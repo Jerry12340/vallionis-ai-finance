@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.env
+*.venv
+venv/
+env/
+.python-version
+
+# Sensitive files (NEVER commit these!)
+.env
+APIkey.env
+
+# Flask
+instance/
+.flaskenv
+recommended_portfolio.csv  # If you don't want the CSV tracked
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Logs
+*.log

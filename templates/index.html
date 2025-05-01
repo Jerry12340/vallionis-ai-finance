@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Recommender</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Stock Investment Recommender</h1>
+        <form method="POST">
+    <div class="form-group">
+        <label>Investment Style</label>
+        <select name="investing_style" class="form-control" required>
+            <option value="conservative">Conservative</option>
+            <option value="moderate">Moderate</option>
+            <option value="aggressive">Aggressive</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Time Horizon (years)</label>
+        <input type="number" name="time_horizon" class="form-control"
+               min="1" max="30" required>
+    </div>
+
+    <div class="form-group">
+        <label>Number of Stocks</label>
+        <input type="number" name="stocks_amount" class="form-control"
+               min="1" max="30" required>
+    </div>
+
+    <div class="form-check">
+        <input type="checkbox" name="premium" class="form-check-input">
+        <label class="form-check-label">Premium Features</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">Get Recommendations</button>
+</form>
+    </div>
+</body>
+</html>

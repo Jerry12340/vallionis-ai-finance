@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Results</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        .numeric-col { text-align: right; min-width: 120px; }
+        .symbol-col { font-weight: bold; width: 100px; }
+        .table thead th { background-color: #343a40; color: white; vertical-align: middle; }
+        .main-heading { margin-bottom: 2rem; }
+        .card { border: none; border-radius: 0.5rem; }
+        .secondary-stock { opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="main-heading">
+            <h2>Investment Recommendations</h2>
+            <h5 class="text-muted">{{ investing_style|title }} Portfolio · {{ time_horizon }} Year Horizon</h5>
+        </div>
+
+        <!-- Recommendations Table -->
+        <div class="card shadow mb-5">
+            <div class="card-body p-0">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th class="symbol-col">Symbol</th>
+                            <th class="numeric-col">Total Return</th>
+                            <th class="numeric-col">Annual Return</th>
+                            {% if premium %}
+                                <th class="numeric-col">P/E (TTM)</th>
+                                <th class="numeric-col">P/E (Fwd)</th>
+                                <th class="numeric-col">Beta</th>
+                                <th class="numeric-col">Div Yield</th>
+                                <th class="numeric-col">Debt/Eq</th>
+                                <th class="numeric-col">P/S</th>
+                                <th class="numeric-col">P/B</th>
+                                <th class="numeric-col">ROE</th>
+                            {% else %}
+                                <th class="numeric-col">Div Yield</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in recommendations %}
+                        <tr {% if loop.index > recs_count %}class="secondary-stock"{% endif %}>
+                            <td class="symbol-col">{{ stock.symbol }}</td>
+                            <td class="numeric-col">{{ stock.total_return }}</td>
+                            <td class="numeric-col">{{ stock.annual_return }}</td>
+                            {% if premium %}
+                                <td class="numeric-col">{{ stock.trailing_pe }}</td>
+                                <td class="numeric-col">{{ stock.forward_pe }}</td>
+                                <td class="numeric-col">{{ stock.beta }}</td>
+                                <td class="numeric-col">{{ stock.dividend_yield }}</td>
+                                <td class="numeric-col">{{ stock.debt_to_equity }}</td>
+                                <td class="numeric-col">{{ stock.ps_ratio }}</td>
+                                <td class="numeric-col">{{ stock.pb_ratio }}</td>
+                                <td class="numeric-col">{{ stock.roe }}</td>
+                            {% else %}
+                                <td class="numeric-col">{{ stock.dividend_yield }}</td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary Section -->
+        <div class="mt-5">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6>Total Return</h6>
+                            <h3>{{ averages.total }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6>Annual Return</h6>
+                            <h3>{{ averages.annual }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6>Dividend Yield</h6>
+                            <h3>{{ averages.dividend }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/" class="btn btn-primary btn-lg">
+                ← New Analysis
+            </a>
+        </div>
+    </div>
+</body>
+</html>
