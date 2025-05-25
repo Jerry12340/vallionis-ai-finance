@@ -1,107 +1,203 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Results</title>
+    <title>Recommendation Results</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <style>
-        .numeric-col { text-align: right; min-width: 120px; }
-        .symbol-col { font-weight: bold; width: 100px; }
-        .table thead th { background-color: #343a40; color: white; vertical-align: middle; }
-        .main-heading { margin-bottom: 2rem; }
-        .card { border: none; border-radius: 0.5rem; }
-        .secondary-stock { opacity: 0.8; }
+        .stock-card {
+            transition: transform 0.2s;
+            margin-bottom: 20px;
+        }
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .badge-premium {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .allocation-bar {
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .allocation-progress {
+            height: 100%;
+            background-color: #28a745;
+        }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="main-heading">
-            <h2>Investment Recommendations</h2>
-            <h5 class="text-muted">{{ investing_style|title }} Portfolio · {{ time_horizon }} Year Horizon</h5>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Your Stock Recommendations (Simulated Performance)</h1>
+            {% if premium %}
+                <span class="badge badge-premium">Premium</span>
+            {% endif %}
         </div>
 
-        <!-- Recommendations Table -->
-        <div class="card shadow mb-5">
-            <div class="card-body p-0">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th class="symbol-col">Symbol</th>
-                            <th class="numeric-col">Total Return</th>
-                            <th class="numeric-col">Annual Return</th>
-                            {% if premium %}
-                                <th class="numeric-col">P/E (TTM)</th>
-                                <th class="numeric-col">P/E (Fwd)</th>
-                                <th class="numeric-col">Beta</th>
-                                <th class="numeric-col">Div Yield</th>
-                                <th class="numeric-col">Debt/Eq</th>
-                                <th class="numeric-col">P/S</th>
-                                <th class="numeric-col">P/B</th>
-                                <th class="numeric-col">ROE</th>
-                            {% else %}
-                                <th class="numeric-col">Div Yield</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stock in recommendations %}
-                        <tr {% if loop.index > recs_count %}class="secondary-stock"{% endif %}>
-                            <td class="symbol-col">{{ stock.symbol }}</td>
-                            <td class="numeric-col">{{ stock.total_return }}</td>
-                            <td class="numeric-col">{{ stock.annual_return }}</td>
-                            {% if premium %}
-                                <td class="numeric-col">{{ stock.trailing_pe }}</td>
-                                <td class="numeric-col">{{ stock.forward_pe }}</td>
-                                <td class="numeric-col">{{ stock.beta }}</td>
-                                <td class="numeric-col">{{ stock.dividend_yield }}</td>
-                                <td class="numeric-col">{{ stock.debt_to_equity }}</td>
-                                <td class="numeric-col">{{ stock.ps_ratio }}</td>
-                                <td class="numeric-col">{{ stock.pb_ratio }}</td>
-                                <td class="numeric-col">{{ stock.roe }}</td>
-                            {% else %}
-                                <td class="numeric-col">{{ stock.dividend_yield }}</td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-primary">
+                    <div class="card-body">
+                        <h5 class="card-title">Average Annual Projected Return Algorithmic Estimate (Hypothetical):</h5>
+                        <p class="card-text display-4">{{ averages.annual }}</p>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <!-- Summary Section -->
-        <div class="mt-5">
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6>Total Return</h6>
-                            <h3>{{ averages.total }}</h3>
-                        </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <h5 class="card-title">Hypothetical cumulative return (Not guaranteed)</h5>
+                        <p class="card-text display-4">{{ averages.total }}</p>
                     </div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6>Annual Return</h6>
-                            <h3>{{ averages.annual }}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6>Dividend Yield</h6>
-                            <h3>{{ averages.dividend }}</h3>
-                        </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-info">
+                    <div class="card-body">
+                        <h5 class="card-title">Avg Dividend Yield (Past Data)</h5>
+                        <p class="card-text display-4">{{ averages.dividend }}</p>
                     </div>
                 </div>
             </div>
         </div>
+        {% if not premium and recommendations %}
+            <div class="alert alert-warning premium-alert" style="border-left: 4px solid #ffc107;">
+                <div class="d-flex align-items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock mr-3">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <div>
+                        <h5 class="alert-heading">Premium Recommendations Hidden</h5>
+                        <p class="mb-2">Our top 3 stock picks are reserved for premium members. Upgrade to see the highest-rated recommendations from our model.</p>
+                        <a href="{{ url_for('subscription') }}" class="btn btn-warning btn-sm">
+                            Unlock Premium Recommendations
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
-        <div class="text-center mt-4">
-            <a href="/" class="btn btn-primary btn-lg">
-                ← New Analysis
+        {% if premium and (sector_focus != 'all' or dividend_preference) %}
+        <div class="alert alert-info">
+            <h5>Premium Filters Applied:</h5>
+            <ul>
+                {% if sector_focus != 'all' %}
+                    <li>Sector Focus: {{ sector_focus|capitalize }}</li>
+                {% endif %}
+                {% if dividend_preference %}
+                    <li>Dividend Stocks Prioritized</li>
+                {% endif %}
+                <li>Risk Tolerance: {{ risk_tolerance|capitalize }}</li>
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            {% for stock in recommendations %}
+            <div class="col-lg-4 col-md-6">
+                <div class="card stock-card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">{{ stock.symbol }}</h5>
+                        <small class="text-light">{{ stock.industry }}</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="text-success">{{ stock.annual_return }}</h6>
+                                <small class="text-muted">Annual Return</small>
+                            </div>
+                            <div>
+                                <h6>{{ stock.total_return }}</h6>
+                                <small class="text-muted">Total Return</small>
+                            </div>
+                            <div>
+                                <h6 class="text-info">{{ stock.dividend_yield }}</h6>
+                                <small class="text-muted">Dividend</small>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <h6>Suggested Allocation: {{ stock.suggested_allocation }}</h6>
+                            <div class="allocation-bar">
+                                <div class="allocation-progress" style="width: {{ stock.suggested_allocation.split('%')[0] }}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse"
+                                data-target="#details-{{ loop.index }}" aria-expanded="false">
+                                Show Details
+                            </button>
+                        </div>
+
+                        <div class="collapse mt-2" id="details-{{ loop.index }}">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Trailing P/E</td>
+                                    <td>{{ stock.trailing_pe }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Forward P/E</td>
+                                    <td>{{ stock.forward_pe }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Beta</td>
+                                    <td>{{ stock.beta }}</td>
+                                </tr>
+                                <tr>
+                                    <td>P/S Ratio</td>
+                                    <td>{{ stock.ps_ratio }}</td>
+                                </tr>
+                                <tr>
+                                    <td>ROE</td>
+                                    <td>{{ stock.roe }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-4">
+            {% if premium %}
+                <a href="{{ url_for('download') }}" class="btn btn-success">
+                    Download Portfolio as CSV
+                </a>
+            {% else %}
+                <div class="alert alert-warning">
+                    <h5>Want to export these recommendations?</h5>
+                    <p>Subscribe to our premium service (£4.99/month or £49.99 for a lifetime subscription) to download this portfolio as a CSV file and unlock advanced features.</p>
+                    <a href="{{ url_for('subscription') }}" class="btn btn-warning">Upgrade to Premium</a>
+                </div>
+            {% endif %}
+            <div class="alert alert-warning">
+                    <p>These figures are computer-generated estimates based on historical data. They are not predictions or guarantees.
+                        Stock investing carries risk—you could lose money. Always do your own research or consult a financial advisor.</p>
+                </div>
+
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary ml-2">
+                Start New Analysis
             </a>
         </div>
     </div>
+    <details class="mt-3">
+      <summary><small>⚠️ How these estimates were calculated</small></summary>
+      <p class="small text-muted">
+        These numbers are based on a simulated portfolio of high-growth stocks from 1995–2025.
+        Actual returns depend on market conditions, fees, and timing.
+        <strong>Most investors earn closer to 5–10% annually long-term.</strong>
+          *Actual results vary widely* based on entry/exit timing.*
+      </p>
+    </details>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 </body>
 </html>

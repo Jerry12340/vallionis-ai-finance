@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found | Stock Portfolio Advisor</title>
+    <style>
+        :root {
+            --primary: #2962ff;
+            --text: #2d3748;
+            --light-bg: #f7fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --gray: #718096;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--light-bg);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .error-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 3rem;
+            width: 100%;
+            text-align: center;
+        }
+
+        .error-code {
+            font-size: 5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 0 0 1rem;
+            opacity: 0.8;
+        }
+
+        .error-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin: 0 0 1rem;
+        }
+
+        .error-message {
+            font-size: 1.125rem;
+            color: var(--gray);
+            margin-bottom: 2rem;
+            line-height: 1.75;
+        }
+
+        .search-box {
+            max-width: 500px;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2045d6;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            border: 1px solid var(--border);
+            color: var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: #edf2f7;
+        }
+
+        .popular-links {
+            margin-top: 2rem;
+            text-align: left;
+        }
+
+        .popular-links h3 {
+            font-size: 1rem;
+            color: var(--gray);
+            margin-bottom: 0.5rem;
+        }
+
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .links-grid a {
+            color: var(--primary);
+            text-decoration: none;
+            padding: 0.25rem 0;
+        }
+
+        .links-grid a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--gray);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .error-card {
+                padding: 2rem;
+            }
+
+            .error-code {
+                font-size: 3.5rem;
+            }
+
+            .error-title {
+                font-size: 1.5rem;
+            }
+
+            .links-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-card">
+            <div class="error-code">404</div>
+            <h1 class="error-title">Page Not Found</h1>
+
+            <div class="error-message">
+                <p>We couldn't find the page you're looking for.</p>
+                <p>It may have been moved, deleted, or the URL may be incorrect.</p>
+            </div>
+
+            <div class="search-box">
+                <form action="{{ url_for('search') }}" method="GET">
+                    <input type="text" class="search-input" name="q" placeholder="Search for stocks, portfolios..." aria-label="Search">
+                </form>
+            </div>
+
+            <div class="actions">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    Go to Homepage
+                </a>
+
+                <a href="{{ url_for('contact') }}" class="btn btn-secondary">
+                    Contact Support
+                </a>
+            </div>
+
+            <div class="popular-links">
+                <h3>Popular Pages:</h3>
+                <div class="links-grid">
+                    <a href="{{ url_for('index') }}">Subscription Plans</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; {{ now.year }} Stock Portfolio Advisor. All rights reserved.</p>
+    </footer>
+</body>
+</html>

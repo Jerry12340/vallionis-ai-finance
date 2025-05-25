@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Error | Stock Portfolio Advisor</title>
+    <style>
+        :root {
+            --primary: #2962ff;
+            --error: #d32f2f;
+            --text: #2d3748;
+            --light-bg: #f7fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--light-bg);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .error-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 3rem;
+            width: 100%;
+            text-align: center;
+        }
+
+        .error-code {
+            font-size: 5rem;
+            font-weight: 800;
+            color: var(--error);
+            margin: 0 0 1rem;
+        }
+
+        .error-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin: 0 0 1rem;
+        }
+
+        .error-message {
+            font-size: 1.125rem;
+            color: #4a5568;
+            margin-bottom: 2rem;
+            line-height: 1.75;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2045d6;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            border: 1px solid var(--border);
+            color: var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: #edf2f7;
+        }
+
+        .technical-details {
+            margin-top: 2.5rem;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: left;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.875rem;
+        }
+
+        .technical-details summary {
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: #718096;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .error-card {
+                padding: 2rem;
+            }
+
+            .error-code {
+                font-size: 3.5rem;
+            }
+
+            .error-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-card">
+            <div class="error-code">500</div>
+            <h1 class="error-title">Internal Server Error</h1>
+
+            <div class="error-message">
+                <p>Something went wrong on our end while processing your request.</p>
+                <p>Our team has been notified and we're working to fix it.</p>
+            </div>
+
+            <div class="actions">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    Return Home
+                </a>
+
+                <a href="mailto:vallionisai@gmail.com.com" class="btn btn-secondary">
+                    Contact Support
+                </a>
+            </div>
+
+            {% if config.DEBUG and error %}
+            <div class="technical-details">
+                <details>
+                    <summary>Technical Details</summary>
+                    <pre>{{ error }}</pre>
+                </details>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; {{ now.year }} Stock Portfolio Advisor. All rights reserved.</p>
+    </footer>
+</body>
+</html>

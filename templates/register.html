@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register - Stock Recommender</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .register-container {
+            max-width: 500px;
+            margin: 100px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="register-container">
+            <h2 class="text-center mb-4">Register</h2>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% for field, errors in form.errors.items() %}
+                {% for error in errors %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                {% endfor %}
+            {% endfor %}
+            
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.email.label }}
+                    {{ form.email(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.password.label }}
+                    {{ form.password(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.confirm_password.label }}
+                    {{ form.confirm_password(class="form-control") }}
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Register</button>
+            </form>
+            
+            <div class="text-center mt-3">
+                <a href="{{ url_for('login') }}">Already have an account? Login</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>

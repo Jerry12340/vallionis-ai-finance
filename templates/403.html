@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Denied - Stock Portfolio Advisor</title>
+    <style>
+        /* Modern, clean styling */
+        :root {
+            --primary-color: #3498db;
+            --error-color: #e74c3c;
+            --text-color: #333;
+            --light-gray: #f5f5f5;
+            --dark-gray: #777;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--light-gray);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .error-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .error-code {
+            font-size: 5rem;
+            font-weight: bold;
+            color: var(--error-color);
+            margin: 0;
+        }
+
+        .error-title {
+            font-size: 2rem;
+            margin: 0.5rem 0;
+        }
+
+        .error-message {
+            font-size: 1.2rem;
+            color: var(--dark-gray);
+            margin-bottom: 2rem;
+        }
+
+        .error-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #f0f0f0;
+        }
+
+        .error-details {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+        }
+
+        footer {
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .error-code {
+                font-size: 3rem;
+            }
+
+            .error-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-content">
+            <div class="error-header">
+                <h1 class="error-code">403</h1>
+                <h2 class="error-title">Access Denied</h2>
+                <p class="error-message">You don't have permission to access this resource.</p>
+            </div>
+
+            <div class="error-details">
+                {% if error.description %}
+                    <p><strong>Details:</strong> {{ error.description }}</p>
+                {% endif %}
+
+                <p>If you believe this is an error, please contact our support team.</p>
+            </div>
+
+            <div class="actions">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">Return Home</a>
+
+                {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('login') }}" class="btn btn-secondary">Login</a>
+                {% else %}
+                    <a href="{{ url_for('account') }}" class="btn btn-secondary">Account Settings</a>
+                {% endif %}
+
+                {% if error.description and "subscription" in error.description.lower() %}
+                    <a href="{{ url_for('subscription') }}" class="btn btn-secondary">Upgrade Account</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; {{ now.year }} Stock Portfolio Advisor. All rights reserved.
+    </footer>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Stock Recommender</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            line-height: 1.6;
+        }
+        .policy-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 25px;
+            font-size: 1.5em;
+        }
+        .last-updated {
+            color: #7f8c8d;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        a {
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="policy-container">
+            <h1>Privacy Policy</h1>
+            <p class="last-updated">Last Updated: 15/05/2025</p>
+
+            <!-- Policy Content (Replace with your generated policy) -->
+            <h2>1. Information We Collect</h2>
+            <p>We collect the following information when you use Stock Recommender:</p>
+            <ul>
+                <li><strong>Account Data:</strong> Email address, password (hashed), subscription status.</li>
+                <li><strong>Investment Preferences:</strong> Risk tolerance, time horizon, sector focus.</li>
+                <li><strong>Payment Data:</strong> Processed securely by Stripe (we never store credit card details).</li>
+                <li><strong>Usage Data:</strong> IP address, browser type, timestamps (for analytics).</li>
+            </ul>
+
+            <h2>2. How We Use Your Data</h2>
+            <p>Your data is used to:</p>
+            <ul>
+                <li>Generate personalized stock recommendations.</li>
+                <li>Process subscriptions and payments.</li>
+                <li>Improve our machine learning models (anonymized where possible).</li>
+                <li>Respond to support requests.</li>
+            </ul>
+
+            <h2>3. Data Sharing</h2>
+            <p>We only share data with:</p>
+            <ul>
+                <li><strong>Stripe:</strong> For payment processing (<a href="https://stripe.com/privacy" target="_blank">Stripe's Privacy Policy</a>).</li>
+                <li><strong>Finnhub/Yahoo Finance:</strong> For stock market data.</li>
+                <li><strong>Legal Compliance:</strong> If required by law (e.g., subpoenas).</li>
+            </ul>
+
+            <h2>4. Your Rights</h2>
+            <p>You can:</p>
+            <ul>
+                <li>Access, update, or delete your account data.</li>
+                <li>Opt out of marketing emails.</li>
+                <li>Request a copy of your data (GDPR compliance).</li>
+            </ul>
+            <p>Contact us at <strong>vallionisai@gmail.com</strong> for requests.</p>
+
+            <h2>5. Cookies</h2>
+            <p>We use session cookies for login functionality. Disable them in your browser settings if preferred.</p>
+
+            <footer>
+                <a href="{{ url_for('terms') }}">Terms of Service</a> |
+                <a href="{{ url_for('index') }}">Home</a>
+            </footer>
+            <p>Payment processing via Stripe (view their compliance: https://stripe.com/gdpr)</p>
+        </div>
+    </div>
+</body>
+</html>

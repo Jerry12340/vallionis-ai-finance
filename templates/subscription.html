@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Stock Recommender - Subscription</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-spinner {
+            width: 3rem;
+            height: 3rem;
+        }
+        .current-plan {
+            background-color: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 0.25rem;
+        }
+        .premium-feature {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .premium-feature:last-child {
+            border-bottom: none;
+        }
+        .access-dates {
+            font-weight: bold;
+            color: #28a745;
+        }
+        .subscription-alert {
+            margin-top: 1rem;
+        }
+        .navbar {
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding-top: 5px;
+        }
+        .btn-cancel {
+            margin-top: 20px;
+            padding: 10px 25px;
+            font-weight: 500;
+        }
+        .pricing-card {
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="/">Stock Recommender</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('account') }}">Account</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('subscription') }}">Subscription</a>
+                </li>
+                <li class="nav-item">
+                    <form action="{{ url_for('logout') }}" method="post" class="form-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-outline-danger">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="loading-overlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary loading-spinner" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <div class="mt-3">
+                <h2>Processing Your Request</h2>
+                <p class="lead">Please wait...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center mb-5">
+                    <h1>Premium Subscription</h1>
+                    <p class="lead">Unlock the full potential of our stock recommendation engine</p>
+                </div>
+
+                {% if current_user.get_subscription_status() %}
+                    <div class="current-plan">
+                        <h4>Your Current Plan</h4>
+                        <div class="alert alert-success">
+                            <p class="mb-0">
+                                <strong>Status:</strong> Active
+                                {% if current_user.subscription_type == 'monthly' and current_user.subscription_expires %}
+                                    (renews {{ current_user.subscription_expires.strftime('%Y-%m-%d') }})
+                                {% endif %}
+                            </p>
+                        </div>
+
+                        <div class="subscription-details">
+                            <p>
+                                <strong>Plan Type:</strong>
+                                {{ 'Monthly Subscription' if current_user.subscription_type == 'monthly' else 'Lifetime Access' }}
+                            </p>
+
+                            {% if current_user.subscription_status == 'pending_cancel' %}
+                            <div class="alert alert-warning subscription-alert">
+                                <i class="fas fa-exclamation-circle"></i>
+                                {% if current_user.subscription_expires %}
+                                    Access ends on {{ current_user.subscription_expires.strftime('%Y-%m-%d') }}
+                                {% else %}
+                                    Subscription cancellation in progress
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h3>Premium Features</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="premium-feature">
+                                    <h5><i class="fas fa-chart-line"></i> Sector-specific recommendations</h5>
+                                    <p>Get recommendations tailored to specific industries like Technology, Healthcare, or Energy.</p>
+                                </div>
+
+                                <div class="premium-feature">
+                                    <h5><i class="fas fa-balance-scale"></i> Custom risk tolerance</h5>
+                                    <p>Adjust recommendations based on your personal risk appetite.</p>
+                                </div>
+
+                                <div class="premium-feature">
+                                    <h5><i class="fas fa-coins"></i> Dividend-focused portfolios</h5>
+                                    <p>Prioritize stocks with strong dividend yields.</p>
+                                </div>
+
+                                <div class="premium-feature">
+                                    <h5><i class="fas fa-file-csv"></i> CSV exports</h5>
+                                    <p>Download portfolio recommendations for analysis.</p>
+                                </div>
+
+                                <div class="premium-feature">
+                                    <h5><i class="fas fa-tachometer-alt"></i> 3x faster processing</h5>
+                                    <p>Priority access to our servers.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="pricing-card">
+                            <h3 class="text-center">Monthly</h3>
+                            <h2 class="text-center">£4.99/month</h2>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check-circle text-success"></i> All premium features</li>
+                                <li><i class="fas fa-check-circle text-success"></i> 7-day free trial</li>
+                            </ul>
+                            {% if current_user.subscription_type == 'lifetime' %}
+                                <button class="btn btn-secondary btn-block" disabled>Not Available</button>
+                                <small class="text-muted">Cannot downgrade from lifetime access</small>
+                            {% elif not current_user.get_subscription_status() or current_user.subscription_type != 'monthly' %}
+                                <form action="{{ url_for('subscribe') }}" method="POST" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-warning btn-block">
+                                        {% if current_user.subscription_type != 'monthly' %}Switch to Monthly{% else %}Start Free Trial{% endif %}
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button class="btn btn-secondary btn-block" disabled>Current Plan</button>
+                            {% endif %}
+                        </div>
+
+                        <div class="pricing-card mt-4">
+                            <h3 class="text-center">Lifetime</h3>
+                            <h2 class="text-center">£49.99</h2>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check-circle text-success"></i> Permanent access</li>
+                                <li><i class="fas fa-check-circle text-success"></i> All future updates</li>
+                            </ul>
+                            {% if current_user.subscription_type == 'lifetime' %}
+                                <button class="btn btn-secondary btn-block" disabled>Current Plan</button>
+                            {% else %}
+                                <form action="{{ url_for('purchase_lifetime') }}" method="POST" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-success btn-block">
+                                        {% if current_user.subscription_type == 'monthly' %}Upgrade to Lifetime{% else %}Get Lifetime Access{% endif %}
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if current_user.get_subscription_status() and current_user.subscription_type == 'monthly' %}
+                <div class="text-center mt-4">
+                    <button type="button" class="btn btn-outline-danger btn-cancel"
+                            data-toggle="modal" data-target="#cancelConfirmModal">
+                        Cancel Subscription
+                    </button>
+                </div>
+                {% endif %}
+
+                <div class="text-center mt-5">
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Subscription Modal -->
+    <div class="modal fade" id="cancelConfirmModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Cancellation</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Your premium access will continue until:</p>
+                    <p class="access-dates">
+                            {% if current_user.subscription_expires %}
+                                {{ current_user.subscription_expires.strftime('%Y-%m-%d') }}
+                            {% else %}
+                                No expiration date
+                            {% endif %}
+                        </p>
+                    <p>After this date you'll lose premium features.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Keep Subscription</button>
+                    <form action="{{ url_for('cancel_subscription') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+                    </form>
+                </div>
+                    <div class="current-plan">
+                        <h4>Your Current Plan</h4>
+                        <div class="alert alert-success">
+                            <p class="mb-0">
+                                <strong>Status:</strong>
+                                {% if current_user.subscription_status == 'pending_cancel' %}
+                                    Pending Cancellation (access until {{ current_user.subscription_expires.strftime('%Y-%m-%d') }})
+                                {% else %}
+                                    Active
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>

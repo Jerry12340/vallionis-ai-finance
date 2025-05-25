@@ -18,7 +18,7 @@ from tabulate import tabulate
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-load_dotenv('APIkey.env')
+load_dotenv('.env')
 api_key = os.getenv('FINNHUB_API_KEY')
 finnhub_client = finnhub.Client(api_key)
 
@@ -262,12 +262,12 @@ def main():
     backup_tickers = [
         'AAPL', 'MSFT', 'GOOG', 'AMZN', 'BRK-B', 'CAT', 'PGR', 'AMAT',
         'IBM', 'META', 'JPM', 'QCOM', 'JNJ', 'PG', 'XOM', 'V',
-        'MA', 'PEP', 'CSCO', 'ADBE', 'CRM', 'UNH', 'ABT'
+        'MA', 'PEP', 'CSCO', 'ADBE', 'CRM', 'ABT'
         , 'WMT', 'BLK', 'ICE', 'MCD', 'CVX', 'HD'
     ]
     raw_tickers = [
         'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'BRK-B', 'AVGO', 'LLY',
-        'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'UNH', 'PG', 'JNJ', 'ORCL', 'HD',
+        'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'PG', 'JNJ', 'ORCL', 'HD',
         'KO', 'ABBV', 'TMUS', 'BAC', 'PM', 'CVX', 'CRM', 'ABT', 'CSCO', 'IBM', 'MCD',
         'ADP', 'WFC', 'MRK', 'PEP', 'AXP', 'MS', 'ISRG',
         'NOW', 'BX', 'GS', 'PGR', 'UBER', 'QCOM', 'BKNG', 'ADBE', 'AMGN',

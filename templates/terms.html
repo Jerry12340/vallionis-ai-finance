@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - Stock Recommender</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            line-height: 1.6;
+        }
+        .terms-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 25px;
+            font-size: 1.5em;
+        }
+        .last-updated {
+            color: #7f8c8d;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        a {
+            color: #3498db;
+        }
+        .disclaimer {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="terms-container">
+            <h1>Terms of Service</h1>
+            <p class="last-updated">Last Updated: [Date]</p>
+
+            <!-- Terms Content -->
+            <h2>1. Acceptance of Terms</h2>
+            <p>By using Stock Recommender, you agree to these terms. If you disagree, do not use our service.</p>
+
+            <h2>2. Subscription Terms</h2>
+            <ul>
+                <li>Monthly subscriptions auto-renew until canceled.</li>
+                <li>Lifetime purchases are non-refundable.</li>
+                <li>Free trials automatically convert to paid subscriptions unless canceled.</li>
+            </ul>
+
+            <div class="disclaimer">
+                <h2>3. Disclaimer</h2>
+                <p><strong>Stock Recommender provides AI-generated suggestions, not financial advice.</strong> Investments carry risks. Past performance does not guarantee future results. Consult a financial advisor before making decisions.</p>
+            </div>
+
+            <h2>4. User Responsibilities</h2>
+            <p>You agree to:</p>
+            <ul>
+                <li>Provide accurate information.</li>
+                <li>Not misuse the service (e.g., spam, reverse engineering).</li>
+                <li>Comply with applicable laws.</li>
+            </ul>
+
+            <h2>5. Termination</h2>
+            <p>We may suspend accounts for violations. You may delete your account anytime.</p>
+
+            <h2>6. Changes to Terms</h2>
+            <p>We’ll notify users of significant changes via email or in-app alerts.</p>
+
+            <footer>
+                <a href="{{ url_for('privacy') }}">Privacy Policy | </a>
+                <a href="{{ url_for('index') }}">Home</a>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Subscription Cancelled</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card text-center">
+            <div class="card-header bg-warning">
+                <h2>Subscription Cancelled</h2>
+            </div>
+            <div class="card-body">
+                <h4 class="card-title">You haven't been charged</h4>
+                <p class="card-text">Your subscription was not completed. You can try again or continue with our free service.</p>
+                <div class="mt-4">
+                    <a href="{{ url_for('subscribe') }}" class="btn btn-warning mr-3">
+                        Try Again
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        Continue with Free Service
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

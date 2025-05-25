@@ -6,4 +6,43 @@ body {
 }
 .table {
     margin-top: 20px;
+    width: 100% !important; /* Forces full width */
+}
+.table-responsive {
+    overflow-x: auto; /* Allows horizontal scrolling */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    overflow: visible; /* Allows table to extend beyond card */
+}
+.allocation-col {
+    min-width: 140px;
+    font-weight: 500;
+    color: #2c7be5;
+}
+.summary-card {
+    margin-bottom: 1rem;
+    height: 100%;
+}
+.premium-alert {
+    border-left: 4px solid #ffc107;
+    margin-bottom: 20px;
+}
+.feather {
+    width: 24px;
+    height: 24px;
+}
+@media (max-width: 768px) {
+    .stock-card {
+        margin: 10px 0;
+    }
+    .card-header h5 {
+        font-size: 1.1rem;
+    }
+    .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
 }

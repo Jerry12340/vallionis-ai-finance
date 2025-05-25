@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings - Stock Recommender</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 5x;
+        }
+        .account-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .account-section {
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .account-section:last-child {
+            border-bottom: none;
+        }
+        .account-header {
+            margin-bottom: 30px;
+        }
+        .subscription-badge {
+            background-color: #ffc107;
+            color: #000;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .btn-account {
+            padding: 10px 20px;
+            font-weight: 500;
+        }
+        .navbar {
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .logout-btn {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="/">Stock Recommender</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('account') }}">Account</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('subscription') }}">Subscription</a>
+                </li>
+                <li class="nav-item">
+                    <form action="{{ url_for('logout') }}" method="post" class="form-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-outline-danger logout-btn">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="account-container">
+            <div class="account-header text-center">
+                <h1>Account Settings</h1>
+                <p class="lead">Manage your account details and preferences</p>
+            </div>
+
+            <!-- User Information Section -->
+            <div class="account-section">
+                <h3>Account Information</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Email:</strong> {{ current_user.email }}</p>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        {% if current_user.get_subscription_status() %}
+                            {% if current_user.subscription_status == 'trialing' %}
+                                <span class="subscription-badge">Trial Premium</span>
+                            {% else %}
+                                <span class="subscription-badge">Premium Member</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge badge-secondary">Free Account</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subscription Status Section -->
+            <div class="account-section">
+                <h3>Subscription Status</h3>
+                {% if current_user.get_subscription_status() %}
+                    <div class="alert alert-success">
+                        <p>
+                            <strong>Status:</strong>
+                            {% if current_user.subscription_status == 'trialing' %}
+                                Trial Premium (ends {{ current_user.subscription_expires.strftime('%Y-%m-%d') }})
+                            {% else %}
+                                Active
+                                {% if current_user.subscription_type == 'monthly' and current_user.subscription_expires %}
+                                    (renews {{ current_user.subscription_expires.strftime('%Y-%m-%d') }})
+                                {% endif %}
+                            {% endif %}
+                            <br>
+                            <strong>Type:</strong> {{ 'Monthly Subscription' if current_user.subscription_type == 'monthly' else 'Lifetime Access' }}
+                        </p>
+                        {% if current_user.stripe_customer_id %}
+                        <div class="mt-3">
+                            <a href="{{ url_for('subscription') }}" class="btn btn-outline-primary btn-account">
+                                Manage Subscription
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <p>You're currently using a free account. Upgrade to premium for advanced features.</p>
+                        <a href="{{ url_for('subscription') }}" class="btn btn-warning btn-account">
+                            Upgrade to Premium
+                        </a>
+                    </div>
+                {% endif %}
+                {% if current_user.subscription_status == 'pending_cancel' %}
+                    <div class="alert alert-warning mt-3">
+                        <p>
+                            <strong>Status:</strong> Cancelling at period end<br>
+                            <strong>Access Until:</strong> {{ current_user.subscription_expires.strftime('%Y-%m-%d') }}
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Change Password Section -->
+            <div class="account-section">
+                <h3>Change Password</h3>
+                <form method="POST" action="{{ url_for('change_password') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="form-group">
+                        {{ change_password_form.old_password.label }}
+                        {{ change_password_form.old_password(class="form-control") }}
+                        {% for error in change_password_form.old_password.errors %}
+                            <small class="text-danger">{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group">
+                        {{ change_password_form.new_password.label }}
+                        {{ change_password_form.new_password(class="form-control") }}
+                        {% for error in change_password_form.new_password.errors %}
+                            <small class="text-danger">{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group">
+                        {{ change_password_form.confirm_password.label }}
+                        {{ change_password_form.confirm_password(class="form-control") }}
+                        {% for error in change_password_form.confirm_password.errors %}
+                            <small class="text-danger">{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-account">Update Password</button>
+                </form>
+            </div>
+
+            <!-- Danger Zone Section -->
+            <div class="account-section">
+                <h3 class="text-danger">Danger Zone</h3>
+                <div class="alert alert-danger">
+                    <p><strong>Delete Account:</strong> This will permanently remove all your data.</p>
+                    <button class="btn btn-outline-danger" data-toggle="modal" data-target="#deleteAccountModal">
+                        Delete My Account
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Account Modal -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1" role="dialog" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+                    <p class="text-danger"><strong>All your data will be permanently removed.</strong></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <form action="{{ url_for('delete_account') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-danger">Delete My Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>
