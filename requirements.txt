@@ -21,5 +21,4 @@ timedelta==2020.12.3
 flask-migrate==4.1.0
 dotenv==0.9.9
 scikit-learn==1.7.0rc1
-mysql==0.0.3
 mysql-connector-python==9.3.0
