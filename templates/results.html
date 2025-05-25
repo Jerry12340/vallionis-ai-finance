@@ -63,6 +63,9 @@
                 </div>
             </div>
         </div>
+        <div class="alert alert-danger">
+          <strong>Disclaimer:</strong> This site provides algorithmic stock analysis for informational purposes only and does not constitute financial advice. Investing in stocks involves risk and you may lose money. Please consult a licensed financial advisor before making investment decisions.
+        </div>
         {% if not premium and recommendations %}
             <div class="alert alert-warning premium-alert" style="border-left: 4px solid #ffc107;">
                 <div class="d-flex align-items-center">
@@ -195,6 +198,9 @@
           *Actual results vary widely* based on entry/exit timing.*
       </p>
     </details>
+    <small>
+      © {{ current_year }} Vallionis AI. All rights reserved. This service does not offer personalized investment advice. See our <a href="{{ url_for('disclaimer') }}">full disclaimer</a>.
+    </small>
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>

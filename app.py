@@ -830,7 +830,7 @@ def index():
                         'annual': '0%',
                         'dividend': '0%'
                     }
-                return render_template('results.html', **results)
+                return render_template('results.html', **results, current_year=datetime.now().year)
             except Exception as e:
                 flash(f"Error generating recommendations: {str(e)}", "error")
         else:
@@ -1582,6 +1582,11 @@ def favicon():
 @app.route('/.well-known/appspecific/com.chrome.devtools.json')
 def handle_chrome_devtools():
     return jsonify({}), 200
+
+
+@app.route('/disclaimer')
+def disclaimer():
+    return render_template('disclaimer.html', current_year=datetime.now().year)
 
 
 # Initialize scheduler
