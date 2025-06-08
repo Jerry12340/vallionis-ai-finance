@@ -68,32 +68,57 @@ app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///local.db').replace('postgres://', 'postgresql://')
+# Database configuration
+def get_database_uri():
+    # Use Render's PostgreSQL database if DATABASE_URL exists
+    if 'DATABASE_URL' in os.environ:
+        uri = os.environ['DATABASE_URL']
+        if uri.startswith('postgres://'):
+            uri = uri.replace('postgres://', 'postgresql://', 1)
+        return uri
+    # Fallback to SQLite for local development
+    return 'sqlite:///local.db'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_size': 5,
     'max_overflow': 10,
-    'pool_recycle': 300
+    'pool_recycle': 300,
+    'connect_args': {
+        'connect_timeout': 5
+    }
 }
 
+# Add SSL requirement for production
 if os.getenv('FLASK_ENV') == 'production':
-    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args'] = {
-        'sslmode': 'require'
-    }
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args']['sslmode'] = 'require'
 
+# Initialize database
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# Initialize database
+# Database initialization
 @app.before_first_request
 def initialize_database():
     with app.app_context():
         try:
+            # Create tables if they don't exist
             db.create_all()
             logger.info("✅ Database initialized successfully")
         except Exception as e:
             logger.error(f"❌ Database initialization failed: {str(e)}")
-            raise
+            # If using SQLite, ensure the directory exists
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                os.makedirs(os.path.dirname('instance/'), exist_ok=True)
+                try:
+                    db.create_all()
+                except Exception as sqlite_error:
+                    logger.error(f"❌ SQLite initialization failed: {str(sqlite_error)}")
+                    raise
+            else:
+                raise
 
 # Security configurations
 app.config.update(
@@ -103,8 +128,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
     PREFERRED_URL_SCHEME='https' if os.getenv('FLASK_ENV') == 'production' else 'http',
     FLASK_ENV=os.getenv('FLASK_ENV', 'development'),
-    DEBUG=os.getenv('DEBUG', 'False').lower() == 'true',
-    SECRET_KEY=os.getenv('SECRET_KEY')
+    DEBUG=os.getenv('DEBUG', 'False').lower() == 'true'
 )
 
 # Configure logging
