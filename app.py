@@ -41,6 +41,8 @@ from authlib.common.security import generate_token
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
+print('newest')
+
 # Load environment variables
 load_dotenv('.env')
 
