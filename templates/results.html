@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Recommendation Results{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Your Stock Recommendations</h1>
+        {% if premium %}
+            <span class="badge badge-premium">Premium</span>
+        {% endif %}
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Projected Annual Return</h5>
+                    <p class="card-text display-4">{{ averages.annual }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Projected Total Return</h5>
+                    <p class="card-text display-4">{{ averages.total }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Avg Dividend Yield</h5>
+                    <p class="card-text display-4">{{ averages.dividend }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-danger">
+        <strong>Disclaimer:</strong> This site provides algorithmic stock analysis for informational purposes only and does not constitute financial advice. Investing in stocks involves risk and you may lose money. Please consult a licensed financial advisor before making investment decisions.
+    </div>
+
+    {% if not premium and recommendations %}
+        <div class="alert alert-warning premium-alert">
+            <div class="d-flex align-items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock mr-3">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <div>
+                    <h5 class="alert-heading">Premium Recommendations Hidden</h5>
+                    <p class="mb-2">Our top 3 stock picks are reserved for premium members.</p>
+                    <a href="{{ url_for('subscription') }}" class="btn btn-warning btn-sm">
+                        Unlock Premium Recommendations
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if premium and (sector_focus != 'all' or dividend_preference) %}
+    <div class="alert alert-info">
+        <h5>Premium Filters Applied:</h5>
+        <ul class="mb-0">
+            {% if sector_focus != 'all' %}
+                <li>Sector Focus: {{ sector_focus|capitalize }}</li>
+            {% endif %}
+            {% if dividend_preference %}
+                <li>Dividend Stocks Prioritized</li>
+            {% endif %}
+            <li>Risk Tolerance: {{ risk_tolerance|capitalize }}</li>
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        {% for stock in recommendations %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card stock-card h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">{{ stock.symbol }}</h5>
+                    <small class="text-light">{{ stock.industry }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div class="text-center">
+                            <small class="text-muted">Annual Return</small>
+                            <h6 class="text-success mb-0">{{ stock.annual_return }}</h6>
+                        </div>
+                        <div class="text-center">
+                            <small class="text-muted">Total Return</small>
+                            <h6 class="mb-0">{{ stock.total_return }}</h6>
+                        </div>
+                        <div class="text-center">
+                            <small class="text-muted">Dividend Yield</small>
+                            <h6 class="text-info mb-0">{{ stock.dividend_yield }}</h6>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6>Suggested Allocation: {{ stock.suggested_allocation }}</h6>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ stock.suggested_allocation.split('%')[0] }}%" aria-valuenow="{{ stock.suggested_allocation.split('%')[0] }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-sm btn-outline-primary w-100 mb-2 details-toggle" type="button"
+                            data-target="#details-{{ loop.index }}"
+                            aria-expanded="false"
+                            aria-controls="details-{{ loop.index }}">
+                        <span class="toggle-text">Show Details</span>
+                    </button>
+
+                    <div class="collapse" id="details-{{ loop.index }}">
+                        <div class="card card-body p-2">
+                            <table class="table table-sm mb-0">
+                                <tr>
+                                    <td>Trailing P/E</td>
+                                    <td>{{ stock.trailing_pe }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Forward P/E</td>
+                                    <td>{{ stock.forward_pe }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Beta</td>
+                                    <td>{{ stock.beta }}</td>
+                                </tr>
+                                <tr>
+                                    <td>P/S Ratio</td>
+                                    <td>{{ stock.ps_ratio }}</td>
+                                </tr>
+                                <tr>
+                                    <td>ROE</td>
+                                    <td>{{ stock.roe }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-4 mb-5">
+        {% if premium %}
+            <a href="{{ url_for('download') }}" class="btn btn-success">
+                <i class="fas fa-download mr-2"></i>Download Portfolio as CSV
+            </a>
+        {% else %}
+            <div class="alert alert-warning">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-lock fa-2x mr-3"></i>
+                    <div>
+                        <h5 class="alert-heading">Want to export these recommendations?</h5>
+                        <p class="mb-2">Subscribe to premium to download this portfolio as a CSV file.</p>
+                        <a href="{{ url_for('subscription') }}" class="btn btn-warning btn-sm">
+                            Upgrade to Premium
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="alert alert-secondary mt-3">
+            <p class="mb-0"><small>These figures are computer-generated estimates based on historical data. They are not predictions or guarantees. Stock investing carries risk—you could lose money. Always do your own research or consult a financial advisor.</small></p>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left mr-2"></i>Start New Analysis
+            </a>
+
+            <details>
+                <summary class="btn btn-link text-muted">
+                    <small>How these estimates were calculated</small>
+                </summary>
+                <div class="alert alert-light mt-2">
+                    <p class="small mb-0">
+                        These numbers are based on a simulated portfolio of stocks.
+                        Actual returns depend on market conditions, fees, and timing.
+                        <strong>Most investors earn closer to 5–10% annually long-term.</strong>
+                        *Actual results vary widely* based on entry/exit timing.*
+                    </p>
+                </div>
+            </details>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Card hover effect
+    const cards = document.querySelectorAll('.stock-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-5px)';
+            card.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = '';
+            card.style.boxShadow = '';
+        });
+    });
+
+    // Collapse functionality
+    document.querySelectorAll('.details-toggle').forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const target = document.querySelector(targetId);
+            const isExpanded = this.getAttribute('aria-expanded') === 'true';
+
+            // Toggle the collapse state
+            if (isExpanded) {
+                target.style.display = 'none';
+                this.setAttribute('aria-expanded', 'false');
+                this.querySelector('.toggle-text').textContent = 'Show Details';
+            } else {
+                target.style.display = 'block';
+                this.setAttribute('aria-expanded', 'true');
+                this.querySelector('.toggle-text').textContent = 'Hide Details';
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.collapse {
+    display: none;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}Premium Subscription - StockAI{% endblock %}
+
+{% block content %}
+<div class="account-container">
+    <div class="account-header">
+        <h1>Premium Subscription</h1>
+        <p class="subheader">Unlock the full potential of our stock recommendation engine</p>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary loading-spinner" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <div class="mt-3">
+                <h2>Processing Your Request</h2>
+                <p class="lead">Please wait...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Plan Section -->
+    {% if current_user.get_subscription_status() %}
+    <div class="account-section card">
+        <div class="card-header">
+            <h3>Your Current Plan</h3>
+        </div>
+        <div class="card-body">
+            <div class="subscription-status">
+                <div class="status-details">
+                    <p>
+                        <strong>Status:</strong> 
+                        {% if current_user.subscription_status == 'pending_cancel' %}
+                            Pending Cancellation
+                        {% else %}
+                            Active
+                        {% endif %}
+                        {% if current_user.subscription_type == 'monthly' and current_user.subscription_expires %}
+                            (renews {{ current_user.subscription_expires.strftime('%Y-%m-%d') }})
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Plan Type:</strong>
+                        {{ 'Monthly Subscription' if current_user.subscription_type == 'monthly' else 'Lifetime Access' }}
+                    </p>
+                </div>
+                {% if current_user.subscription_status == 'pending_cancel' %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle"></i>
+                    {% if current_user.subscription_expires %}
+                        Access ends on {{ current_user.subscription_expires.strftime('%Y-%m-%d') }}
+                    {% else %}
+                        Subscription cancellation in progress
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Premium Features Section -->
+    <div class="account-section card">
+        <div class="card-header">
+            <h3>Premium Features</h3>
+        </div>
+        <div class="card-body">
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h5>Sector-specific recommendations</h5>
+                        <p>Get recommendations tailored to specific industries like Technology, Healthcare, or Energy.</p>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h5>Custom risk tolerance</h5>
+                        <p>Adjust recommendations based on your personal risk appetite.</p>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h5>Dividend-focused portfolios</h5>
+                        <p>Prioritize stocks with strong dividend yields.</p>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-csv"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h5>CSV exports</h5>
+                        <p>Download portfolio recommendations for analysis.</p>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h5>3x faster processing</h5>
+                        <p>Priority access to our servers.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing Plans Section -->
+    <div class="account-section card">
+        <div class="card-header">
+            <h3>Upgrade Options</h3>
+        </div>
+        <div class="card-body">
+            <div class="pricing-grid">
+                <!-- Monthly Plan -->
+                <div class="pricing-card">
+                    <h3>Monthly</h3>
+                    <div class="price">£4.99<span>/month</span></div>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check-circle"></i> All premium features</li>
+                        <li><i class="fas fa-check-circle"></i> 7-day free trial</li>
+                    </ul>
+                    {% if current_user.subscription_type == 'lifetime' %}
+                        <button class="btn btn-secondary btn-block" disabled>Not Available</button>
+                        <small class="text-muted">Cannot downgrade from lifetime access</small>
+                    {% elif not current_user.get_subscription_status() or current_user.subscription_type != 'monthly' %}
+                        <form action="{{ url_for('subscribe') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-primary btn-block">
+                                {% if current_user.subscription_type != 'monthly' %}Switch to Monthly{% else %}Start Free Trial{% endif %}
+                            </button>
+                        </form>
+                    {% else %}
+                        <button class="btn btn-outline btn-block" disabled>Current Plan</button>
+                    {% endif %}
+                </div>
+
+                <!-- Lifetime Plan -->
+                <div class="pricing-card highlight">
+                    <div class="popular-badge">Best Value</div>
+                    <h3>Lifetime</h3>
+                    <div class="price">£99.99</div>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check-circle"></i> Permanent access</li>
+                        <li><i class="fas fa-check-circle"></i> All future updates</li>
+                    </ul>
+                    {% if current_user.subscription_type == 'lifetime' %}
+                        <button class="btn btn-outline btn-block" disabled>Current Plan</button>
+                    {% else %}
+                        <form action="{{ url_for('purchase_lifetime') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-success btn-block">
+                                {% if current_user.subscription_type == 'monthly' %}Upgrade to Lifetime{% else %}Get Lifetime Access{% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Subscription Button -->
+    {% if current_user.get_subscription_status() and current_user.subscription_type == 'monthly' %}
+    <div class="account-section card danger-zone">
+        <div class="card-header">
+            <h3>Cancel Subscription</h3>
+        </div>
+        <div class="card-body">
+            <div class="danger-content">
+                <p><strong>Warning:</strong> Cancelling will remove your premium access at the end of your billing period.</p>
+                <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#cancelConfirmModal">
+                    Cancel Subscription
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Back to Home Button -->
+    <div class="back-to-home">
+        <a href="{{ url_for('index') }}" class="btn btn-outline">Back to Home</a>
+    </div>
+</div>
+
+<!-- Cancel Subscription Modal -->
+<div class="modal fade" id="cancelConfirmModal" tabindex="-1" role="dialog" aria-labelledby="cancelConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelConfirmModalLabel">Confirm Cancellation</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Your premium access will continue until:</p>
+                <p class="access-dates">
+                    {% if current_user.subscription_expires %}
+                        {{ current_user.subscription_expires.strftime('%Y-%m-%d') }}
+                    {% else %}
+                        No expiration date
+                    {% endif %}
+                </p>
+                <p>After this date you'll lose premium features.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Keep Subscription</button>
+                <form action="{{ url_for('cancel_subscription') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Show loading overlay during form submissions
+    $('form').on('submit', function() {
+        $('.loading-overlay').show();
+    });
+
+    // Initialize modal but don't show it
+    $('#cancelConfirmModal').modal({
+        show: false,
+        backdrop: 'static'
+    });
+
+    // Clean up any existing modal backdrops
+    $('body').removeClass('modal-open');
+    $('.modal-backdrop').remove();
+});
+</script>
+{% endblock %}
+
+<style>
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.fade:not(.show) {
+    display: none;
+}
+
+.loading-spinner {
+    width: 3rem;
+    height: 3rem;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.feature-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    background: var(--card-bg);
+    transition: transform 0.2s;
+}
+
+.feature-item:hover {
+    transform: translateY(-3px);
+}
+
+.feature-icon {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.feature-content h5 {
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.pricing-card {
+    position: relative;
+    padding: 2rem;
+    border-radius: 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.pricing-card.highlight {
+    border: 2px solid var(--primary-color);
+}
+
+.popular-badge {
+    position: absolute;
+    top: -12px;
+    right: 20px;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.price {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 1rem 0;
+    color: var(--primary-color);
+}
+
+.price span {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0;
+    text-align: left;
+}
+
+.feature-list li {
+    margin-bottom: 0.75rem;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.feature-list li i {
+    position: absolute;
+    left: 0;
+    color: var(--success-color);
+}
+
+.access-dates {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin: 1rem 0;
+}
+
+@media (max-width: 768px) {
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pricing-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>

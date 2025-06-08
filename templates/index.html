@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="loading-content">
+        <div class="spinner"></div>
+        <h3>Calculating Recommendations</h3>
+        <p>This may take a few moments...</p>
+    </div>
+</div>
+
+<div class="main-content">
+    <form method="POST" id="recommendationForm">
+        {{ form.hidden_tag() }}
+
+        <!-- Add error display for each field -->
+        {% if form.errors %}
+        <div class="alert alert-danger">
+            Please correct the errors below
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+            {{ form.investing_style.label(class="font-weight-bold") }}
+            {{ form.investing_style(class="form-control form-control-lg") }}
+            {% for error in form.investing_style.errors %}
+                <small class="text-danger">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.time_horizon.label(class="font-weight-bold") }}
+            {{ form.time_horizon(class="form-control form-control-lg") }}
+            {% for error in form.time_horizon.errors %}
+                <small class="text-danger">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.stocks_amount.label(class="font-weight-bold") }}
+            {{ form.stocks_amount(class="form-control form-control-lg") }}
+            {% for error in form.stocks_amount.errors %}
+                <small class="text-danger">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <!-- Premium Features Section -->
+        <div class="card premium-features mb-4">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0">Premium Features</h4>
+                <span class="badge badge-warning">PREMIUM</span>
+            </div>
+            <div class="card-body {% if not is_premium_user %}disabled{% endif %}">
+                <div class="form-check form-switch">
+                    {{ form.premium(class="form-check-input", id="premiumToggle", disabled=not is_premium_user) }}
+                    {{ form.premium.label(class="form-check-label font-weight-bold") }}
+                </div>
+
+                <div id="premiumFields" style="display: none;">
+                    <div class="form-group mt-3">
+                        {{ form.sector_focus.label(class="font-weight-bold") }}
+                        {{ form.sector_focus(class="form-control form-control-lg", disabled=not is_premium_user) }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.risk_tolerance.label(class="font-weight-bold") }}
+                        {{ form.risk_tolerance(class="form-control form-control-lg", disabled=not is_premium_user) }}
+                    </div>
+
+                    <div class="form-check form-switch">
+                        {{ form.dividend_preference(class="form-check-input", id="dividendPreference", disabled=not is_premium_user) }}
+                        {{ form.dividend_preference.label(class="form-check-label font-weight-bold") }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block py-3 px-4 my-3" id="submitBtn">
+            <i class="fas fa-chart-line mr-2"></i>Get Recommendations
+        </button>
+    </form>
+
+    <!-- Subscription buttons -->
+    {% if not is_premium_user %}
+    <div class="upgrade-cta mt-4 mb-4">
+        <div class="card p-3">
+            <div class="card-body text-center p-4">
+                <h4 class="card-title mb-4">Subscribe to access premium features</h4>
+                    <div class="cta-buttons d-flex justify-content-center gap-5">
+                        <!-- Monthly Subscription Button -->
+                        <form action="{{ url_for('subscribe') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success btn-lg px-4 py-3">
+                                <i class="fas fa-calendar-alt mr-2"></i>£4.99/month
+                            </button>
+                        </form>
+
+                        <!-- Lifetime Subscription Button -->
+                        <form action="{{ url_for('purchase_lifetime') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-warning btn-lg px-4 py-3">
+                                <i class="fas fa-gem mr-2"></i>£99.99 lifetime
+                            </button>
+                        </form>
+                    </div>
+                <p class="text-muted mt-4 mb-0">7-day free trial included with monthly subscription</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById('recommendationForm');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (form && loadingOverlay && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Only show loading if form is valid
+            if (form.checkValidity()) {
+                loadingOverlay.style.display = 'flex';
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Processing...';
+
+                // Prevent further clicks on the button
+                submitBtn.style.pointerEvents = 'none';
+            }
+            // Don't prevent default - allow normal form submission
+        });
+
+        // Premium toggle functionality
+        const premiumToggle = document.getElementById('premiumToggle');
+        const premiumFields = document.getElementById('premiumFields');
+
+        if (premiumToggle && premiumFields) {
+            function updatePremiumDisplay() {
+                premiumFields.style.display = premiumToggle.checked ? 'block' : 'none';
+            }
+
+            premiumToggle.addEventListener('change', updatePremiumDisplay);
+
+            // Initialize display
+            updatePremiumDisplay();
+        }
+    }
+});
+</script>
+{% endblock %}

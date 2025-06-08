@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Successful</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h3>Payment Successful!</h3>
+            </div>
+            <div class="card-body">
+                {% if current_user.get_subscription_status() %}
+                    {% if current_user.subscription_status == 'trialing' %}
+                        <p>Your 7-day free trial has started!</p>
+                        <p>Full access until {{ current_user.subscription_expires.strftime('%Y-%m-%d') }}</p>
+                    {% elif current_user.subscription_type == 'monthly' %}
+                        <p>Your monthly subscription is active!</p>
+                    {% elif current_user.subscription_type == 'lifetime' %}
+                        <p>Lifetime access granted!</p>
+                    {% endif %}
+                {% endif %}
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    Return to App
+                </a>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Force reload after 1 second to ensure session updates
+        setTimeout(() => {
+            window.location.reload(true);
+        }, 1000);
+    </script>
+</body>
+</html>

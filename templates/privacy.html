@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy - StockAI{% endblock %}
+
+{% block content %}
+<div class="legal-container">
+    <div class="legal-header">
+        <h1>Privacy Policy</h1>
+        <p class="last-updated">Last Updated: June 15, 2025</p>
+    </div>
+
+    <div class="legal-content">
+        <section class="legal-section">
+            <h2>1. Information We Collect</h2>
+            <p>We collect the following information when you use StockAI:</p>
+            <ul class="legal-list">
+                <li><i class="fas fa-user-circle"></i> <strong>Account Data:</strong> Email address, password (hashed), subscription status</li>
+                <li><i class="fas fa-chart-pie"></i> <strong>Investment Preferences:</strong> Risk tolerance, time horizon, sector focus</li>
+                <li><i class="fas fa-credit-card"></i> <strong>Payment Data:</strong> Processed securely by Stripe (we never store credit card details)</li>
+                <li><i class="fas fa-server"></i> <strong>Usage Data:</strong> IP address, browser type, timestamps (for analytics and security)</li>
+            </ul>
+        </section>
+
+        <section class="legal-section">
+            <h2>2. How We Use Your Data</h2>
+            <p>Your data helps us provide and improve our services:</p>
+            <ul class="legal-list">
+                <li><i class="fas fa-bullseye"></i> Generate personalized stock recommendations</li>
+                <li><i class="fas fa-shopping-cart"></i> Process subscriptions and payments</li>
+                <li><i class="fas fa-robot"></i> Improve our machine learning models (anonymized where possible)</li>
+                <li><i class="fas fa-headset"></i> Respond to support requests and troubleshoot issues</li>
+                <li><i class="fas fa-shield-alt"></i> Detect and prevent fraudulent activity</li>
+            </ul>
+        </section>
+
+        <section class="legal-section">
+            <h2>3. Data Sharing</h2>
+            <p>We only share data with trusted third parties when necessary:</p>
+            <ul class="legal-list">
+                <li><i class="fab fa-stripe"></i> <strong>Stripe:</strong> For secure payment processing (<a href="https://stripe.com/privacy" target="_blank">View Stripe's Privacy Policy</a>)</li>
+                <li><i class="fas fa-database"></i> <strong>Market Data Providers:</strong> Finnhub, Yahoo Finance for stock market data</li>
+                <li><i class="fas fa-balance-scale"></i> <strong>Legal Compliance:</strong> When required by law (e.g., subpoenas, court orders)</li>
+            </ul>
+            <p>We never sell your personal data to third parties.</p>
+        </section>
+
+        <section class="legal-section">
+            <h2>4. Your Rights</h2>
+            <p>You have control over your data:</p>
+            <ul class="legal-list">
+                <li><i class="fas fa-download"></i> Access or request a copy of your personal data</li>
+                <li><i class="fas fa-edit"></i> Update or correct inaccurate information</li>
+                <li><i class="fas fa-trash-alt"></i> Request deletion of your account and data</li>
+                <li><i class="fas fa-envelope"></i> Opt out of marketing communications</li>
+            </ul>
+            <p>Contact us at <a href="mailto:vallionisai@gmail.com">vallionisai@gmail.com</a> for data requests.</p>
+        </section>
+
+        <section class="legal-section">
+            <h2>5. Data Security</h2>
+            <p>We implement industry-standard measures to protect your information:</p>
+            <ul class="legal-list">
+                <li><i class="fas fa-lock"></i> Encryption of sensitive data in transit and at rest</li>
+                <li><i class="fas fa-user-shield"></i> Regular security audits and vulnerability testing</li>
+                <li><i class="fas fa-users-cog"></i> Limited access to personal data by our team</li>
+            </ul>
+        </section>
+
+        <section class="legal-section">
+            <h2>6. Cookies & Tracking</h2>
+            <p>We use essential cookies for:</p>
+            <ul class="legal-list">
+                <li><i class="fas fa-sign-in-alt"></i> Maintaining user sessions</li>
+                <li><i class="fas fa-shield-alt"></i> Security and fraud prevention</li>
+                <li><i class="fas fa-chart-line"></i> Basic analytics to improve our service</li>
+            </ul>
+            <p>You can disable cookies in your browser settings, though this may affect functionality.</p>
+        </section>
+
+        <div class="legal-footer">
+            <a href="{{ url_for('terms') }}" class="btn btn-outline">Terms of Service</a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline">Back to Home</a>
+        </div>
+
+        <div class="payment-info">
+            <small>Payment processing securely handled by <a href="https://stripe.com" target="_blank">Stripe</a></small>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.payment-info {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
+}
+
+.payment-info a {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+</style>
+{% endblock %}

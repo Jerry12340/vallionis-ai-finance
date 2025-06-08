@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Account Settings - StockAI{% endblock %}
+
+{% block content %}
+<div class="account-container">
+    <div class="account-header">
+        <h1>Account Settings</h1>
+        <p class="subheader">Manage your account details and preferences</p>
+    </div>
+
+    <!-- User Information Section -->
+    <div class="account-section card">
+        <div class="card-header">
+            <h3>Account Information</h3>
+        </div>
+        <div class="card-body">
+            <div class="account-info-grid">
+                <div>
+                    <p><strong>Email:</strong> {{ current_user.email }}</p>
+                    {% if current_user.password == 'google_oauth' %}
+                        <p><strong>Login Method:</strong> Google</p>
+                    {% else %}
+                        <p><strong>Login Method:</strong> Email & Password</p>
+                    {% endif %}
+                </div>
+                <div class="text-right">
+                    {% if current_user.get_subscription_status() %}
+                        {% if current_user.subscription_status == 'trialing' %}
+                            <span class="badge badge-warning">Trial Premium</span>
+                        {% else %}
+                            <span class="badge badge-success">Premium Member</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge badge-secondary">Free Account</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscription Status Section -->
+    <div class="account-section card">
+        <div class="card-header">
+            <h3>Subscription Status</h3>
+        </div>
+        <div class="card-body">
+            {% if current_user.get_subscription_status() %}
+                <div class="subscription-status">
+                    <div class="status-details">
+                        <p>
+                            <strong>Status:</strong>
+                            {% if current_user.subscription_status == 'trialing' %}
+                                Trial Premium (ends {{ current_user.subscription_expires.strftime('%Y-%m-%d') }})
+                            {% else %}
+                                Active
+                                {% if current_user.subscription_type == 'monthly' and current_user.subscription_expires %}
+                                    (renews {{ current_user.subscription_expires.strftime('%Y-%m-%d') }})
+                                {% endif %}
+                            {% endif %}
+                        </p>
+                        <p>
+                            <strong>Type:</strong> {{ 'Monthly Subscription' if current_user.subscription_type == 'monthly' else 'Lifetime Access' }}
+                        </p>
+                    </div>
+                    {% if current_user.stripe_customer_id %}
+                    <div class="status-actions">
+                        <a href="{{ url_for('subscription') }}" class="btn btn-outline">
+                            Manage Subscription
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="subscription-upgrade">
+                    <p>You're currently using a free account. Upgrade to premium for advanced features.</p>
+                    <a href="{{ url_for('subscription') }}" class="btn btn-primary">
+                        Upgrade to Premium
+                    </a>
+                </div>
+            {% endif %}
+            {% if current_user.subscription_status == 'pending_cancel' %}
+                <div class="alert alert-warning mt-3">
+                    <p>
+                        <strong>Status:</strong> Cancelling at period end<br>
+                        <strong>Access Until:</strong> {{ current_user.subscription_expires.strftime('%Y-%m-%d') }}
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Change Password Section - Only show for email/password users -->
+    {% if current_user.password != 'google_oauth' %}
+    <div class="account-section card">
+        <div class="card-header">
+            <h3>Change Password</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('change_password') }}" class="password-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="form-group">
+                    {{ change_password_form.old_password.label(class="form-label") }}
+                    {{ change_password_form.old_password(class="form-control") }}
+                    {% for error in change_password_form.old_password.errors %}
+                        <small class="text-danger">{{ error }}</small>
+                    {% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ change_password_form.new_password.label(class="form-label") }}
+                    {{ change_password_form.new_password(class="form-control") }}
+                    {% for error in change_password_form.new_password.errors %}
+                        <small class="text-danger">{{ error }}</small>
+                    {% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ change_password_form.confirm_password.label(class="form-label") }}
+                    {{ change_password_form.confirm_password(class="form-control") }}
+                    {% for error in change_password_form.confirm_password.errors %}
+                        <small class="text-danger">{{ error }}</small>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary">Update Password</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Danger Zone Section -->
+    <div class="account-section card danger-zone">
+        <div class="card-header">
+            <h3>Danger Zone</h3>
+        </div>
+        <div class="card-body">
+            <div class="danger-content">
+                <p><strong>Delete Account:</strong> This will permanently remove all your data.</p>
+                <button class="btn btn-danger" data-toggle="modal" data-target="#deleteAccountModal">
+                    Delete My Account
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Account Modal (hidden by default) -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1" role="dialog" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+                    <p class="text-danger"><strong>All your data will be permanently removed.</strong></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <form action="{{ url_for('delete_account') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-danger">Delete My Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="back-to-home">
+        <a href="{{ url_for('index') }}" class="btn btn-outline">Back to Home</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize modal but don't show it
+    $('#deleteAccountModal').modal({
+        show: false
+    });
+
+    // Clean up any existing modal backdrops
+    $('body').removeClass('modal-open');
+    $('.modal-backdrop').remove();
+});
+</script>
+{% endblock %}

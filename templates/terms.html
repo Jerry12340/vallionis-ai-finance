@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service - StockAI{% endblock %}
+
+{% block content %}
+<div class="legal-container">
+    <div class="legal-header">
+        <h1>Terms of Service</h1>
+        <p class="last-updated">Last Updated: June 15, 2025</p>
+    </div>
+
+    <div class="legal-content">
+        <section class="legal-section">
+            <h2>1. Acceptance of Terms</h2>
+            <p>By accessing or using StockAI ("Service"), you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the Service.</p>
+        </section>
+
+        <section class="legal-section">
+            <h2>2. Subscription Terms</h2>
+            <ul class="legal-list">
+                <li><i class="fas fa-sync-alt"></i> Monthly subscriptions automatically renew until canceled</li>
+                <li><i class="fas fa-lock"></i> Lifetime purchases are non-refundable</li>
+                <li><i class="fas fa-clock"></i> Free trials automatically convert to paid subscriptions unless canceled</li>
+                <li><i class="fas fa-calendar-alt"></i> Cancellations take effect at the end of the current billing period</li>
+            </ul>
+        </section>
+
+        <div class="disclaimer-box">
+            <h2>3. Important Disclaimer</h2>
+            <p><i class="fas fa-exclamation-triangle"></i> <strong>StockAI provides AI-generated suggestions, not financial advice.</strong> All investments carry risks. Past performance does not guarantee future results. Consult a qualified financial advisor before making investment decisions.</p>
+        </div>
+
+        <section class="legal-section">
+            <h2>4. User Responsibilities</h2>
+            <ul class="legal-list">
+                <li><i class="fas fa-check-circle"></i> Provide accurate and complete registration information</li>
+                <li><i class="fas fa-ban"></i> Not misuse the Service (spam, reverse engineering, etc.)</li>
+                <li><i class="fas fa-gavel"></i> Comply with all applicable laws and regulations</li>
+                <li><i class="fas fa-key"></i> Maintain the confidentiality of your account credentials</li>
+            </ul>
+        </section>
+
+        <section class="legal-section">
+            <h2>5. Termination</h2>
+            <p>We reserve the right to suspend or terminate accounts for violations of these Terms. You may delete your account at any time through your account settings.</p>
+        </section>
+
+        <section class="legal-section">
+            <h2>6. Changes to Terms</h2>
+            <p>We will notify users of significant changes via email or through in-app notifications. Continued use of the Service after changes constitutes acceptance of the new terms.</p>
+        </section>
+
+        <div class="legal-footer">
+            <a href="{{ url_for('privacy') }}" class="btn btn-outline">Privacy Policy</a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline">Back to Home</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.legal-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.legal-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.legal-header h1 {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.last-updated {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.legal-section {
+    margin-bottom: 2.5rem;
+}
+
+.legal-section h2 {
+    color: var(--primary-color);
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.legal-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.legal-list li {
+    margin-bottom: 0.8rem;
+    padding-left: 2rem;
+    position: relative;
+}
+
+.legal-list li i {
+    position: absolute;
+    left: 0;
+    color: var(--primary-color);
+}
+
+.disclaimer-box {
+    background-color: var(--warning-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--warning-color);
+    margin: 2rem 0;
+}
+
+.disclaimer-box h2 {
+    color: var(--warning-color);
+    border-bottom: none;
+}
+
+.disclaimer-box i {
+    margin-right: 0.5rem;
+    color: var(--warning-color);
+}
+
+.legal-footer {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .legal-container {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+    
+    .legal-header h1 {
+        font-size: 2rem;
+    }
+    
+    .legal-footer {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
