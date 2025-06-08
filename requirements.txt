@@ -21,7 +21,6 @@ timedelta==2020.12.3
 flask-migrate==4.1.0
 dotenv==0.9.9
 scikit-learn==1.7.0rc1
-mysql-connector-python==9.3.0
 authlib==1.6.0
 waitress==3.0.2
 psycopg2-binary==2.9.10

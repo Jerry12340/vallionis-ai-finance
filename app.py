@@ -68,16 +68,18 @@ app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
-# Database configuration - Simplified for MySQL/MariaDB
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///local.db').replace('postgres://', 'postgresql://')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_size': 5,
     'max_overflow': 10,
-    'pool_recycle': 300,
-    'pool_timeout': 30
+    'pool_recycle': 300
 }
+
+if os.getenv('FLASK_ENV') == 'production':
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args'] = {
+        'sslmode': 'require'
+    }
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
