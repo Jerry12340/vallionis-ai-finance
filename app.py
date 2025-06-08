@@ -36,12 +36,13 @@ from torch.utils.data import DataLoader, TensorDataset
 from wtforms.validators import ValidationError
 from authlib.integrations.flask_client import OAuth
 from authlib.common.security import generate_token
+from sqlalchemy.dialects import registry
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-print('newest')
+registry.register("postgresql", "psycopg2.dialect", "PostgreSQLDialect_psycopg2")
 
 # Load environment variables
 load_dotenv('.env')
