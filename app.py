@@ -69,13 +69,29 @@ if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
 # Database configuration - Simplified for MySQL/MariaDB
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+mysqlconnector://stockuser:123@localhost/stockrec')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///local.db').replace('postgres://', 'postgresql://')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_size': 5,
     'max_overflow': 10,
-    'pool_recycle': 3600
+    'pool_recycle': 300,
+    'pool_timeout': 30
 }
+
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+# Initialize database
+@app.before_first_request
+def initialize_database():
+    with app.app_context():
+        try:
+            db.create_all()
+            logger.info("✅ Database initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Database initialization failed: {str(e)}")
+            raise
 
 # Security configurations
 app.config.update(
@@ -104,8 +120,6 @@ logger = logging.getLogger(__name__)
 # Extensions Initialization
 # =============================================
 csrf = CSRFProtect(app)
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = None
@@ -134,10 +148,6 @@ class User(db.Model, UserMixin):
                 if self.subscription_expires and self.subscription_expires > datetime.utcnow():
                     return True
         return False
-
-# =============================================
-# Forms
-# =============================================
 
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -233,19 +243,6 @@ if not all([stripe.api_key, STRIPE_PUBLISHABLE_KEY, STRIPE_PRICE_ID, STRIPE_LIFE
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
-# =============================================
-# Database Initialization
-# =============================================
-def initialize_database():
-    with app.app_context():
-        try:
-            db.create_all()
-            db.engine.connect()
-            logger.info("✅ Database connection successful")
-        except Exception as e:
-            logger.error(f"❌ Database connection failed: {str(e)}")
-            raise
 
 
 # Forms

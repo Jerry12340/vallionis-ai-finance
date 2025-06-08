@@ -24,3 +24,4 @@ scikit-learn==1.7.0rc1
 mysql-connector-python==9.3.0
 authlib==1.6.0
 waitress==3.0.2
+psycopg2-binary==2.9.10
