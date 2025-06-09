@@ -45,9 +45,17 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 registry.register("postgresql", "psycopg2.dialect", "PostgreSQLDialect_psycopg2")
 
-registry.unregister("mysql")
-registry.unregister("mysql.connector")
-registry.unregister("mysqldb")
+# Prevent MySQL dialect loading
+try:
+    registry.deregister("mysql")
+    registry.deregister("mysql.connector")
+    registry.deregister("mysqldb")
+except AttributeError:
+    # Fallback for older SQLAlchemy versions
+    if hasattr(registry, '_impls'):
+        registry._impls.pop('mysql', None)
+        registry._impls.pop('mysql.connector', None)
+        registry._impls.pop('mysqldb', None)
 
 # Load environment variables
 load_dotenv('.env')
