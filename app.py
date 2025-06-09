@@ -74,14 +74,16 @@ def get_database_uri():
     if 'DATABASE_URL' in os.environ:
         uri = os.environ['DATABASE_URL']
         if uri.startswith('postgres://'):
-            uri = uri.replace('postgres://', 'postgresql://', 1)
+            uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
         return uri
     # Fallback to SQLite for local development
     return 'sqlite:///local.db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+
+# Explicitly configure engine options for PostgreSQL
+engine_options = {
     'pool_pre_ping': True,
     'pool_size': 5,
     'max_overflow': 10,
@@ -93,10 +95,17 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 # Add SSL requirement for production
 if os.getenv('FLASK_ENV') == 'production':
-    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args']['sslmode'] = 'require'
+    engine_options['connect_args']['sslmode'] = 'require'
 
-# Initialize database with explicit PostgreSQL dialect
-app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args']['client_encoding'] = 'utf8'
+# Force PostgreSQL dialect in connection string
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
+    engine_options['connect_args']['client_encoding'] = 'utf8'
+    # Explicitly specify PostgreSQL dialect
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace(
+        'postgresql://', 'postgresql+psycopg2://', 1
+    )
+
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
 # Initialize database
 db = SQLAlchemy(app)
@@ -109,6 +118,7 @@ def verify_database_connection():
         db.session.execute('SELECT 1')
         print("Database connection successful!")
         print(f"Using database: {db.engine.url}")
+        print(f"Dialect: {db.engine.dialect.name}")
     except Exception as e:
         print("Database connection failed!")
         print(f"Error: {str(e)}")
