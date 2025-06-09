@@ -83,53 +83,59 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# Verify database connection
-@app.before_first_request
-def verify_database_connection():
-    try:
-        db.session.execute('SELECT 1')
-        print("Database connection successful!")
-        print(f"Using database: {db.engine.url}")
-        print(f"Dialect: {db.engine.dialect.name}")
-    except Exception as e:
-        print("Database connection failed!")
-        print(f"Error: {str(e)}")
-        raise e
+# Security configurations
+app.config.update(
+    SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV') == 'production',
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+    PREFERRED_URL_SCHEME='https' if os.getenv('FLASK_ENV') == 'production' else 'http',
+    FLASK_ENV=os.getenv('FLASK_ENV', 'development'),
+    DEBUG=os.getenv('DEBUG', 'False').lower() == 'true'
+)
 
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG if app.config['DEBUG'] else logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
-# Verify database connection
-@app.before_first_request
-def verify_database_connection():
-    try:
-        db.session.execute('SELECT 1')
-        print("Database connection successful!")
-        print(f"Using database: {db.engine.url}")
-        print(f"Dialect: {db.engine.dialect.name}")
-    except Exception as e:
-        print("Database connection failed!")
-        print(f"Error: {str(e)}")
-        raise e
-
-
-# Verification
-@app.before_first_request
-def verify_database():
-    try:
-        with app.app_context():
+# Database initialization function
+def initialize_database():
+    with app.app_context():
+        try:
             # Test connection
             db.session.execute('SELECT 1').scalar()
-            logging.info(f"✅ Database connection established using {db.engine.dialect.name} dialect")
-
-            # Debug output
+            logger.info("✅ Database connection established")
             print("\n=== DATABASE CONFIGURATION ===")
             print(f"SQLAlchemy version: {sa.__version__}")
             print(f"Active dialect: {db.engine.dialect.name}")
             print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
             print("=============================\n")
 
-    except Exception as e:
-        logging.error(f"❌ Database connection failed: {str(e)}")
-        raise
+            # Create tables if they don't exist
+            db.create_all()
+            logger.info("✅ Database initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Database initialization failed: {str(e)}")
+            # If using SQLite, ensure the directory exists
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                os.makedirs(os.path.dirname('instance/'), exist_ok=True)
+                try:
+                    db.create_all()
+                except Exception as sqlite_error:
+                    logger.error(f"❌ SQLite initialization failed: {str(sqlite_error)}")
+                    raise
+            else:
+                raise
+
+# Run database initialization at app startup
+initialize_database()
 
 
 # Security configurations
