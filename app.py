@@ -70,15 +70,10 @@ app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
-# Corrected database URI handling
-if 'DATABASE_URL' in os.environ:
-    # Force PostgreSQL dialect with psycopg2 driver
-    uri = os.environ['DATABASE_URL']
-    if uri.startswith('postgres://'):
-        uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = uri
-else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///local.db'
+uri = os.environ['DATABASE_URL']
+if uri.startswith('postgres://'):
+    uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = uri
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -115,11 +110,6 @@ def initialize_database():
             # Test connection using text() wrapper
             db.session.execute(text('SELECT 1')).scalar()
             logger.info("✅ Database connection established")
-            print("\n=== DATABASE CONFIGURATION ===")
-            print(f"SQLAlchemy version: {sa.__version__}")
-            print(f"Active dialect: {db.engine.dialect.name}")
-            print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
-            print("=============================\n")
 
             # Create tables if they don't exist
             db.create_all()
