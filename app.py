@@ -37,6 +37,7 @@ from wtforms.validators import ValidationError
 from authlib.integrations.flask_client import OAuth
 from authlib.common.security import generate_token
 import sqlalchemy as sa
+from sqlalchemy.sql import text
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -109,8 +110,8 @@ logger = logging.getLogger(__name__)
 def initialize_database():
     with app.app_context():
         try:
-            # Test connection
-            db.session.execute('SELECT 1').scalar()
+            # Test connection using text() wrapper
+            db.session.execute(text('SELECT 1')).scalar()
             logger.info("✅ Database connection established")
             print("\n=== DATABASE CONFIGURATION ===")
             print(f"SQLAlchemy version: {sa.__version__}")
@@ -159,27 +160,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
-# Database initialization
-@app.before_first_request
-def initialize_database():
-    with app.app_context():
-        try:
-            # Create tables if they don't exist
-            db.create_all()
-            logger.info("✅ Database initialized successfully")
-        except Exception as e:
-            logger.error(f"❌ Database initialization failed: {str(e)}")
-            # If using SQLite, ensure the directory exists
-            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
-                os.makedirs(os.path.dirname('instance/'), exist_ok=True)
-                try:
-                    db.create_all()
-                except Exception as sqlite_error:
-                    logger.error(f"❌ SQLite initialization failed: {str(sqlite_error)}")
-                    raise
-            else:
-                raise
 
 # Security configurations
 app.config.update(
