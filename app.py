@@ -73,8 +73,9 @@ def get_database_uri():
     # Use Render's PostgreSQL database if DATABASE_URL exists
     if 'DATABASE_URL' in os.environ:
         uri = os.environ['DATABASE_URL']
+        # Replace with PostgreSQL dialect
         if uri.startswith('postgres://'):
-            uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
+            uri = uri.replace('postgres://', 'postgresql://', 1)
         return uri
     # Fallback to SQLite for local development
     return 'sqlite:///local.db'
@@ -97,13 +98,9 @@ engine_options = {
 if os.getenv('FLASK_ENV') == 'production':
     engine_options['connect_args']['sslmode'] = 'require'
 
-# Force PostgreSQL dialect in connection string
+# Only apply PostgreSQL-specific options if using PostgreSQL
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
     engine_options['connect_args']['client_encoding'] = 'utf8'
-    # Explicitly specify PostgreSQL dialect
-    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace(
-        'postgresql://', 'postgresql+psycopg2://', 1
-    )
 
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
