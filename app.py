@@ -37,12 +37,17 @@ from wtforms.validators import ValidationError
 from authlib.integrations.flask_client import OAuth
 from authlib.common.security import generate_token
 from sqlalchemy.dialects import registry
+import sqlalchemy as sa
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 registry.register("postgresql", "psycopg2.dialect", "PostgreSQLDialect_psycopg2")
+
+registry.unregister("mysql")
+registry.unregister("mysql.connector")
+registry.unregister("mysqldb")
 
 # Load environment variables
 load_dotenv('.env')
@@ -71,7 +76,12 @@ app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
-# Database configuration
+@app.before_first_request
+def check_dialect():
+    print(f"ACTIVE DIALECT: {db.engine.dialect.name}")
+    print(f"REGISTERED DIALECTS: {sa.dialects.registry.impls.keys()}")
+
+
 def get_database_uri():
     # Use Render's PostgreSQL database if DATABASE_URL exists
     if 'DATABASE_URL' in os.environ:
