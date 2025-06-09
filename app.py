@@ -45,60 +45,35 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 registry.register("postgresql", "psycopg2.dialect", "PostgreSQLDialect_psycopg2")
 
-# Prevent MySQL dialect loading
-try:
-    registry.deregister("mysql")
-    registry.deregister("mysql.connector")
-    registry.deregister("mysqldb")
-except AttributeError:
-    # Fallback for older SQLAlchemy versions
-    if hasattr(registry, '_impls'):
-        registry._impls.pop('mysql', None)
-        registry._impls.pop('mysql.connector', None)
-        registry._impls.pop('mysqldb', None)
+# Completely prevent MySQL dialect loading
+if hasattr(registry, '_impls'):  # Works for all SQLAlchemy versions
+    for mysql_dialect in ['mysql', 'mysql.connector', 'mysqldb']:
+        registry._impls.pop(mysql_dialect, None)
 
 # Load environment variables
 load_dotenv('.env')
 
 # Initialize Flask app
 app = Flask(__name__)
-oauth = OAuth(app)
-google = oauth.register(
-    name='google',
-    authorize_url='https://accounts.google.com/o/oauth2/auth',
-    access_token_url='https://oauth2.googleapis.com/token',
-    api_base_url='https://www.googleapis.com/oauth2/v1/',
-    client_kwargs={
-        'scope': 'openid email profile',
-        'token_endpoint_auth_method': 'client_secret_post'  # Important for desktop apps
-    },
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    jwks_uri='https://www.googleapis.com/oauth2/v3/certs',
-    issuer='https://accounts.google.com'
-)
 
-# =============================================
-# Configuration
-# =============================================
+# App configuration
 app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
-@app.before_first_request
-def check_dialect():
-    print(f"ACTIVE DIALECT: {db.engine.dialect.name}")
-    print(f"REGISTERED DIALECTS: {sa.dialects.registry.impls.keys()}")
 
-
+# Database URI configuration
 def get_database_uri():
-    # Use Render's PostgreSQL database if DATABASE_URL exists
-    if 'DATABASE_URL' in os.environ:
-        uri = os.environ['DATABASE_URL']
-        if uri.startswith('postgres://'):
-            uri = uri.replace('postgres://', 'postgresql://', 1)
-        return uri
-    # Fallback to SQLite for local development
-    return 'sqlite:///local.db'
+    uri = os.getenv('DATABASE_URL', 'sqlite:///local.db')
+
+    # Force PostgreSQL dialect format
+    if uri.startswith('postgres://'):
+        uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
+    elif uri.startswith('postgresql://'):
+        uri = uri.replace('postgresql://', 'postgresql+psycopg2://', 1)
+
+    return uri
+
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -108,17 +83,65 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'max_overflow': 10,
     'pool_recycle': 300,
     'connect_args': {
-        'connect_timeout': 5
+        'connect_timeout': 5,
+        'application_name': 'your_app_name'  # Helpful for monitoring
     }
 }
 
-# Add SSL requirement for production
+# Production-specific settings
 if os.getenv('FLASK_ENV') == 'production':
-    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args']['sslmode'] = 'require'
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args'].update({
+        'sslmode': 'require',
+        'sslrootcert': '/etc/ssl/certs/ca-certificates.crt'
+    })
 
-# Initialize database
+# Initialize database with forced dialect
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+
+# Verification
+@app.before_first_request
+def verify_database():
+    try:
+        with app.app_context():
+            # Test connection
+            db.session.execute('SELECT 1').scalar()
+            logging.info(f"✅ Database connection established using {db.engine.dialect.name} dialect")
+
+            # Debug output
+            print("\n=== DATABASE CONFIGURATION ===")
+            print(f"SQLAlchemy version: {sa.__version__}")
+            print(f"Active dialect: {db.engine.dialect.name}")
+            print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+            print("=============================\n")
+
+    except Exception as e:
+        logging.error(f"❌ Database connection failed: {str(e)}")
+        raise
+
+
+# Security configurations
+app.config.update(
+    SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV') == 'production',
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+    PREFERRED_URL_SCHEME='https' if os.getenv('FLASK_ENV') == 'production' else 'http',
+    FLASK_ENV=os.getenv('FLASK_ENV', 'development'),
+    DEBUG=os.getenv('DEBUG', 'False').lower() == 'true'
+)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG if app.config['DEBUG'] else logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Database initialization
 @app.before_first_request
