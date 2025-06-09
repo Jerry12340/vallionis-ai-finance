@@ -69,40 +69,32 @@ app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
-def get_database_uri():
-    # Use Render's PostgreSQL database if DATABASE_URL exists
-    if 'DATABASE_URL' in os.environ:
-        uri = os.environ['DATABASE_URL']
-        # Ensure we use PostgreSQL dialect
-        if uri.startswith('postgres://'):
-            uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
-        return uri
-    # Fallback to SQLite for local development
-    return 'sqlite:///local.db'
+# Simplified database URI handling
+if 'DATABASE_URL' in os.environ:
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL'].replace(
+        'postgres://', 'postgresql://', 1
+    )
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///local.db'
 
-app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Configure engine options
-engine_options = {
-    'pool_pre_ping': True,
-    'pool_size': 5,
-    'max_overflow': 10,
-    'pool_recycle': 300,
-    'connect_args': {
-        'connect_timeout': 5
-    }
-}
-
-# Add SSL requirement for production
-if os.getenv('FLASK_ENV') == 'production':
-    engine_options['connect_args']['sslmode'] = 'require'
-
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
 # Initialize database
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+# Verify database connection
+@app.before_first_request
+def verify_database_connection():
+    try:
+        db.session.execute('SELECT 1')
+        print("Database connection successful!")
+        print(f"Using database: {db.engine.url}")
+        print(f"Dialect: {db.engine.dialect.name}")
+    except Exception as e:
+        print("Database connection failed!")
+        print(f"Error: {str(e)}")
+        raise e
 
 
 # Verify database connection
