@@ -70,12 +70,7 @@ app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
-uri = os.environ['DATABASE_URL']
-if uri.startswith('postgres://'):
-    uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = uri
-
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 
 # Initialize database
 db = SQLAlchemy(app)
