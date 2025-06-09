@@ -73,9 +73,9 @@ def get_database_uri():
     # Use Render's PostgreSQL database if DATABASE_URL exists
     if 'DATABASE_URL' in os.environ:
         uri = os.environ['DATABASE_URL']
-        # Replace with PostgreSQL dialect
+        # Ensure we use PostgreSQL dialect
         if uri.startswith('postgres://'):
-            uri = uri.replace('postgres://', 'postgresql://', 1)
+            uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
         return uri
     # Fallback to SQLite for local development
     return 'sqlite:///local.db'
@@ -83,7 +83,7 @@ def get_database_uri():
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Explicitly configure engine options for PostgreSQL
+# Configure engine options
 engine_options = {
     'pool_pre_ping': True,
     'pool_size': 5,
@@ -98,15 +98,12 @@ engine_options = {
 if os.getenv('FLASK_ENV') == 'production':
     engine_options['connect_args']['sslmode'] = 'require'
 
-# Only apply PostgreSQL-specific options if using PostgreSQL
-if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
-    engine_options['connect_args']['client_encoding'] = 'utf8'
-
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
 # Initialize database
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
 
 # Verify database connection
 @app.before_first_request
