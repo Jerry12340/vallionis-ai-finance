@@ -70,11 +70,13 @@ app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
-# Simplified database URI handling
+# Corrected database URI handling
 if 'DATABASE_URL' in os.environ:
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL'].replace(
-        'postgres://', 'postgresql://', 1
-    )
+    # Force PostgreSQL dialect with psycopg2 driver
+    uri = os.environ['DATABASE_URL']
+    if uri.startswith('postgres://'):
+        uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = uri
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///local.db'
 
