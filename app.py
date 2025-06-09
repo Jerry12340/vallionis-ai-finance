@@ -36,44 +36,48 @@ from torch.utils.data import DataLoader, TensorDataset
 from wtforms.validators import ValidationError
 from authlib.integrations.flask_client import OAuth
 from authlib.common.security import generate_token
-from sqlalchemy.dialects import registry
 import sqlalchemy as sa
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-registry.register("postgresql", "psycopg2.dialect", "PostgreSQLDialect_psycopg2")
-
-# Completely prevent MySQL dialect loading
-if hasattr(registry, '_impls'):  # Works for all SQLAlchemy versions
-    for mysql_dialect in ['mysql', 'mysql.connector', 'mysqldb']:
-        registry._impls.pop(mysql_dialect, None)
-
 # Load environment variables
 load_dotenv('.env')
 
 # Initialize Flask app
 app = Flask(__name__)
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
+    access_token_url='https://oauth2.googleapis.com/token',
+    api_base_url='https://www.googleapis.com/oauth2/v1/',
+    client_kwargs={
+        'scope': 'openid email profile',
+        'token_endpoint_auth_method': 'client_secret_post'
+    },
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    jwks_uri='https://www.googleapis.com/oauth2/v3/certs',
+    issuer='https://accounts.google.com'
+)
 
-# App configuration
+# =============================================
+# Configuration
+# =============================================
 app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise ValueError("No SECRET_KEY set for Flask application")
 
-
-# Database URI configuration
 def get_database_uri():
-    uri = os.getenv('DATABASE_URL', 'sqlite:///local.db')
-
-    # Force PostgreSQL dialect format
-    if uri.startswith('postgres://'):
-        uri = uri.replace('postgres://', 'postgresql+psycopg2://', 1)
-    elif uri.startswith('postgresql://'):
-        uri = uri.replace('postgresql://', 'postgresql+psycopg2://', 1)
-
-    return uri
-
+    # Use Render's PostgreSQL database if DATABASE_URL exists
+    if 'DATABASE_URL' in os.environ:
+        uri = os.environ['DATABASE_URL']
+        if uri.startswith('postgres://'):
+            uri = uri.replace('postgres://', 'postgresql://', 1)
+        return uri
+    # Fallback to SQLite for local development
+    return 'sqlite:///local.db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -83,21 +87,32 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'max_overflow': 10,
     'pool_recycle': 300,
     'connect_args': {
-        'connect_timeout': 5,
-        'application_name': 'your_app_name'  # Helpful for monitoring
+        'connect_timeout': 5
     }
 }
 
-# Production-specific settings
+# Add SSL requirement for production
 if os.getenv('FLASK_ENV') == 'production':
-    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args'].update({
-        'sslmode': 'require',
-        'sslrootcert': '/etc/ssl/certs/ca-certificates.crt'
-    })
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args']['sslmode'] = 'require'
 
-# Initialize database with forced dialect
+# Initialize database with explicit PostgreSQL dialect
+app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args']['client_encoding'] = 'utf8'
+
+# Initialize database
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+# Verify database connection
+@app.before_first_request
+def verify_database_connection():
+    try:
+        db.session.execute('SELECT 1')
+        print("Database connection successful!")
+        print(f"Using database: {db.engine.url}")
+    except Exception as e:
+        print("Database connection failed!")
+        print(f"Error: {str(e)}")
+        raise e
 
 
 # Verification
