@@ -127,15 +127,6 @@ def initialize_database():
 initialize_database()
 
 
-def get_one_hot_encoder():
-    ohe_kwargs = {"handle_unknown": "ignore"}
-    if version.parse(sklearn.__version__) >= version.parse("1.2"):
-        ohe_kwargs["sparse_output"] = False
-    else:
-        ohe_kwargs["sparse"] = False
-    return OneHotEncoder(**ohe_kwargs)
-
-
 # Security configurations
 app.config.update(
     SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV') == 'production',
@@ -521,7 +512,7 @@ def train_rank(
             ]), numeric_features),
             ('cat', Pipeline([
                 ('imputer', SimpleImputer(strategy='constant', fill_value='Unknown')),
-                ('encoder', OneHotEncoder(handle_unknown='ignore', sparse=False))
+                ('encoder', get_one_hot_encoder())
             ]), categorical_features)
         ])
 
