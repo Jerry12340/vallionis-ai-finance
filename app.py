@@ -18,7 +18,6 @@ from wtforms import StringField, SelectField, IntegerField, BooleanField, Passwo
 from wtforms.validators import DataRequired, NumberRange, Email, EqualTo
 import stripe
 from jinja2 import Environment
-from datetime import datetime
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -36,7 +35,6 @@ from torch.utils.data import DataLoader, TensorDataset
 from wtforms.validators import ValidationError
 from authlib.integrations.flask_client import OAuth
 from authlib.common.security import generate_token
-import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 # Suppress warnings
@@ -257,22 +255,6 @@ class RecommendationForm(FlaskForm):
     )
 
 
-
-# =============================================
-# Helper Functions
-# =============================================
-gpu_checked = False
-
-@app.before_request
-def check_gpu():
-    global gpu_checked
-    if not gpu_checked:
-        if torch.cuda.is_available():
-            logger.info(f"✅ GPU detected: {torch.cuda.get_device_name(0)}")
-        else:
-            logger.warning("⚠️ No GPU detected - falling back to CPU")
-        gpu_checked = True
-
 # =============================================
 # External Services
 # =============================================
@@ -454,7 +436,7 @@ def build_training_set(df, years):
         sym = row['symbol']
         try:
             # Get maximum available history
-            hist = yf.Ticker(sym).history(period="max")
+            hist = yf.Ticker(sym).history(period="30y")
             if len(hist) < 2:
                 continue
 
@@ -491,84 +473,38 @@ def build_training_set(df, years):
     return result_df.dropna(subset=['annual_return']).copy()
 
 
-def train_rank(df, years, top_n, min_ann_return=10, max_pe=40, max_ann_return=25, investing_style=None,
-               risk_free_rate=4):
+def train_rank(
+    df, years, top_n, min_ann_return=10, max_pe=40, max_ann_return=25, investing_style=None, risk_free_rate=4
+):
     # Early exit for invalid input
     if df.empty or 'annual_return' not in df.columns:
         print("Empty dataframe or missing annual_return column")
         return pd.DataFrame()
 
-    # Check for required columns
-    required_columns = ['symbol', 'annual_return', 'trailing_pe', 'forward_pe',
-                        'beta', 'dividend_yield', 'debt_to_equity', 'earnings_growth',
-                        'ps_ratio', 'pb_ratio', 'roe', 'industry']
-
+    required_columns = [
+        'symbol', 'annual_return', 'trailing_pe', 'forward_pe', 'beta', 'dividend_yield', 'debt_to_equity',
+        'earnings_growth', 'ps_ratio', 'pb_ratio', 'roe', 'industry'
+    ]
     missing_cols = [col for col in required_columns if col not in df.columns]
     if missing_cols:
         print(f"Missing required columns: {missing_cols}")
         return pd.DataFrame()
 
     try:
-        # Define feature types
-        numeric_features = ['trailing_pe', 'forward_pe', 'beta', 'dividend_yield',
-                            'debt_to_equity', 'earnings_growth', 'ps_ratio', 'pb_ratio', 'roe']
+        # Prepare features
+        numeric_features = [
+            'trailing_pe', 'forward_pe', 'beta', 'dividend_yield', 'debt_to_equity', 'earnings_growth',
+            'ps_ratio', 'pb_ratio', 'roe'
+        ]
         categorical_features = ['industry']
 
         # Fill missing values
         df[numeric_features] = df[numeric_features].fillna(0)
         df[categorical_features] = df[categorical_features].fillna('Unknown')
 
-        # Extract and prepare features
-        X_numeric = df[numeric_features].values.astype(np.float32)
-        X_categorical = df[categorical_features].apply(lambda x: x.astype('category').cat.codes).values
-
-        # Combine features
-        X = np.column_stack([X_numeric, X_categorical])
         y = df['annual_return'].values
 
-        # Convert to tensors
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        X_tensor = torch.FloatTensor(X).to(device)
-        y_tensor = torch.FloatTensor(y).to(device)
-
-        # Define model
-        class StockPredictor(nn.Module):
-            def __init__(self, input_size):
-                super().__init__()
-                self.net = nn.Sequential(
-                    nn.Linear(input_size, 64),
-                    nn.ReLU(),
-                    nn.Linear(64, 32),
-                    nn.ReLU(),
-                    nn.Linear(32, 1)
-                )
-
-            def forward(self, x):
-                return self.net(x)
-
-        model = StockPredictor(X.shape[1]).to(device)
-        criterion = nn.MSELoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-        # Train
-        dataset = TensorDataset(X_tensor, y_tensor)
-        loader = DataLoader(dataset, batch_size=32, shuffle=True)
-
-        for epoch in range(100):
-            for batch_x, batch_y in loader:
-                optimizer.zero_grad()
-                outputs = model(batch_x)
-                loss = criterion(outputs.squeeze(), batch_y)
-                loss.backward()
-                optimizer.step()
-
-        # Predict
-        with torch.no_grad():
-            predictions = model(X_tensor).cpu().numpy().flatten()
-
-        df['predicted_ann_return'] = predictions
-
-        # Traditional ML model as fallback
+        # Preprocessing and model pipeline
         preprocessor = ColumnTransformer([
             ('num', Pipeline([
                 ('imputer', SimpleImputer(strategy='constant', fill_value=0)),
@@ -576,20 +512,17 @@ def train_rank(df, years, top_n, min_ann_return=10, max_pe=40, max_ann_return=25
             ]), numeric_features),
             ('cat', Pipeline([
                 ('imputer', SimpleImputer(strategy='constant', fill_value='Unknown')),
-                ('encoder', OneHotEncoder(handle_unknown='ignore'))
+                ('encoder', OneHotEncoder(handle_unknown='ignore', sparse=False))
             ]), categorical_features)
         ])
 
         model = Pipeline([
             ('pre', preprocessor),
-            ('rf', RandomForestRegressor(n_estimators=200, random_state=42))
+            ('rf', RandomForestRegressor(n_estimators=100, random_state=42, max_depth=5))
         ])
 
-        try:
-            model.fit(df[numeric_features + categorical_features], y)
-            df['predicted_ann_return'] = model.predict(df[numeric_features + categorical_features])
-        except Exception as e:
-            print(f"Fallback model failed: {str(e)}")
+        model.fit(df[numeric_features + categorical_features], y)
+        df['predicted_ann_return'] = model.predict(df[numeric_features + categorical_features])
 
         # Apply style adjustments
         shrinkage_factors = {
@@ -626,7 +559,7 @@ def train_rank(df, years, top_n, min_ann_return=10, max_pe=40, max_ann_return=25
         if max_ann_return is not None:
             df['predicted_ann_return'] = np.minimum(df['predicted_ann_return'], max_ann_return)
 
-        return df.nlargest(top_n, 'predicted_ann_return')
+        return df.nlargest(top_n, 'predicted_ann_return').copy()
 
     except Exception as e:
         print(f"Error in train_rank: {str(e)}")
