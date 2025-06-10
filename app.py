@@ -427,7 +427,7 @@ def fetch_valid_tickers(tickers, premium):
         if premium:
             time.sleep(1.5)
         else:
-            time.sleep(4)
+            time.sleep(3)
 
     # Create DataFrame with guaranteed columns
     df = pd.DataFrame(rows, columns=base_template.keys())
