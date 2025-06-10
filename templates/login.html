@@ -1,11 +1,17 @@
 {% extends "base.html" %}
 
+{% block navbar %}
+<nav class="nav" style="justify-content: center;">
+    <span class="logo" style="font-size: 2rem; font-weight: 700;">Vallionis finance AI</span>
+</nav>
+{% endblock %}
+
 {% block content %}
 <div class="card">
     <div class="card-header">
         <h2>Login</h2>
     </div>
-    
+
     <div class="card-body" style="padding: 2rem;">
         <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
