@@ -47,7 +47,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 load_dotenv('.env')
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 oauth = OAuth(app)
 redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
 google = oauth.register(
