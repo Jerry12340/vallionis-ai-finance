@@ -13,8 +13,9 @@
     </div>
 
     <header class="header">
+        {% block navbar %}
         <nav class="nav">
-            <a href="/" class="logo">StockAI</a>
+            <a href="/" class="logo">Vallionis finance AI</a>
             <div class="nav-links">
                 <a href="{{ url_for('account') }}">Account</a>
                 <a href="{{ url_for('subscription') }}">Subscription</a>
@@ -24,6 +25,7 @@
                 </form>
             </div>
         </nav>
+        {% endblock %}
     </header>
 
     <main class="container">
