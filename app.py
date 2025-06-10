@@ -29,13 +29,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 from datetime import datetime, timezone, timedelta
 from flask_migrate import Migrate
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
 from wtforms.validators import ValidationError
 from authlib.integrations.flask_client import OAuth
 from authlib.common.security import generate_token
 from sqlalchemy.sql import text
+import sklearn
+from packaging import version
+from sklearn.preprocessing import OneHotEncoder
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -125,6 +125,15 @@ def initialize_database():
 
 # Run database initialization at app startup
 initialize_database()
+
+
+def get_one_hot_encoder():
+    ohe_kwargs = {"handle_unknown": "ignore"}
+    if version.parse(sklearn.__version__) >= version.parse("1.2"):
+        ohe_kwargs["sparse_output"] = False
+    else:
+        ohe_kwargs["sparse"] = False
+    return OneHotEncoder(**ohe_kwargs)
 
 
 # Security configurations
