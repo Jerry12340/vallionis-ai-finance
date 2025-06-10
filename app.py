@@ -49,8 +49,11 @@ load_dotenv('.env')
 # Initialize Flask app
 app = Flask(__name__)
 oauth = OAuth(app)
+redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
 google = oauth.register(
     name='google',
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
     authorize_url='https://accounts.google.com/o/oauth2/auth',
     access_token_url='https://oauth2.googleapis.com/token',
     api_base_url='https://www.googleapis.com/oauth2/v1/',
