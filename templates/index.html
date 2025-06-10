@@ -87,15 +87,15 @@
             <div class="card-body text-center p-4">
                 <h4 class="card-title mb-4">Subscribe to access premium features</h4>
                     <div class="cta-buttons d-flex justify-content-center" style="gap: 2rem;">
-                        <form action="{{ url_for('subscribe') }}" method="POST">
+                        <form action="{{ url_for('subscribe') }}" method="POST" class="mx-2">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-success btn-lg px-4 py-3 mx-2">
+                            <button type="submit" class="btn btn-success btn-lg px-4 py-3">
                                 <i class="fas fa-calendar-alt mr-2"></i>£4.99/month
                             </button>
                         </form>
-                        <form action="{{ url_for('purchase_lifetime') }}" method="POST">
+                        <form action="{{ url_for('purchase_lifetime') }}" method="POST" class="mx-2">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-warning btn-lg px-4 py-3 mx-2">
+                            <button type="submit" class="btn btn-warning btn-lg px-4 py-3">
                                 <i class="fas fa-gem mr-2"></i>£99.99 lifetime
                             </button>
                         </form>
