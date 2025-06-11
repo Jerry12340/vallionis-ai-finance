@@ -75,7 +75,7 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-lg btn-block py-3 px-4 my-3" id="submitBtn">
+        <button type="submit" class="btn btn-primary btn-lg btn-block py-3 px-4 my-3" id="submitBtn" style="margin-bottom: 1rem;">
             <i class="fas fa-chart-line mr-2"></i>Get Recommendations
         </button>
     </form>
@@ -87,7 +87,7 @@
             <div class="card-body text-center p-4">
                 <h4 class="card-title mb-4">Subscribe to access premium features</h4>
                     <div class="cta-buttons d-flex justify-content-center">
-                        <form action="{{ url_for('subscribe') }}" method="POST" style="margin-bottom: 2rem;">
+                        <form action="{{ url_for('subscribe') }}" method="POST" style="margin-bottom: 1rem;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-success btn-lg px-4 py-3">
                                 <i class="fas fa-calendar-alt mr-2"></i>£4.99/month
