@@ -189,9 +189,44 @@ login_manager.login_view = 'login'
 login_manager.login_message = None
 login_manager.session_protection = "strong"
 
-# =============================================
-# Database Models
-# =============================================
+
+class UserPreferenceHistory(db.Model):
+    """Tracks historical changes to user preferences"""
+    __tablename__ = 'user_preference_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Preference fields
+    investing_style = db.Column(db.String(20))
+    time_horizon = db.Column(db.Integer)
+    risk_tolerance = db.Column(db.String(20))
+    sector_focus = db.Column(db.String(20))
+    dividend_preference = db.Column(db.Boolean)
+
+    # Relationship
+    user = db.relationship('User', backref=db.backref('preference_history', lazy='dynamic'))
+
+
+class CurrentUserPreferences(db.Model):
+    """Stores the current preferences for quick access"""
+    __tablename__ = 'current_user_preferences'
+
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Preference fields (same as above)
+    investing_style = db.Column(db.String(20))
+    time_horizon = db.Column(db.Integer)
+    risk_tolerance = db.Column(db.String(20))
+    sector_focus = db.Column(db.String(20))
+    dividend_preference = db.Column(db.Boolean)
+
+    # Relationship
+    user = db.relationship('User', backref=db.backref('current_preferences', uselist=False))
+
+
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
@@ -212,6 +247,46 @@ class User(db.Model, UserMixin):
                 if self.subscription_expires and self.subscription_expires > datetime.utcnow():
                     return True
         return False
+
+    def update_preferences(self, investing_style, time_horizon, risk_tolerance=None,
+                           sector_focus=None, dividend_preference=None):
+        """Update user preferences with history tracking"""
+        try:
+            # Create historical record
+            history_entry = UserPreferenceHistory(
+                user_id=self.id,
+                investing_style=investing_style,
+                time_horizon=time_horizon,
+                risk_tolerance=risk_tolerance,
+                sector_focus=sector_focus,
+                dividend_preference=dividend_preference
+            )
+            db.session.add(history_entry)
+
+            # Update or create current preferences
+            if not self.current_preferences:
+                self.current_preferences = CurrentUserPreferences(
+                    user_id=self.id,
+                    investing_style=investing_style,
+                    time_horizon=time_horizon,
+                    risk_tolerance=risk_tolerance,
+                    sector_focus=sector_focus,
+                    dividend_preference=dividend_preference
+                )
+            else:
+                self.current_preferences.investing_style = investing_style
+                self.current_preferences.time_horizon = time_horizon
+                self.current_preferences.risk_tolerance = risk_tolerance
+                self.current_preferences.sector_focus = sector_focus
+                self.current_preferences.dividend_preference = dividend_preference
+                self.current_preferences.last_updated = datetime.utcnow()
+
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error updating preferences for user {self.id}: {str(e)}")
+            return False
 
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -586,7 +661,15 @@ def process_request(
     dividend_preference=False
 ):
     try:
-        # Force premium to False if user doesn't have premium status
+        if current_user.is_authenticated:
+            current_user.update_preferences(
+                investing_style=investing_style,
+                time_horizon=time_horizon,
+                risk_tolerance=risk_tolerance if premium else None,
+                sector_focus=sector_focus if premium else None,
+                dividend_preference=dividend_preference if premium else None
+            )
+
         if premium and not current_user.get_subscription_status():
             premium = False
             flash('Premium features disabled - subscription required', 'warning')
@@ -1664,6 +1747,38 @@ def authorize_google():
         logger.error(f"Google login error: {str(e)}")
         flash('Google login failed', 'danger')
         return redirect(url_for('login'))
+
+
+@app.route('/preference-history')
+@login_required
+def preference_history():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    history = current_user.preference_history.order_by(
+        UserPreferenceHistory.timestamp.desc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
+
+    return render_template('preference_history.html', history=history)
+
+
+@app.route('/api/preference-trends')
+@login_required
+def preference_trends():
+    # Get all history records
+    records = current_user.preference_history.order_by(
+        UserPreferenceHistory.timestamp
+    ).all()
+
+    # Prepare data for charting
+    data = {
+        'dates': [r.timestamp.isoformat() for r in records],
+        'time_horizon': [r.time_horizon for r in records],
+        'investing_style': [r.investing_style for r in records],
+        'risk_tolerance': [r.risk_tolerance or 'medium' for r in records]
+    }
+
+    return jsonify(data)
 
 
 # Initialize scheduler
