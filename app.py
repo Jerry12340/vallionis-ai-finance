@@ -127,19 +127,6 @@ def initialize_database():
 # Run database initialization at app startup
 initialize_database()
 
-def download_render_cert():
-    cert_path = os.path.join(os.path.dirname(__file__), 'render_root.crt')
-    if not os.path.exists(cert_path):
-        import urllib.request
-        urllib.request.urlretrieve(
-            'https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem',
-            cert_path
-        )
-    return cert_path
-
-ssl_cert_path = download_render_cert()
-app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args']['sslrootcert'] = ssl_cert_path
-
 
 def get_one_hot_encoder():
     ohe_kwargs = {"handle_unknown": "ignore"}
