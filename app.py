@@ -36,6 +36,7 @@ from sqlalchemy.sql import text
 import sklearn
 from packaging import version
 from sklearn.preprocessing import OneHotEncoder
+import ssl
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -126,6 +127,19 @@ def initialize_database():
 # Run database initialization at app startup
 initialize_database()
 
+def download_render_cert():
+    cert_path = os.path.join(os.path.dirname(__file__), 'render_root.crt')
+    if not os.path.exists(cert_path):
+        import urllib.request
+        urllib.request.urlretrieve(
+            'https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem',
+            cert_path
+        )
+    return cert_path
+
+ssl_cert_path = download_render_cert()
+app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args']['sslrootcert'] = ssl_cert_path
+
 
 def get_one_hot_encoder():
     ohe_kwargs = {"handle_unknown": "ignore"}
@@ -168,6 +182,19 @@ app.config.update(
     FLASK_ENV=os.getenv('FLASK_ENV', 'development'),
     DEBUG=os.getenv('DEBUG', 'False').lower() == 'true'
 )
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {
+        'sslmode': 'verify-full',
+        'sslrootcert': '/etc/ssl/certs/ca-certificates.crt',  # Standard Linux cert path
+        'options': '-c statement_timeout=3000'  # 3-second timeout
+    },
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+    'pool_size': 5,
+    'max_overflow': 10
+}
 
 # Configure logging
 logging.basicConfig(
