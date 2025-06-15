@@ -175,17 +175,7 @@ app.config.update(
 )
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'connect_args': {
-        'sslmode': 'verify-full',
-        'sslrootcert': '/etc/ssl/certs/ca-certificates.crt',  # Standard Linux cert path
-        'options': '-c statement_timeout=3000'  # 3-second timeout
-    },
-    'pool_pre_ping': True,
-    'pool_recycle': 300,
-    'pool_size': 5,
-    'max_overflow': 10
-}
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configure logging
 logging.basicConfig(
