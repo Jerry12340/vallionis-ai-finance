@@ -1792,10 +1792,24 @@ def preference_trends():
 @app.route('/googlee52791lad856f67e.html')
 def google_verification():
     try:
+        # Verify file exists first
+        if not os.path.exists('googlee52791lad856f67e.html'):
+            return "File not found", 404
+
+        # Try reading the file
         with open('googlee52791lad856f67e.html') as f:
-            return f.read(), 200, {'Content-Type': 'text/html'}
+            content = f.read()
+            if not content:
+                return "Empty file", 500
+            return content, 200, {'Content-Type': 'text/html'}
+
     except Exception as e:
-        return f"❌ Error: {e}", 500
+        # Log the full error for debugging
+        print(f"Verification error: {str(e)}")
+        return f"❌ Error: {str(e)}", 500
+
+print(os.path.exists('googlee52791lad856f67e.html'))  # Should print True
+print(os.access('googlee52791lad856f67e.html', os.R_OK))
 
 
 # Initialize scheduler
