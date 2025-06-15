@@ -1789,7 +1789,7 @@ def preference_trends():
     return jsonify(data)
 
 
-@app.route('/googlee527911ad856f67e.html')  # Use your actual filename!
+@app.route('/googlee527911ad856f67e.html')
 def google_verification():
     return send_from_directory('static', 'googlee527911ad856f67e.html')
 
