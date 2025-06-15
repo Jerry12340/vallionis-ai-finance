@@ -1791,7 +1791,10 @@ def preference_trends():
 
 @app.route('/googlee527911ad856f67e.html')
 def google_verification():
-    return send_from_directory('.', 'googlee527911ad856f67e.html')
+    try:
+        return send_from_directory('.', 'googlee527911ad856f67e.html')
+    except Exception as e:
+        return f"❌ Error: {e}", 500
 
 
 # Initialize scheduler
