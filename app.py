@@ -1792,7 +1792,8 @@ def preference_trends():
 @app.route('/googlee527911ad856f67e.html')
 def google_verification():
     try:
-        return send_from_directory('.', 'googlee527911ad856f67e.html')
+        with open('googlee527911ad856f67e.html') as f:
+            return f.read(), 200, {'Content-Type': 'text/html'}
     except Exception as e:
         return f"❌ Error: {e}", 500
 
