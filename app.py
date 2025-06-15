@@ -36,7 +36,7 @@ from sqlalchemy.sql import text
 import sklearn
 from packaging import version
 from sklearn.preprocessing import OneHotEncoder
-import ssl
+from sqlalchemy import create_engine
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -100,7 +100,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Database initialization function
+engine = create_engine(
+    os.environ['DATABASE_URL'],
+    pool_pre_ping=True
+)
+
 def initialize_database():
     with app.app_context():
         try:
