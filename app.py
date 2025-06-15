@@ -1789,6 +1789,11 @@ def preference_trends():
     return jsonify(data)
 
 
+@app.route('/googlee527911ad856f67e.html')  # Use your actual filename!
+def google_verification():
+    return send_from_directory('static', 'googlee527911ad856f67e.html')
+
+
 # Initialize scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_customer_ids, 'interval', hours=1)
