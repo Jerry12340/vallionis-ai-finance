@@ -37,6 +37,7 @@ from packaging import version
 from sklearn.preprocessing import OneHotEncoder
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
+from psycopg2 import OperationalError as Psycopg2OpError
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -112,14 +113,14 @@ def initialize_database(retries=5, delay=20):
                 db.create_all()
             print("✅ Database initialized successfully")
             return
-        except OperationalError as e:
+        except (OperationalError, Psycopg2OpError) as e:
             print(f"❌ Attempt {i + 1} failed: {e}")
             if i < retries - 1:
+                print(f"⏳ Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
                 print("🚨 Failed to connect to database after retries. Exiting.")
                 raise
-
 
 initialize_database()
 
