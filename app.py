@@ -117,16 +117,6 @@ def initialize_database():
             logger.info("✅ Database initialized successfully")
         except Exception as e:
             logger.error(f"❌ Database initialization failed: {str(e)}")
-            # If using SQLite, ensure the directory exists
-            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
-                os.makedirs(os.path.dirname('instance/'), exist_ok=True)
-                try:
-                    db.create_all()
-                except Exception as sqlite_error:
-                    logger.error(f"❌ SQLite initialization failed: {str(sqlite_error)}")
-                    raise
-            else:
-                raise
 
 # Run database initialization at app startup
 initialize_database()
