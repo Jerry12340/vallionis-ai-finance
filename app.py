@@ -32,11 +32,11 @@ from flask_migrate import Migrate
 from wtforms.validators import ValidationError
 from authlib.integrations.flask_client import OAuth
 from authlib.common.security import generate_token
-from sqlalchemy.sql import text
 import sklearn
 from packaging import version
 from sklearn.preprocessing import OneHotEncoder
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -104,26 +104,20 @@ engine = create_engine(
     pool_pre_ping=True
 )
 
-def initialize_database(retries=5, delay=5):
-    with app.app_context():
-        for attempt in range(1, retries + 1):
-            try:
-                # Test connection
-                db.session.execute(text('SELECT 1')).scalar()
-                logger.info("✅ Database connection established")
+def initialize_database(retries=5, delay=20):
+    for i in range(retries):
+        try:
+            db.create_all()
+            print("✅ Database initialized successfully")
+            return
+        except OperationalError as e:
+            print(f"❌ Attempt {i + 1} failed: {e}")
+            if i < retries - 1:
+                time.sleep(delay)
+            else:
+                print("🚨 Failed to connect to database after retries. Exiting.")
+                raise
 
-                # Create tables if they don't exist
-                db.create_all()
-                logger.info("✅ Database initialized successfully")
-                break  # success!
-            except Exception as e:
-                logger.error(f"❌ Attempt {attempt}: Database initialization failed - {str(e)}")
-                if attempt < retries:
-                    logger.info(f"🔁 Retrying in {delay} seconds...")
-                    time.sleep(delay)
-                else:
-                    logger.critical("🚨 All retry attempts failed. Exiting.")
-                    raise
 
 initialize_database()
 
