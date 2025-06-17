@@ -122,6 +122,7 @@ def initialize_database(retries=5, delay=20):
                 print("🚨 Failed to connect to database after retries. Exiting.")
                 raise
 
+
 initialize_database()
 
 
