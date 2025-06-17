@@ -104,10 +104,12 @@ engine = create_engine(
     pool_pre_ping=True
 )
 
+
 def initialize_database(retries=5, delay=20):
     for i in range(retries):
         try:
-            db.create_all()
+            with app.app_context():
+                db.create_all()
             print("✅ Database initialized successfully")
             return
         except OperationalError as e:
