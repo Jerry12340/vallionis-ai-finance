@@ -1789,29 +1789,6 @@ def preference_trends():
     return jsonify(data)
 
 
-@app.route('/googlee52791lad856f67e.html')
-def google_verification():
-    try:
-        # Verify file exists first
-        if not os.path.exists('googlee52791lad856f67e.html'):
-            return "File not found", 404
-
-        # Try reading the file
-        with open('googlee52791lad856f67e.html') as f:
-            content = f.read()
-            if not content:
-                return "Empty file", 500
-            return content, 200, {'Content-Type': 'text/html'}
-
-    except Exception as e:
-        # Log the full error for debugging
-        print(f"Verification error: {str(e)}")
-        return f"❌ Error: {str(e)}", 500
-
-print(os.path.exists('googlee52791lad856f67e.html'))  # Should print True
-print(os.access('googlee52791lad856f67e.html', os.R_OK))
-
-
 # Initialize scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_customer_ids, 'interval', hours=1)
