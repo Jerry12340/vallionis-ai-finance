@@ -74,7 +74,6 @@ if not app.secret_key:
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 
-# Initialize database
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
@@ -105,20 +104,27 @@ engine = create_engine(
     pool_pre_ping=True
 )
 
-def initialize_database():
+def initialize_database(retries=5, delay=5):
     with app.app_context():
-        try:
-            # Test connection using text() wrapper
-            db.session.execute(text('SELECT 1')).scalar()
-            logger.info("✅ Database connection established")
+        for attempt in range(1, retries + 1):
+            try:
+                # Test connection
+                db.session.execute(text('SELECT 1')).scalar()
+                logger.info("✅ Database connection established")
 
-            # Create tables if they don't exist
-            db.create_all()
-            logger.info("✅ Database initialized successfully")
-        except Exception as e:
-            logger.error(f"❌ Database initialization failed: {str(e)}")
+                # Create tables if they don't exist
+                db.create_all()
+                logger.info("✅ Database initialized successfully")
+                break  # success!
+            except Exception as e:
+                logger.error(f"❌ Attempt {attempt}: Database initialization failed - {str(e)}")
+                if attempt < retries:
+                    logger.info(f"🔁 Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                else:
+                    logger.critical("🚨 All retry attempts failed. Exiting.")
+                    raise
 
-# Run database initialization at app startup
 initialize_database()
 
 
