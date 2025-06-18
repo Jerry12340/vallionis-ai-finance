@@ -1785,8 +1785,7 @@ def preference_trends():
 
 @app.route('/googlee527911ad856f67e.html')
 def google_verification():
-    return send_from_directory('.', 'googlee527911ad856f67e.html')
-
+    return send_from_directory('.', 'googlee527911ad856f67e.html', mimetype='text/html')
 
 # Initialize scheduler
 scheduler = BackgroundScheduler()
