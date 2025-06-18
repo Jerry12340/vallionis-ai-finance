@@ -1786,8 +1786,8 @@ def preference_trends():
 @app.route('/googlee527911ad856f67e.html')
 def serve_google_verification():
     return send_from_directory(
-        os.path.join(app.root_path, 'static'),  # Or '.' if file is in root
-        'static/googlee527911ad856f67e.html',
+        os.path.join(app.root_path, 'static'),  # Looks in /static
+        'googlee527911ad856f67e.html',          # File is directly in /static
         mimetype='text/html'
     )
 
