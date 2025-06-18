@@ -38,6 +38,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from psycopg2 import OperationalError as Psycopg2OpError
+from flask import send_file
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -1784,13 +1785,20 @@ def preference_trends():
 
 
 @app.route('/googlee527911ad856f67e.html')
-def serve_google_verification():
-    print(f"Looking for file at: {os.path.join(app.root_path, 'static', 'googlee527911ad856f67e.html')}")  # Debug
-    return send_from_directory(
-        os.path.join(app.root_path, 'static'),
-        'googlee527911ad856f67e.html',
-        mimetype='text/html'
-    )
+def serve_verification():
+    try:
+        return send_file(
+            'static/googlee527911ad856f67e.html',
+            mimetype='text/html'
+        )
+    except Exception as e:
+        print(f"Error serving file: {str(e)}")
+        abort(500, description="Verification file not found")
+
+
+print(f"Current working directory: {os.getcwd()}")
+print(f"Static folder contents: {os.listdir('static')}")
+
 
 # Initialize scheduler
 scheduler = BackgroundScheduler()
