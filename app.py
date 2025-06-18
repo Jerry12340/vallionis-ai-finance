@@ -1785,9 +1785,10 @@ def preference_trends():
 
 @app.route('/googlee527911ad856f67e.html')
 def serve_google_verification():
+    print(f"Looking for file at: {os.path.join(app.root_path, 'static', 'googlee527911ad856f67e.html')}")  # Debug
     return send_from_directory(
-        os.path.join(app.root_path, 'static'),  # Looks in /static
-        'googlee527911ad856f67e.html',          # File is directly in /static
+        os.path.join(app.root_path, 'static'),
+        'googlee527911ad856f67e.html',
         mimetype='text/html'
     )
 
