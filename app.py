@@ -1786,11 +1786,7 @@ def preference_trends():
 
 @app.route('/googlee527911ad856f67e.html')
 def serve_verification():
-    file_path = os.path.join('static', 'googlee527911ad856f67e.html')
-    if not os.path.exists(file_path):
-        print(f"File not found at: {os.path.abspath(file_path)}")
-        abort(404)
-    return send_file(file_path, mimetype='text/html')
+    return send_from_directory('static', 'googlee527911ad856f67e.html')
 
 
 # Initialize scheduler
