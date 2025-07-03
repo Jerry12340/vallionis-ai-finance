@@ -1789,6 +1789,11 @@ def serve_verification():
     return send_from_directory('static', 'googlee527911ad856f67e.html')
 
 
+@app.route('/verify')
+def verify():
+    return render_template('verify.html')
+
+
 # Initialize scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_customer_ids, 'interval', hours=1)
