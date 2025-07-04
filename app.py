@@ -1794,6 +1794,11 @@ def verify():
     return render_template('verify.html')
 
 
+@app.route('/contact')
+def contact():
+    return "<h1>Contact Page</h1><p>Email us at vallionisai@gmail.com</p>"
+
+
 # Initialize scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_customer_ids, 'interval', hours=1)
