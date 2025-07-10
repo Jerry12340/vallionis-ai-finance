@@ -1796,7 +1796,7 @@ def verify():
 
 @app.route('/contact')
 def contact():
-    return "<h1>Contact Page</h1><p>Email us at vallionisai@gmail.com</p>"
+    return render_template('contact.html')
 
 
 # Initialize scheduler

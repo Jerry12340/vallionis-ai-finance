@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us | Stock Portfolio Advisor</title>
+    <style>
+        :root {
+            --primary: #2962ff;
+            --secondary: #1e88e5;
+            --text: #2d3748;
+            --light-bg: #f7fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --gray: #718096;
+            --success: #48bb78;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--light-bg);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--gray);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .contact-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .contact-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .contact-card h2 {
+            color: var(--primary);
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .contact-icon {
+            font-size: 1.5rem;
+        }
+
+        .contact-info {
+            margin-top: 1.5rem;
+        }
+
+        .contact-info p {
+            margin: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .contact-form {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary);
+        }
+
+        .success-message {
+            background-color: var(--success);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            display: none;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1.5rem;
+            color: var(--gray);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Contact Stock Portfolio Advisor</h1>
+            <p class="subtitle">Have questions about our investment recommendations or need support? Reach out to our team through any of the channels below.</p>
+        </header>
+
+        <div class="contact-grid">
+            <div class="contact-card">
+                <h2><span class="contact-icon">📧</span> Email Support</h2>
+                <div class="contact-info">
+                    <p><strong>General Inquiries:</strong> info@stockadvisor.com</p>
+                    <p><strong>Technical Support:</strong> support@stockadvisor.com</p>
+                    <p><strong>Premium Members:</strong> premium-support@stockadvisor.com</p>
+                </div>
+            </div>
+
+            <div class="contact-card">
+                <h2><span class="contact-icon">📞</span> Phone Support</h2>
+                <div class="contact-info">
+                    <p><strong>US:</strong> +1 (555) 123-4567</p>
+                    <p><strong>International:</strong> +1 (555) 987-6543</p>
+                    <p><strong>Hours:</strong> Mon-Fri, 9AM-5PM EST</p>
+                </div>
+            </div>
+
+            <div class="contact-card">
+                <h2><span class="contact-icon">🏢</span> Corporate Office</h2>
+                <div class="contact-info">
+                    <p>Stock Portfolio Advisor LLC</p>
+                    <p>123 Financial District</p>
+                    <p>New York, NY 10005</p>
+                    <p>United States</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="contact-form">
+            <h2 style="text-align: center; margin-top: 0;">Send Us a Message</h2>
+
+            <div class="success-message" id="successMessage">
+                Thank you! Your message has been sent successfully. We'll get back to you soon.
+            </div>
+
+            <form id="contactForm">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="subject">Subject</label>
+                    <select id="subject" name="subject" required>
+                        <option value="">Select a topic</option>
+                        <option value="general">General Inquiry</option>
+                        <option value="technical">Technical Support</option>
+                        <option value="premium">Premium Membership</option>
+                        <option value="feedback">Product Feedback</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Your Message</label>
+                    <textarea id="message" name="message" required></textarea>
+                </div>
+
+                <button type="submit" class="btn">Send Message</button>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; {{ current_year }} Stock Portfolio Advisor. All rights reserved.</p>
+    </footer>
+
+    <script>
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // In a real implementation, you would send the form data to your server here
+            // For this example, we'll just show the success message
+
+            document.getElementById('successMessage').style.display = 'block';
+            this.reset();
+
+            // Scroll to show the success message
+            document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
+
+            // Hide the success message after 5 seconds
+            setTimeout(function() {
+                document.getElementById('successMessage').style.display = 'none';
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
