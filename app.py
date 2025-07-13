@@ -110,8 +110,6 @@ engine = create_engine(
 def initialize_database(retries=5, delay=20):
     for i in range(retries):
         try:
-            with app.app_context():
-                db.create_all()
             print("✅ Database initialized successfully")
             return
         except (OperationalError, Psycopg2OpError) as e:
@@ -386,11 +384,6 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
-
-
-# Database setup
-with app.app_context():
-    db.create_all()
 
 
 # Track customer ID changes
