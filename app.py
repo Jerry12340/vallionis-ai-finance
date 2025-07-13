@@ -70,7 +70,6 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 3600,
     'connect_args': {
         'sslmode': 'require',
-        'options': '-c statement_timeout=30000'
     }
 }
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
