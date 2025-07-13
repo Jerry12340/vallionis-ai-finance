@@ -49,6 +49,68 @@ load_dotenv('.env')
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='static', template_folder='templates')
+
+app.secret_key = os.getenv('SECRET_KEY')
+if not app.secret_key:
+    raise ValueError("No SECRET_KEY set for Flask application")
+
+# Database URL handling
+db_url = os.environ.get('DATABASE_URL')
+if not db_url:
+    raise ValueError("DATABASE_URL environment variable is not set")
+
+# Fix common URL issues
+if db_url.startswith('postgres://'):
+    db_url = db_url.replace('postgres://', 'postgresql://', 1)
+
+# Configure SQLAlchemy
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 3600,
+    'connect_args': {
+        'sslmode': 'require',
+        'options': '-c statement_timeout=30000'
+    }
+}
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize extensions (order matters)
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+# Verify database connection
+try:
+    with app.app_context():
+        db.engine.connect()
+    print("✅ Database connection verified")
+except Exception as e:
+    print(f"❌ Failed to connect to database: {e}")
+    raise
+
+# Security configurations (ONLY ONE INSTANCE)
+app.config.update(
+    SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV') == 'production',
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+    PREFERRED_URL_SCHEME='https' if os.getenv('FLASK_ENV') == 'production' else 'http',
+    FLASK_ENV=os.getenv('FLASK_ENV', 'development'),
+    DEBUG=os.getenv('DEBUG', 'False').lower() == 'true'
+)
+
+# Configure logging (ONLY ONE INSTANCE)
+logging.basicConfig(
+    level=logging.DEBUG if app.config['DEBUG'] else logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Initialize OAuth after db
 oauth = OAuth(app)
 redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
 google = oauth.register(
@@ -65,45 +127,6 @@ google = oauth.register(
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     jwks_uri='https://www.googleapis.com/oauth2/v3/certs',
     issuer='https://accounts.google.com'
-)
-
-# =============================================
-# Configuration
-# =============================================
-app.secret_key = os.getenv('SECRET_KEY')
-if not app.secret_key:
-    raise ValueError("No SECRET_KEY set for Flask application")
-
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-
-# Security configurations
-app.config.update(
-    SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV') == 'production',
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
-    PREFERRED_URL_SCHEME='https' if os.getenv('FLASK_ENV') == 'production' else 'http',
-    FLASK_ENV=os.getenv('FLASK_ENV', 'development'),
-    DEBUG=os.getenv('DEBUG', 'False').lower() == 'true'
-)
-
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG if app.config['DEBUG'] else logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('app.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
-
-engine = create_engine(
-    os.environ['DATABASE_URL'],
-    pool_pre_ping=True
 )
 
 
