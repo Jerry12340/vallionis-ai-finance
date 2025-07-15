@@ -23,5 +23,5 @@ flask-migrate==4.1.0
 authlib==1.6.0
 waitress==3.0.2
 psycopg2-binary==2.9.10
-Werkzeug==2.0.3
+Werkzeug==2.3.7
 SQLAlchemy==2.0.30
