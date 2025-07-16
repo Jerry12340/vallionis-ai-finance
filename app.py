@@ -147,6 +147,54 @@ def initialize_database(retries=5, delay=20):
 initialize_database()
 
 
+def fetch_valid_tickers(tickers, premium):
+    import time
+    rows = []
+    skipped_tickers = []
+
+    # Define expected columns with defaults
+    base_template = {
+        'symbol': None,
+        'industry': 'Unknown',
+        'trailing_pe': None,
+        'forward_pe': None,
+        'beta': None,
+        'dividend_yield': None,
+        'debt_to_equity': None,
+        'earnings_growth': None,
+        'ps_ratio': None,
+        'pb_ratio': None,
+        'roe': None,
+        'next_5y_eps_growth': np.nan,
+        'next_year_eps_growth': np.nan,
+        'peg_ratio': np.nan
+    }
+
+    for sym in tickers:
+        try:
+            data = get_industry_pe_beta(sym) or {}  # Ensure we get a dict
+            # Merge with base template to ensure all keys exist
+            merged_data = {**base_template, **data}
+            merged_data['symbol'] = sym  # Ensure symbol is always set
+            rows.append(merged_data)
+        except Exception as e:
+            print(f"Error fetching {sym}: {e}")
+            # Add fallback entry with symbol only
+            rows.append({**base_template, 'symbol': sym})
+            skipped_tickers.append(sym)
+        if premium:
+            time.sleep(1.5)
+        else:
+            time.sleep(3)
+
+    # Create DataFrame with guaranteed columns
+    df = pd.DataFrame(rows, columns=list(base_template.keys()))
+
+    # Fill remaining missing values
+    df['industry'] = df['industry'].fillna('Unknown')
+    return df
+
+
 def get_one_hot_encoder():
     ohe_kwargs = {"handle_unknown": "ignore"}
     if version.parse(sklearn.__version__) >= version.parse("1.2"):
