@@ -898,17 +898,76 @@ def process_request(
         if not premium:
             final_recs = final_recs.iloc[3:].head(original_stocks)
 
-        # --- SORT BY predicted_ann_return DESCENDING ---
+        # Sort by predicted_ann_return descending
         if not final_recs.empty and 'predicted_ann_return' in final_recs.columns:
             final_recs = final_recs.sort_values('predicted_ann_return', ascending=False).reset_index(drop=True)
 
-        # --- CALCULATE SUGGESTED ALLOCATION (proportional to predicted_ann_return) ---
+        # Calculate suggested allocation
         if not final_recs.empty and final_recs['predicted_ann_return'].sum() > 0:
             final_recs['suggested_allocation'] = final_recs['predicted_ann_return'] / final_recs[
                 'predicted_ann_return'].sum()
         else:
             final_recs['suggested_allocation'] = 1 / len(final_recs) if not final_recs.empty else 0
 
+        def format_stocks(source_df):
+            formatted = []
+            if not source_df.empty:
+                for _, row in source_df.iterrows():
+                    formatted.append({
+                        'symbol': row.get('symbol', 'N/A'),
+                        'total_return': f"{row.get('predicted_total_return', 0):.0f}%",
+                        'annual_return': f"{row.get('predicted_ann_return', 0):.2f}%",
+                        'trailing_pe': f"{row.get('trailing_pe', 0):.2f}",
+                        'forward_pe': f"{row.get('forward_pe', 0):.2f}",
+                        'beta': f"{row.get('beta', 0):.2f}",
+                        'dividend_yield': f"{row.get('dividend_yield', 0):.2f}%",
+                        'debt_to_equity': f"{row.get('debt_to_equity', 0):.2f}%",
+                        'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
+                        'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
+                        'roe': f"{row.get('roe', 0) * 100:.2f}%",
+                        'next_5y_growth': (
+                            f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%"
+                            if row.get('next_5y_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                        ),
+                        'next_year_growth': (
+                            f"{row.get('next_year_eps_growth', 0) * 100:.1f}%"
+                            if row.get('next_year_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                        ),
+                        'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
+                        'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
+                        'industry': row.get('industry', 'N/A')
+                    })
+            return formatted
+
+        recommendations = format_stocks(final_recs)
+
+        # Calculate weighted averages
+        if not final_recs.empty:
+            avg_annual = (final_recs['predicted_ann_return'] * final_recs['suggested_allocation']).sum()
+            avg_div = (final_recs['dividend_yield'] * final_recs['suggested_allocation']).sum()
+            avg_total = (final_recs['predicted_total_return'] * final_recs['suggested_allocation']).sum()
+        else:
+            avg_annual = avg_div = avg_total = 0
+
+        # Prepare session data
+        csv_buffer = StringIO()
+        final_recs.to_csv(csv_buffer, index=False)
+        session['csv_data'] = csv_buffer.getvalue()
+        session['premium'] = premium
+
+        return {
+            'recommendations': recommendations,
+            'recs_count': len(final_recs),
+            'averages': {
+                'total': f"{avg_total:.0f}%",
+                'annual': f"{avg_annual:.2f}%",
+                'dividend': f"{avg_div:.2f}%"
+            },
+            'premium': premium,
+            'sector_focus': sector_focus,
+            'risk_tolerance': risk_tolerance,
+            'dividend_preference': dividend_preference
+        }
 
     except Exception as e:
         logger.error(f"Error in process_request: {str(e)}")
