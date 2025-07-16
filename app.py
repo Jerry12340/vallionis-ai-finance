@@ -908,8 +908,14 @@ def process_request(
                         'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
                         'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
                         'roe': f"{row.get('roe', 0) * 100:.2f}%",
-                        'next_5y_growth': f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%" if row.get(
-                            'next_5y_eps_growth') else 'N/A',
+                        'next_5y_growth': (
+                            f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%"
+                            if row.get('next_5y_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                        ),
+                        'next_year_growth': (
+                            f"{row.get('next_year_eps_growth', 0) * 100:.1f}%"
+                            if row.get('next_year_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                        ),
                         'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
                         'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
                         'industry': row.get('industry', 'N/A')
