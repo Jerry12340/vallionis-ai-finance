@@ -40,7 +40,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from psycopg2 import OperationalError as Psycopg2OpError
 from flask import send_file
-from alpha_vantage.fundamentals import Fundamentals
+from alpha_vantage.timeseries import TimeSeries
+from alpha_vantage.techindicators import TechIndicators
 from alpha_vantage.alphavantage import AlphaVantageError
 import requests
 
@@ -578,35 +579,22 @@ def get_industry_pe_beta(symbol):
 
             try:
                 rate_limit_alpha_vantage()
-                av = Fundamentals(key=ALPHA_VANTAGE_API_KEY)
+                ts = TimeSeries(key=ALPHA_VANTAGE_API_KEY)
+                ti = TechIndicators(key=ALPHA_VANTAGE_API_KEY)
 
-                # Get annual earnings
-                earnings = av.get_earnings_annual(symbol)
-                historical_growth = None
-                if earnings and 'annualEarnings' in earnings:
-                    eps_data = earnings['annualEarnings']
-                    if len(eps_data) >= 2:
-                        historical_growth = (float(eps_data[0]['reportedEPS']) /
-                                             float(eps_data[1]['reportedEPS'])) ** (1 / 1) - 1
+                # Get earnings data (using different endpoint)
+                earnings, _ = ts.get_earnings(symbol)
+                estimates = {}
 
-                # Get analyst estimates
-                estimates = av.get_company_earnings(symbol)
-                next_year_growth = None
-                five_year_growth = None
-
-                if estimates and 'quarterlyEarnings' in estimates:
-                    quarterly = estimates['quarterlyEarnings']
+                if earnings and 'quarterlyEarnings' in earnings:
+                    quarterly = earnings['quarterlyEarnings']
                     if len(quarterly) >= 4:
-                        next_year_growth = (float(quarterly[0]['reportedEPS']) /
-                                            float(quarterly[4]['reportedEPS'])) ** (1 / 1) - 1
+                        estimates['next_year_growth'] = (float(quarterly[0]['reportedEPS']) /
+                                                         float(quarterly[4]['reportedEPS'])) ** (1 / 1) - 1
 
-                return {
-                    'historical_growth': historical_growth,
-                    'next_year_growth': next_year_growth,
-                    'five_year_growth': five_year_growth
-                }
+                return estimates
 
-            except (AlphaVantageError, requests.exceptions.RequestException, ValueError) as e:
+            except Exception as e:
                 logger.debug(f"Alpha Vantage failed for {symbol}: {str(e)}")
                 return None
 
