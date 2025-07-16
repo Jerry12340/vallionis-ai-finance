@@ -446,15 +446,21 @@ def load_user(user_id):
 # Helper functions
 def get_industry_pe_beta(symbol):
     try:
-        profile = finnhub_client.company_profile2(symbol=symbol)
-        industry = profile.get('finnhubIndustry', 'Unknown')
-        metrics = finnhub_client.company_basic_financials(symbol=symbol, metric='all').get('metric', {})
+        # Try to get Finnhub data if client is available
+        industry = 'Unknown'
+        metrics = {}
+        if finnhub_client:
+            try:
+                profile = finnhub_client.company_profile2(symbol=symbol)
+                industry = profile.get('finnhubIndustry', 'Unknown')
+                metrics = finnhub_client.company_basic_financials(symbol=symbol, metric='all').get('metric', {})
+            except Exception as e:
+                logger.warning(f"Finnhub data fetch failed for {symbol}: {e}")
 
-        # Get data from both Finnhub and Yahoo Finance
+        # Get data from Yahoo Finance
         yf_data = yf.Ticker(symbol).info
 
-        trailing_pe = metrics.get('peExclExtraTTM') or metrics.get('peInclExtraTTM') or metrics.get(
-            'peBasicExclExtraTTM')
+        trailing_pe = metrics.get('peExclExtraTTM') or metrics.get('peInclExtraTTM') or metrics.get('peBasicExclExtraTTM') or yf_data.get('trailingPE')
         forward_pe = metrics.get('forwardPE') or metrics.get('forwardPEInclExtraTTM') or yf_data.get('forwardPE')
         beta = metrics.get('beta') or yf_data.get('beta')
         dividend_yield = metrics.get('dividendYield') or yf_data.get('dividendYield')
@@ -465,69 +471,53 @@ def get_industry_pe_beta(symbol):
         pb_ratio = yf_data.get('priceToBook')
         roe = yf_data.get('returnOnEquity')
 
+        # Growth and PEG ratio
+        next_5y_eps_growth = yf_data.get('earningsGrowth', np.nan)  # Yahoo: 'earningsGrowth' is usually next year, not 5y
+        next_year_eps_growth = yf_data.get('earningsQuarterlyGrowth', np.nan)
+        peg_ratio = yf_data.get('pegRatio', np.nan)
+
+        # If Finnhub has these, prefer them (if available)
+        if metrics.get('5YAvgEPSGrowth'):
+            next_5y_eps_growth = metrics.get('5YAvgEPSGrowth', next_5y_eps_growth)
+        if metrics.get('nextYearEPSGrowth'):
+            next_year_eps_growth = metrics.get('nextYearEPSGrowth', next_year_eps_growth)
+        if metrics.get('pegRatio'):
+            peg_ratio = metrics.get('pegRatio', peg_ratio)
+
         return {
             'symbol': symbol,
             'industry': industry,
-            'trailing_pe': round(trailing_pe, 2) if trailing_pe else None,
-            'forward_pe': round(forward_pe, 2) if forward_pe else None,
-            'beta': round(beta, 2) if beta else None,
-            'dividend_yield': round(dividend_yield, 4) if dividend_yield else None,
-            'debt_to_equity': round(debt_to_equity, 2) if debt_to_equity else None,
-            'earnings_growth': round(earnings_growth, 2) if earnings_growth else None,
-            'ps_ratio': round(ps_ratio, 2) if ps_ratio else None,
-            'pb_ratio': round(pb_ratio, 2) if pb_ratio else None,
-            'roe': round(roe, 2) if roe else None
+            'trailing_pe': round(trailing_pe, 2) if trailing_pe is not None else None,
+            'forward_pe': round(forward_pe, 2) if forward_pe is not None else None,
+            'beta': round(beta, 2) if beta is not None else None,
+            'dividend_yield': round(dividend_yield, 4) if dividend_yield is not None else None,
+            'debt_to_equity': round(debt_to_equity, 2) if debt_to_equity is not None else None,
+            'earnings_growth': round(earnings_growth, 2) if earnings_growth is not None else None,
+            'ps_ratio': round(ps_ratio, 2) if ps_ratio is not None else None,
+            'pb_ratio': round(pb_ratio, 2) if pb_ratio is not None else None,
+            'roe': round(roe, 2) if roe is not None else None,
+            'next_5y_eps_growth': float(next_5y_eps_growth) if next_5y_eps_growth is not None else np.nan,
+            'next_year_eps_growth': float(next_year_eps_growth) if next_year_eps_growth is not None else np.nan,
+            'peg_ratio': float(peg_ratio) if peg_ratio is not None else np.nan
         }
     except Exception as e:
         logger.error(f"Error fetching data for {symbol}: {str(e)}")
         return {
             'symbol': symbol,
-            'industry': 'Unknown'
+            'industry': 'Unknown',
+            'trailing_pe': None,
+            'forward_pe': None,
+            'beta': None,
+            'dividend_yield': None,
+            'debt_to_equity': None,
+            'earnings_growth': None,
+            'ps_ratio': None,
+            'pb_ratio': None,
+            'roe': None,
+            'next_5y_eps_growth': np.nan,
+            'next_year_eps_growth': np.nan,
+            'peg_ratio': np.nan
         }
-
-
-def fetch_valid_tickers(tickers, premium):
-    rows = []
-    skipped_tickers = []
-
-    # Define expected columns with defaults
-    base_template = {
-        'symbol': None,
-        'industry': 'Unknown',
-        'trailing_pe': None,
-        'forward_pe': None,
-        'beta': None,
-        'dividend_yield': None,
-        'debt_to_equity': None,
-        'earnings_growth': None,
-        'ps_ratio': None,
-        'pb_ratio': None,
-        'roe': None
-    }
-
-    for sym in tickers:
-        try:
-            data = get_industry_pe_beta(sym) or {}  # Ensure we get a dict
-            # Merge with base template to ensure all keys exist
-            merged_data = {**base_template, **data}
-            merged_data['symbol'] = sym  # Ensure symbol is always set
-            rows.append(merged_data)
-        except Exception as e:
-            print(f"Error fetching {sym}: {e}")
-            # Add fallback entry with symbol only
-            rows.append({**base_template, 'symbol': sym})
-            skipped_tickers.append(sym)
-        if premium:
-            time.sleep(1.5)
-        else:
-            time.sleep(3)
-
-    # Create DataFrame with guaranteed columns
-    df = pd.DataFrame(rows, columns=base_template.keys())
-
-    # Fill remaining missing values
-    df['industry'] = df['industry'].fillna('Unknown')
-    return df
 
 
 def build_training_set(df, years):
