@@ -42,7 +42,7 @@ from psycopg2 import OperationalError as Psycopg2OpError
 from flask import send_file
 from alpha_vantage.timeseries import TimeSeries
 from alpha_vantage.techindicators import TechIndicators
-from alpha_vantage.alphavantage import AlphaVantageError
+from alpha_vantage.alphavantage import AlphaVantage
 import requests
 
 # Suppress warnings
