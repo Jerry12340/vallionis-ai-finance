@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, session, Response, abort, redirect, url_for, jsonify, send_from_directory
+from flask import Flask, render_template, request, session, Response, abort, redirect, url_for, jsonify, \
+    send_from_directory
 import time
 import pandas as pd
 import yfinance as yf
@@ -359,11 +360,13 @@ class User(db.Model, UserMixin):
             logger.error(f"Error updating preferences for user {self.id}: {str(e)}")
             return False
 
+
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
+
 
 class RecommendationForm(FlaskForm):
     investing_style = SelectField(
@@ -431,6 +434,7 @@ if not all([stripe.api_key, STRIPE_PUBLISHABLE_KEY, STRIPE_PRICE_ID, STRIPE_LIFE
     logger.error("Missing Stripe LIVE configuration in environment variables")
     raise ValueError("Stripe live credentials not configured")
 
+
 # =============================================
 # User Loader
 # =============================================
@@ -446,7 +450,6 @@ class ChangePasswordForm(FlaskForm):
     confirm_password = PasswordField('Confirm New Password',
                                      validators=[DataRequired(), EqualTo('new_password')])
     submit = SubmitField('Change Password')
-
 
 
 class LoginForm(FlaskForm):
@@ -485,6 +488,7 @@ class RegistrationForm(FlaskForm):
         if User.query.filter_by(email=field.data).first():
             raise ValidationError('Email already registered')
 
+
 # Login manager
 @login_manager.user_loader
 def load_user(user_id):
@@ -508,7 +512,8 @@ def get_industry_pe_beta(symbol):
         # Get data from Yahoo Finance
         yf_data = yf.Ticker(symbol).info
 
-        trailing_pe = metrics.get('peExclExtraTTM') or metrics.get('peInclExtraTTM') or metrics.get('peBasicExclExtraTTM') or yf_data.get('trailingPE')
+        trailing_pe = metrics.get('peExclExtraTTM') or metrics.get('peInclExtraTTM') or metrics.get(
+            'peBasicExclExtraTTM') or yf_data.get('trailingPE')
         forward_pe = metrics.get('forwardPE') or metrics.get('forwardPEInclExtraTTM') or yf_data.get('forwardPE')
         beta = metrics.get('beta') or yf_data.get('beta')
         dividend_yield = metrics.get('dividendYield') or yf_data.get('dividendYield')
@@ -520,7 +525,8 @@ def get_industry_pe_beta(symbol):
         roe = yf_data.get('returnOnEquity')
 
         # Growth and PEG ratio
-        next_5y_eps_growth = yf_data.get('earningsGrowth', np.nan)  # Yahoo: 'earningsGrowth' is usually next year, not 5y
+        next_5y_eps_growth = yf_data.get('earningsGrowth',
+                                         np.nan)  # Yahoo: 'earningsGrowth' is usually next year, not 5y
         next_year_eps_growth = yf_data.get('earningsQuarterlyGrowth', np.nan)
         peg_ratio = yf_data.get('pegRatio', np.nan)
         if metrics.get('pegRatio'):
@@ -741,14 +747,15 @@ def train_rank(
         traceback.print_exc()
         return pd.DataFrame()
 
+
 def process_request(
-    investing_style,
-    time_horizon,
-    stocks_amount,
-    premium,
-    sector_focus='all',
-    risk_tolerance='medium',
-    dividend_preference=False
+        investing_style,
+        time_horizon,
+        stocks_amount,
+        premium,
+        sector_focus='all',
+        risk_tolerance='medium',
+        dividend_preference=False
 ):
     try:
         if current_user.is_authenticated:
@@ -897,9 +904,27 @@ def process_request(
 
         # --- CALCULATE SUGGESTED ALLOCATION (proportional to predicted_ann_return) ---
         if not final_recs.empty and final_recs['predicted_ann_return'].sum() > 0:
-            final_recs['suggested_allocation'] = final_recs['predicted_ann_return'] / final_recs['predicted_ann_return'].sum()
+            final_recs['suggested_allocation'] = final_recs['predicted_ann_return'] / final_recs[
+                'predicted_ann_return'].sum()
         else:
             final_recs['suggested_allocation'] = 1 / len(final_recs) if not final_recs.empty else 0
+
+
+    except Exception as e:
+        logger.error(f"Error in process_request: {str(e)}")
+        return {
+            'recommendations': [],
+            'recs_count': 0,
+            'averages': {
+                'total': '0%',
+                'annual': '0%',
+                'dividend': '0%'
+            },
+            'premium': premium,
+            'sector_focus': sector_focus,
+            'risk_tolerance': risk_tolerance,
+            'dividend_preference': dividend_preference
+        }
 
     def format_stocks(source_df):
         formatted = []
@@ -954,22 +979,6 @@ def process_request(
                 'total': f"{avg_total:.0f}%",
                 'annual': f"{avg_annual:.2f}%",
                 'dividend': f"{avg_div:.2f}%"
-            },
-            'premium': premium,
-            'sector_focus': sector_focus,
-            'risk_tolerance': risk_tolerance,
-            'dividend_preference': dividend_preference
-        }
-
-    except Exception as e:
-        logger.error(f"Error in process_request: {str(e)}")
-        return {
-            'recommendations': [],
-            'recs_count': 0,
-            'averages': {
-                'total': '0%',
-                'annual': '0%',
-                'dividend': '0%'
             },
             'premium': premium,
             'sector_focus': sector_focus,
@@ -1033,6 +1042,7 @@ def download():
         mimetype="text/csv",
         headers={"Content-disposition": "attachment; filename=recommended_portfolio.csv"}
     )
+
 
 def safe_stripe_call(func, *args, **kwargs):
     """Wrapper to handle Stripe ID inconsistencies"""
@@ -1446,6 +1456,7 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(check_expired_subscriptions, 'interval', hours=1)
 scheduler.start()
 
+
 @app.route('/change-password', methods=['GET', 'POST'])
 @login_required
 def change_password():
@@ -1478,11 +1489,13 @@ def create_portal_session():
         flash(f'Error accessing subscription portal: {str(e)}', 'danger')
         return redirect(url_for('subscription'))
 
+
 @app.context_processor
 def inject_user():
     return dict(
         is_premium=current_user.is_authenticated and current_user.get_subscription_status()
     )
+
 
 @app.route('/account', methods=['GET', 'POST'])
 @login_required
@@ -1556,6 +1569,7 @@ def fix_customer_id():
         app.logger.error(f"Customer ID recovery error: {str(e)}")
 
     return redirect(url_for('subscription'))
+
 
 @app.route('/delete-account', methods=['POST'])
 @login_required
