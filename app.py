@@ -523,6 +523,8 @@ def get_industry_pe_beta(symbol):
         next_5y_eps_growth = yf_data.get('earningsGrowth', np.nan)  # Yahoo: 'earningsGrowth' is usually next year, not 5y
         next_year_eps_growth = yf_data.get('earningsQuarterlyGrowth', np.nan)
         peg_ratio = yf_data.get('pegRatio', np.nan)
+        if metrics.get('pegRatio'):
+            peg_ratio = metrics.get('pegRatio', peg_ratio)
 
         # If Finnhub has these, prefer them (if available)
         if metrics.get('5YAvgEPSGrowth'):
@@ -531,6 +533,14 @@ def get_industry_pe_beta(symbol):
             next_year_eps_growth = metrics.get('nextYearEPSGrowth', next_year_eps_growth)
         if metrics.get('pegRatio'):
             peg_ratio = metrics.get('pegRatio', peg_ratio)
+
+        if (peg_ratio is None or peg_ratio == 0 or np.isnan(peg_ratio)) and forward_pe and next_5y_eps_growth:
+            try:
+                # PEG = PE / (Growth Rate * 100), growth as a decimal
+                if next_5y_eps_growth != 0:
+                    peg_ratio = forward_pe / (next_5y_eps_growth * 100)
+            except Exception:
+                pass
 
         return {
             'symbol': symbol,
@@ -891,36 +901,35 @@ def process_request(
         else:
             final_recs['suggested_allocation'] = 1 / len(final_recs) if not final_recs.empty else 0
 
-        # Format recommendations
-        def format_stocks(source_df):
-            formatted = []
-            if not source_df.empty:
-                for _, row in source_df.iterrows():
-                    formatted.append({
-                        'symbol': row.get('symbol', 'N/A'),
-                        'total_return': f"{row.get('predicted_total_return', 0):.0f}%",
-                        'annual_return': f"{row.get('predicted_ann_return', 0):.2f}%",
-                        'trailing_pe': f"{row.get('trailing_pe', 0):.2f}",
-                        'forward_pe': f"{row.get('forward_pe', 0):.2f}",
-                        'beta': f"{row.get('beta', 0):.2f}",
-                        'dividend_yield': f"{row.get('dividend_yield', 0):.2f}%",
-                        'debt_to_equity': f"{row.get('debt_to_equity', 0):.2f}%",
-                        'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
-                        'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
-                        'roe': f"{row.get('roe', 0) * 100:.2f}%",
-                        'next_5y_growth': (
-                            f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%"
-                            if row.get('next_5y_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
-                        ),
-                        'next_year_growth': (
-                            f"{row.get('next_year_eps_growth', 0) * 100:.1f}%"
-                            if row.get('next_year_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
-                        ),
-                        'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
-                        'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
-                        'industry': row.get('industry', 'N/A')
-                    })
-            return formatted
+    def format_stocks(source_df):
+        formatted = []
+        if not source_df.empty:
+            for _, row in source_df.iterrows():
+                formatted.append({
+                    'symbol': row.get('symbol', 'N/A'),
+                    'total_return': f"{row.get('predicted_total_return', 0):.0f}%",
+                    'annual_return': f"{row.get('predicted_ann_return', 0):.2f}%",
+                    'trailing_pe': f"{row.get('trailing_pe', 0):.2f}",
+                    'forward_pe': f"{row.get('forward_pe', 0):.2f}",
+                    'beta': f"{row.get('beta', 0):.2f}",
+                    'dividend_yield': f"{row.get('dividend_yield', 0):.2f}%",
+                    'debt_to_equity': f"{row.get('debt_to_equity', 0):.2f}%",
+                    'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
+                    'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
+                    'roe': f"{row.get('roe', 0) * 100:.2f}%",
+                    'next_5y_growth': (
+                        f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%"
+                        if row.get('next_5y_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                    ),
+                    'next_year_growth': (
+                        f"{row.get('next_year_eps_growth', 0) * 100:.1f}%"
+                        if row.get('next_year_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                    ),
+                    'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
+                    'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
+                    'industry': row.get('industry', 'N/A')
+                })
+        return formatted
 
         recommendations = format_stocks(final_recs)
 
