@@ -497,91 +497,127 @@ def load_user(user_id):
 
 # Helper functions
 def get_industry_pe_beta(symbol):
+    """
+    Fetch fundamental data for a stock with realistic growth projections
+    Args:
+        symbol (str): Stock ticker symbol
+    Returns:
+        dict: Dictionary containing financial metrics with capped growth rates
+    """
+    # Initialize with default values
+    result = {
+        'symbol': symbol,
+        'industry': 'Unknown',
+        'trailing_pe': None,
+        'forward_pe': None,
+        'beta': None,
+        'dividend_yield': None,
+        'debt_to_equity': None,
+        'earnings_growth': None,
+        'ps_ratio': None,
+        'pb_ratio': None,
+        'roe': None,
+        'next_5y_eps_growth': np.nan,
+        'next_year_eps_growth': np.nan,
+        'peg_ratio': np.nan,
+        'market_cap': None
+    }
+
     try:
-        # Try to get Finnhub data if client is available
-        industry = 'Unknown'
-        metrics = {}
+        # First get market cap to determine company size category
+        yf_data = yf.Ticker(symbol).info
+        market_cap = yf_data.get('marketCap', 0)
+        result['market_cap'] = market_cap
+
+        # Define growth caps based on company size (in billions)
+        GROWTH_CAPS = {
+            'mega': 0.25,  # >$200B (AMZN, AAPL, etc.)
+            'large': 0.35,  # $10B-$200B
+            'small': 0.50  # <$10B
+        }
+        company_size = 'mega' if market_cap > 200e9 else 'large' if market_cap > 10e9 else 'small'
+        max_growth = GROWTH_CAPS[company_size]
+
+        # Get Finnhub data if available
+        finnhub_metrics = {}
         if finnhub_client:
             try:
                 profile = finnhub_client.company_profile2(symbol=symbol)
-                industry = profile.get('finnhubIndustry', 'Unknown')
-                metrics = finnhub_client.company_basic_financials(symbol=symbol, metric='all').get('metric', {})
+                result['industry'] = profile.get('finnhubIndustry', 'Unknown')
+                finnhub_metrics = finnhub_client.company_basic_financials(symbol=symbol, metric='all').get('metric', {})
             except Exception as e:
                 logger.warning(f"Finnhub data fetch failed for {symbol}: {e}")
 
-        # Get data from Yahoo Finance
+        # Get Yahoo Finance data
         yf_data = yf.Ticker(symbol).info
 
-        trailing_pe = metrics.get('peExclExtraTTM') or metrics.get('peInclExtraTTM') or metrics.get(
-            'peBasicExclExtraTTM') or yf_data.get('trailingPE')
-        forward_pe = metrics.get('forwardPE') or metrics.get('forwardPEInclExtraTTM') or yf_data.get('forwardPE')
-        beta = metrics.get('beta') or yf_data.get('beta')
-        dividend_yield = metrics.get('dividendYield') or yf_data.get('dividendYield')
-        debt_to_equity = yf_data.get('debtToEquity')
-        earnings_growth = yf_data.get('earningsQuarterlyGrowth')
-        revenue_growth = yf_data.get('revenueQuarterlyGrowth')
-        ps_ratio = yf_data.get('priceToSalesTrailing12Months')
-        pb_ratio = yf_data.get('priceToBook')
-        roe = yf_data.get('returnOnEquity')
+        # Helper function to get realistic growth rate
+        def get_capped_growth():
+            """Get growth rate with multiple fallback sources and capping"""
+            sources = []
 
-        # Growth and PEG ratio
-        next_5y_eps_growth = yf_data.get('earningsGrowth',
-                                         np.nan)  # Yahoo: 'earningsGrowth' is usually next year, not 5y
-        next_year_eps_growth = yf_data.get('earningsQuarterlyGrowth', np.nan)
-        peg_ratio = yf_data.get('pegRatio', np.nan)
-        if metrics.get('pegRatio'):
-            peg_ratio = metrics.get('pegRatio', peg_ratio)
-
-        # If Finnhub has these, prefer them (if available)
-        if metrics.get('5YAvgEPSGrowth'):
-            next_5y_eps_growth = metrics.get('5YAvgEPSGrowth', next_5y_eps_growth)
-        if metrics.get('nextYearEPSGrowth'):
-            next_year_eps_growth = metrics.get('nextYearEPSGrowth', next_year_eps_growth)
-        if metrics.get('pegRatio'):
-            peg_ratio = metrics.get('pegRatio', peg_ratio)
-
-        if (peg_ratio is None or peg_ratio == 0 or np.isnan(peg_ratio)) and forward_pe and next_5y_eps_growth:
+            # 1. Try Yahoo Finance analyst estimates first (most reliable)
             try:
-                # PEG = PE / (Growth Rate * 100), growth as a decimal
-                if next_5y_eps_growth != 0:
-                    peg_ratio = forward_pe / (next_5y_eps_growth * 100)
-            except Exception:
-                pass
+                analyst_estimates = yf.Ticker(symbol).analyst_price_target
+                if not analyst_estimates.empty and 'growth' in analyst_estimates.columns:
+                    median_growth = analyst_estimates['growth'].median()
+                    if not np.isnan(median_growth):
+                        sources.append(median_growth / 100)  # Convert % to decimal
+            except Exception as e:
+                logger.debug(f"Couldn't get analyst estimates: {e}")
 
-        return {
-            'symbol': symbol,
-            'industry': industry,
-            'trailing_pe': round(trailing_pe, 2) if trailing_pe is not None else None,
-            'forward_pe': round(forward_pe, 2) if forward_pe is not None else None,
-            'beta': round(beta, 2) if beta is not None else None,
-            'dividend_yield': round(dividend_yield, 4) if dividend_yield is not None else None,
-            'debt_to_equity': round(debt_to_equity, 2) if debt_to_equity is not None else None,
-            'earnings_growth': round(earnings_growth, 2) if earnings_growth is not None else None,
-            'ps_ratio': round(ps_ratio, 2) if ps_ratio is not None else None,
-            'pb_ratio': round(pb_ratio, 2) if pb_ratio is not None else None,
-            'roe': round(roe, 2) if roe is not None else None,
-            'next_5y_eps_growth': float(next_5y_eps_growth) if next_5y_eps_growth is not None else np.nan,
-            'next_year_eps_growth': float(next_year_eps_growth) if next_year_eps_growth is not None else np.nan,
-            'peg_ratio': float(peg_ratio) if peg_ratio is not None else np.nan
-        }
+            # 2. Try Finnhub's 5Y growth estimate
+            if finnhub_metrics.get('5YAvgEPSGrowth'):
+                sources.append(finnhub_metrics['5YAvgEPSGrowth'])
+
+            # 3. Calculate historical EPS growth if available
+            try:
+                hist = yf.Ticker(symbol).history(period="5y")
+                if not hist.empty and 'EPS' in hist.columns and len(hist['EPS']) >= 2:
+                    eps_growth = (hist['EPS'].iloc[-1] / hist['EPS'].iloc[0]) ** (1 / 5) - 1
+                    sources.append(eps_growth)
+            except Exception as e:
+                logger.debug(f"Couldn't calculate historical growth: {e}")
+
+            # If we have any valid sources, return the capped median
+            if sources:
+                return min(np.median(sources), max_growth)
+
+            # Default fallback
+            return min(0.15, max_growth)  # 15% minimum capped at size limit
+
+        # Get realistic growth rates
+        result['next_5y_eps_growth'] = get_capped_growth()
+
+        # Next year growth can be slightly higher than 5Y
+        next_year = yf_data.get('earningsGrowth', np.nan)
+        if isinstance(next_year, (int, float)):
+            result['next_year_eps_growth'] = min(next_year, max_growth * 1.5)  # Allow 1.5x higher for near-term
+        else:
+            result['next_year_eps_growth'] = min(result['next_5y_eps_growth'] * 1.2, max_growth * 1.5)
+
+        # Calculate PEG ratio properly
+        forward_pe = finnhub_metrics.get('forwardPE') or yf_data.get('forwardPE')
+        if forward_pe and result['next_5y_eps_growth'] > 0:
+            result['peg_ratio'] = forward_pe / (result['next_5y_eps_growth'] * 100)  # growth in %
+
+        # Populate remaining fields
+        result.update({
+            'trailing_pe': round(yf_data.get('trailingPE'), 2),
+            'forward_pe': round(forward_pe, 2) if forward_pe else None,
+            'beta': round(yf_data.get('beta'), 2),
+            'dividend_yield': round(yf_data.get('dividendYield', 0), 4),
+            'debt_to_equity': round(yf_data.get('debtToEquity'), 2),
+            'ps_ratio': round(yf_data.get('priceToSalesTrailing12Months'), 2),
+            'pb_ratio': round(yf_data.get('priceToBook'), 2),
+            'roe': round(yf_data.get('returnOnEquity'), 4),
+        })
+
     except Exception as e:
-        logger.error(f"Error fetching data for {symbol}: {str(e)}")
-        return {
-            'symbol': symbol,
-            'industry': 'Unknown',
-            'trailing_pe': None,
-            'forward_pe': None,
-            'beta': None,
-            'dividend_yield': None,
-            'debt_to_equity': None,
-            'earnings_growth': None,
-            'ps_ratio': None,
-            'pb_ratio': None,
-            'roe': None,
-            'next_5y_eps_growth': np.nan,
-            'next_year_eps_growth': np.nan,
-            'peg_ratio': np.nan
-        }
+        logger.error(f"Error in get_industry_pe_beta for {symbol}: {str(e)}")
+        # Return the default result with NaN values
+
+    return result
 
 
 def build_training_set(df, years):
