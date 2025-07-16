@@ -40,10 +40,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from psycopg2 import OperationalError as Psycopg2OpError
 from flask import send_file
-from alpha_vantage.timeseries import TimeSeries
-from alpha_vantage.techindicators import TechIndicators
-from alpha_vantage.alphavantage import AlphaVantage
-import requests
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -83,18 +79,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
-ALPHA_VANTAGE_RATE_LIMIT = 5  # Requests per minute for free tier
-last_alpha_vantage_call = 0
-
-def rate_limit_alpha_vantage():
-    """Ensure we don't exceed Alpha Vantage rate limits"""
-    global last_alpha_vantage_call
-    elapsed = time.time() - last_alpha_vantage_call
-    if elapsed < 60/ALPHA_VANTAGE_RATE_LIMIT:
-        time.sleep((60/ALPHA_VANTAGE_RATE_LIMIT) - elapsed)
-    last_alpha_vantage_call = time.time()
-
+# Verify database connection
 try:
     with app.app_context():
         db.engine.connect()
@@ -572,106 +557,43 @@ def get_industry_pe_beta(symbol):
             except Exception as e:
                 logger.debug(f"Finnhub data fetch failed for {symbol}: {e}")
 
-        def get_alpha_vantage_estimates(symbol):
-            """Get earnings estimates from Alpha Vantage"""
-            if not ALPHA_VANTAGE_API_KEY:
-                return None
-
-            try:
-                rate_limit_alpha_vantage()
-                ts = TimeSeries(key=ALPHA_VANTAGE_API_KEY)
-                ti = TechIndicators(key=ALPHA_VANTAGE_API_KEY)
-
-                # Get earnings data (using different endpoint)
-                earnings, _ = ts.get_earnings(symbol)
-                estimates = {}
-
-                if earnings and 'quarterlyEarnings' in earnings:
-                    quarterly = earnings['quarterlyEarnings']
-                    if len(quarterly) >= 4:
-                        estimates['next_year_growth'] = (float(quarterly[0]['reportedEPS']) /
-                                                         float(quarterly[4]['reportedEPS'])) ** (1 / 1) - 1
-
-                return estimates
-
-            except Exception as e:
-                logger.debug(f"Alpha Vantage failed for {symbol}: {str(e)}")
-                return None
-
+        # Get EPS growth estimates from multiple sources
         def get_eps_growth_estimates():
-            """Enhanced growth estimation using multiple sources"""
             sources = {
                 'yf_5y': None,
                 'yf_next': None,
                 'finnhub_5y': None,
-                'alpha_vantage': None,
                 'historical': None
             }
 
-            # 1. Get Alpha Vantage estimates
-            av_data = get_alpha_vantage_estimates(symbol)
-            if av_data:
-                sources['alpha_vantage_5y'] = av_data.get('five_year_growth')
-                sources['alpha_vantage_next'] = av_data.get('next_year_growth')
-                sources['historical'] = av_data.get('historical_growth')
-
-            # 2. Yahoo Finance estimates
+            # Yahoo Finance analyst estimates
             try:
                 yf_estimates = yf.Ticker(symbol).analyst_price_target
                 if not yf_estimates.empty:
                     if 'growth' in yf_estimates.columns:
                         sources['yf_5y'] = safe_get(yf_estimates, 'growth', round_digits=None) / 100
             except Exception as e:
-                logger.debug(f"YF analyst estimates failed for {symbol}: {str(e)}")
+                logger.debug(f"YF analyst estimates failed for {symbol}: {e}")
 
-            # 3. Finnhub estimates
-            if finnhub_client:
-                try:
-                    sources['finnhub_5y'] = safe_get(
-                        finnhub_client.company_basic_financials(symbol, 'all').get('metric', {}),
-                        '5YAvgEPSGrowth',
-                        round_digits=None
-                    )
-                except Exception as e:
-                    logger.debug(f"Finnhub growth failed for {symbol}: {str(e)}")
+            # Finnhub 5Y growth
+            sources['finnhub_5y'] = safe_get(finnhub_metrics, '5YAvgEPSGrowth', round_digits=None)
 
-            # 4. Historical EPS growth (fallback)
-            if sources['historical'] is None:
-                try:
-                    hist = yf.Ticker(symbol).history(period="5y")
-                    if 'EPS' in hist.columns and len(hist['EPS']) >= 2:
-                        eps_growth = (hist['EPS'].iloc[-1] / hist['EPS'].iloc[0]) ** (1 / 5) - 1
-                        sources['historical'] = eps_growth
-                except Exception as e:
-                    logger.debug(f"Historical EPS calc failed for {symbol}: {str(e)}")
+            # Historical EPS growth (5 years)
+            try:
+                hist = yf.Ticker(symbol).history(period="5y")
+                if 'EPS' in hist.columns and len(hist['EPS']) >= 2:
+                    eps_growth = (hist['EPS'].iloc[-1] / hist['EPS'].iloc[0]) ** (1/5) - 1
+                    sources['historical'] = eps_growth
+            except Exception as e:
+                logger.debug(f"Historical EPS calc failed for {symbol}: {e}")
 
-            # Calculate weighted median giving priority to analyst estimates
-            weighted_values = []
+            # Next year growth from Yahoo
+            sources['yf_next'] = safe_get(yf_data, 'earningsGrowth', round_digits=None)
 
-            # Highest priority: Analyst estimates (3x weight)
-            for src in ['yf_5y', 'finnhub_5y', 'alpha_vantage_5y']:
-                if sources[src] is not None:
-                    weighted_values.extend([sources[src]] * 3)
-
-            # Medium priority: Alpha Vantage next year (2x weight)
-            if sources['alpha_vantage_next'] is not None:
-                weighted_values.extend([sources['alpha_vantage_next']] * 2)
-
-            # Lower priority: Historical data (1x weight)
-            if sources['historical'] is not None:
-                weighted_values.append(sources['historical'])
-
-            # Calculate median if we have values
-            median_5y = np.median(weighted_values) if weighted_values else None
-
-            # Next year growth calculation
-            next_year = None
-            if sources['alpha_vantage_next'] is not None:
-                next_year = sources['alpha_vantage_next']
-            elif sources['yf_next'] is not None:
-                next_year = sources['yf_next']
-            elif median_5y is not None:
-                next_year = median_5y * 1.2  # Assume next year is 20% higher than 5Y average
+            # Filter out None values and calculate medians
+            valid_5y = [v for v in [sources['yf_5y'], sources['finnhub_5y'], sources['historical']] if v is not None]
+            median_5y = np.median(valid_5y) if valid_5y else None
+            next_year = sources['yf_next'] if sources['yf_next'] is not None else (median_5y * 1.2 if median_5y else None)
 
             # Apply reasonable caps
             if median_5y:
