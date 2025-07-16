@@ -498,11 +498,11 @@ def load_user(user_id):
 # Helper functions
 def get_industry_pe_beta(symbol):
     """
-    Fetch fundamental data for a stock with realistic growth projections
+    Fetch fundamental data for a stock with robust None handling
     Args:
         symbol (str): Stock ticker symbol
     Returns:
-        dict: Dictionary containing financial metrics with capped growth rates
+        dict: Dictionary containing financial metrics with safe rounding
     """
     # Initialize with default values
     result = {
@@ -513,7 +513,6 @@ def get_industry_pe_beta(symbol):
         'beta': None,
         'dividend_yield': None,
         'debt_to_equity': None,
-        'earnings_growth': None,
         'ps_ratio': None,
         'pb_ratio': None,
         'roe': None,
@@ -524,18 +523,28 @@ def get_industry_pe_beta(symbol):
     }
 
     try:
-        # First get market cap to determine company size category
-        yf_data = yf.Ticker(symbol).info
-        market_cap = yf_data.get('marketCap', 0)
-        result['market_cap'] = market_cap
+        # Safe value retrieval with None checks
+        def safe_get(data, key, default=None, round_digits=2):
+            val = data.get(key, default)
+            if val is None or isinstance(val, (str, bool)):
+                return default
+            try:
+                return round(float(val), round_digits) if round_digits else float(val)
+            except (TypeError, ValueError):
+                return default
 
-        # Define growth caps based on company size (in billions)
+        # Get market cap first
+        yf_data = yf.Ticker(symbol).info
+        result['market_cap'] = safe_get(yf_data, 'marketCap', round_digits=None)
+
+        # Define growth caps
         GROWTH_CAPS = {
-            'mega': 0.25,  # >$200B (AMZN, AAPL, etc.)
+            'mega': 0.25,  # >$200B
             'large': 0.35,  # $10B-$200B
             'small': 0.50  # <$10B
         }
-        company_size = 'mega' if market_cap > 200e9 else 'large' if market_cap > 10e9 else 'small'
+        company_size = 'mega' if (result['market_cap'] or 0) > 200e9 else \
+            'large' if (result['market_cap'] or 0) > 10e9 else 'small'
         max_growth = GROWTH_CAPS[company_size]
 
         # Get Finnhub data if available
@@ -546,76 +555,69 @@ def get_industry_pe_beta(symbol):
                 result['industry'] = profile.get('finnhubIndustry', 'Unknown')
                 finnhub_metrics = finnhub_client.company_basic_financials(symbol=symbol, metric='all').get('metric', {})
             except Exception as e:
-                logger.warning(f"Finnhub data fetch failed for {symbol}: {e}")
+                logger.debug(f"Finnhub data fetch failed for {symbol}: {e}")
 
-        # Get Yahoo Finance data
-        yf_data = yf.Ticker(symbol).info
-
-        # Helper function to get realistic growth rate
-        def get_capped_growth():
-            """Get growth rate with multiple fallback sources and capping"""
+        # Get growth rates with safe handling
+        def get_safe_growth():
             sources = []
 
-            # 1. Try Yahoo Finance analyst estimates first (most reliable)
+            # Yahoo Finance analyst estimates
             try:
                 analyst_estimates = yf.Ticker(symbol).analyst_price_target
-                if not analyst_estimates.empty and 'growth' in analyst_estimates.columns:
-                    median_growth = analyst_estimates['growth'].median()
-                    if not np.isnan(median_growth):
-                        sources.append(median_growth / 100)  # Convert % to decimal
-            except Exception as e:
-                logger.debug(f"Couldn't get analyst estimates: {e}")
+                if not analyst_estimates.empty:
+                    growth = safe_get(analyst_estimates, 'growth', round_digits=None)
+                    if growth is not None:
+                        sources.append(growth / 100)
+            except Exception:
+                pass
 
-            # 2. Try Finnhub's 5Y growth estimate
-            if finnhub_metrics.get('5YAvgEPSGrowth'):
-                sources.append(finnhub_metrics['5YAvgEPSGrowth'])
+            # Finnhub 5Y growth
+            finnhub_growth = safe_get(finnhub_metrics, '5YAvgEPSGrowth', round_digits=None)
+            if finnhub_growth is not None:
+                sources.append(finnhub_growth)
 
-            # 3. Calculate historical EPS growth if available
+            # Historical EPS growth
             try:
                 hist = yf.Ticker(symbol).history(period="5y")
-                if not hist.empty and 'EPS' in hist.columns and len(hist['EPS']) >= 2:
+                if 'EPS' in hist.columns and len(hist['EPS']) >= 2:
                     eps_growth = (hist['EPS'].iloc[-1] / hist['EPS'].iloc[0]) ** (1 / 5) - 1
                     sources.append(eps_growth)
-            except Exception as e:
-                logger.debug(f"Couldn't calculate historical growth: {e}")
+            except Exception:
+                pass
 
-            # If we have any valid sources, return the capped median
-            if sources:
-                return min(np.median(sources), max_growth)
+            return min(np.nanmedian(sources), max_growth) if sources else min(0.15, max_growth)
 
-            # Default fallback
-            return min(0.15, max_growth)  # 15% minimum capped at size limit
+        result['next_5y_eps_growth'] = get_safe_growth()
 
-        # Get realistic growth rates
-        result['next_5y_eps_growth'] = get_capped_growth()
+        # Next year growth (allow 1.5x higher than 5Y)
+        next_year = safe_get(yf_data, 'earningsGrowth', round_digits=None)
+        result['next_year_eps_growth'] = (
+            min(next_year, max_growth * 1.5)
+            if next_year is not None
+            else min(result['next_5y_eps_growth'] * 1.2, max_growth * 1.5)
+        )
 
-        # Next year growth can be slightly higher than 5Y
-        next_year = yf_data.get('earningsGrowth', np.nan)
-        if isinstance(next_year, (int, float)):
-            result['next_year_eps_growth'] = min(next_year, max_growth * 1.5)  # Allow 1.5x higher for near-term
-        else:
-            result['next_year_eps_growth'] = min(result['next_5y_eps_growth'] * 1.2, max_growth * 1.5)
-
-        # Calculate PEG ratio properly
-        forward_pe = finnhub_metrics.get('forwardPE') or yf_data.get('forwardPE')
+        # Calculate PEG ratio safely
+        forward_pe = safe_get(finnhub_metrics, 'forwardPE') or safe_get(yf_data, 'forwardPE')
         if forward_pe and result['next_5y_eps_growth'] > 0:
-            result['peg_ratio'] = forward_pe / (result['next_5y_eps_growth'] * 100)  # growth in %
+            result['peg_ratio'] = safe_get({
+                'value': forward_pe / (result['next_5y_eps_growth'] * 100)
+            }, 'value')
 
-        # Populate remaining fields
+        # Populate remaining metrics with safe rounding
         result.update({
-            'trailing_pe': round(yf_data.get('trailingPE'), 2),
-            'forward_pe': round(forward_pe, 2) if forward_pe else None,
-            'beta': round(yf_data.get('beta'), 2),
-            'dividend_yield': round(yf_data.get('dividendYield', 0), 4),
-            'debt_to_equity': round(yf_data.get('debtToEquity'), 2),
-            'ps_ratio': round(yf_data.get('priceToSalesTrailing12Months'), 2),
-            'pb_ratio': round(yf_data.get('priceToBook'), 2),
-            'roe': round(yf_data.get('returnOnEquity'), 4),
+            'trailing_pe': safe_get(yf_data, 'trailingPE'),
+            'forward_pe': forward_pe,
+            'beta': safe_get(yf_data, 'beta'),
+            'dividend_yield': safe_get(yf_data, 'dividendYield', 0),
+            'debt_to_equity': safe_get(yf_data, 'debtToEquity'),
+            'ps_ratio': safe_get(yf_data, 'priceToSalesTrailing12Months'),
+            'pb_ratio': safe_get(yf_data, 'priceToBook'),
+            'roe': safe_get(yf_data, 'returnOnEquity'),
         })
 
     except Exception as e:
-        logger.error(f"Error in get_industry_pe_beta for {symbol}: {str(e)}")
-        # Return the default result with NaN values
+        logger.error(f"Error processing {symbol}: {str(e)}", exc_info=True)
 
     return result
 
