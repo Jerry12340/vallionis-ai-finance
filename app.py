@@ -576,17 +576,22 @@ def build_training_set(df, years):
 
 
 def train_rank(
-    df, years, top_n, min_ann_return=10, max_pe=40, max_ann_return=25, investing_style=None, risk_free_rate=4
+        df, years, top_n, min_ann_return=10, max_pe=40, max_ann_return=25,
+        investing_style=None, risk_free_rate=4
 ):
     # Early exit for invalid input
     if df.empty or 'annual_return' not in df.columns:
         print("Empty dataframe or missing annual_return column")
         return pd.DataFrame()
 
+    # Updated features including growth estimates
     required_columns = [
-        'symbol', 'annual_return', 'trailing_pe', 'forward_pe', 'beta', 'dividend_yield', 'debt_to_equity',
-        'earnings_growth', 'ps_ratio', 'pb_ratio', 'roe', 'industry'
+        'symbol', 'annual_return', 'trailing_pe', 'forward_pe', 'beta',
+        'dividend_yield', 'debt_to_equity', 'earnings_growth', 'ps_ratio',
+        'pb_ratio', 'roe', 'industry', 'next_5y_eps_growth',
+        'next_year_eps_growth', 'peg_ratio'
     ]
+
     missing_cols = [col for col in required_columns if col not in df.columns]
     if missing_cols:
         print(f"Missing required columns: {missing_cols}")
@@ -595,8 +600,9 @@ def train_rank(
     try:
         # Prepare features
         numeric_features = [
-            'trailing_pe', 'forward_pe', 'beta', 'dividend_yield', 'debt_to_equity', 'earnings_growth',
-            'ps_ratio', 'pb_ratio', 'roe'
+            'trailing_pe', 'forward_pe', 'beta', 'dividend_yield',
+            'debt_to_equity', 'earnings_growth', 'ps_ratio', 'pb_ratio',
+            'roe', 'next_5y_eps_growth', 'next_year_eps_growth', 'peg_ratio'
         ]
         categorical_features = ['industry']
 
@@ -625,6 +631,25 @@ def train_rank(
 
         model.fit(df[numeric_features + categorical_features], y)
         df['predicted_ann_return'] = model.predict(df[numeric_features + categorical_features])
+
+        # Apply growth-based adjustments
+        growth_weight = {
+            'conservative': 0.3,
+            'moderate': 0.5,
+            'aggressive': 0.7
+        }.get(investing_style, 0.5)
+
+        # Apply growth multiplier
+        df['growth_multiplier'] = 1 + (df['next_5y_eps_growth'].fillna(0) * growth_weight)
+        df['predicted_ann_return'] = df['predicted_ann_return'] * df['growth_multiplier']
+
+        # Add growth premium for reasonably priced growth stocks
+        df['growth_premium'] = np.where(
+            (df['peg_ratio'] < 2.0) & (df['next_5y_eps_growth'] > 0.1),
+            df['next_5y_eps_growth'] * 0.25,
+            0
+        )
+        df['predicted_ann_return'] = df['predicted_ann_return'] + df['growth_premium']
 
         # Apply style adjustments
         shrinkage_factors = {
@@ -667,7 +692,6 @@ def train_rank(
         print(f"Error in train_rank: {str(e)}")
         traceback.print_exc()
         return pd.DataFrame()
-
 
 def process_request(
     investing_style,
@@ -846,6 +870,9 @@ def process_request(
                         'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
                         'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
                         'roe': f"{row.get('roe', 0) * 100:.2f}%",
+                        'next_5y_growth': f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%" if row.get(
+                            'next_5y_eps_growth') else 'N/A',
+                        'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
                         'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
                         'industry': row.get('industry', 'N/A')
                     })

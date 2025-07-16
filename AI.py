@@ -71,70 +71,60 @@ def questions():
 
 # ——— Finnhub Data Pull ———
 def get_industry_pe_beta(symbol):
-    profile = finnhub_client.company_profile2(symbol=symbol)
-    industry = profile.get('finnhubIndustry', 'Unknown')
-    metrics = finnhub_client.company_basic_financials(symbol=symbol, metric='all').get('metric', {})
-
-    # PE Ratios
-    trailing = (metrics.get('peExclExtraTTM') or metrics.get('peInclExtraTTM') or metrics.get('peBasicExclExtraTTM'))
-    forward = (metrics.get('forwardPE') or metrics.get('forwardPEInclExtraTTM') or metrics.get('forwardPEExclExtraTTM'))
-    if not forward:
-        try:
-            forward = yf.Ticker(symbol).info.get('forwardPE')
-        except:
-            forward = None
-
-    beta = metrics.get('beta')
-
-    # Dividend Yield
-    raw_dy = metrics.get('dividendYield')
-    dividend_yield = round(raw_dy, 2) if raw_dy is not None else None
-    if dividend_yield is None:
-        try:
-            yf_dy = yf.Ticker(symbol).info.get('dividendYield')
-            if yf_dy is not None: dividend_yield = round(yf_dy, 2)
-        except:
-            pass
-
-    # Debt to Equity
     try:
-        de = yf.Ticker(symbol).info.get('debtToEquity')
-        debt_to_equity = round(de, 2) if de is not None else None
-    except:
-        debt_to_equity = None
+        profile = finnhub_client.company_profile2(symbol=symbol)
+        industry = profile.get('finnhubIndustry', 'Unknown')
+        metrics = finnhub_client.company_basic_financials(symbol=symbol, metric='all').get('metric', {})
 
-    # Earnings & Revenue Growth
-    try:
-        eg = yf.Ticker(symbol).info.get('earningsQuarterlyGrowth')
-        earnings_growth = round(eg, 2) if eg is not None else None
-    except:
-        earnings_growth = None
-    try:
-        rg = yf.Ticker(symbol).info.get('revenueQuarterlyGrowth')
-        revenue_growth = round(rg, 2) if rg is not None else None
-    except:
-        revenue_growth = None
+        # Get data from both Finnhub and Yahoo Finance
+        yf_ticker = yf.Ticker(symbol)
+        yf_data = yf_ticker.info
 
-    # P/S, P/B, ROE
-    info = yf.Ticker(symbol).info
-    ps_ratio = round(info.get('priceToSalesTrailing12Months', 0), 2) if info.get(
-        'priceToSalesTrailing12Months') else None
-    pb_ratio = round(info.get('priceToBook', 0), 2) if info.get('priceToBook') else None
-    roe = round(info.get('returnOnEquity', 0), 2) if info.get('returnOnEquity') else None
+        # Get fundamental metrics
+        trailing_pe = metrics.get('peExclExtraTTM') or metrics.get('peInclExtraTTM') or metrics.get('peBasicExclExtraTTM')
+        forward_pe = metrics.get('forwardPE') or metrics.get('forwardPEInclExtraTTM') or yf_data.get('forwardPE')
+        beta = metrics.get('beta') or yf_data.get('beta')
+        dividend_yield = metrics.get('dividendYield') or yf_data.get('dividendYield')
+        debt_to_equity = yf_data.get('debtToEquity')
+        earnings_growth = yf_data.get('earningsQuarterlyGrowth')
+        revenue_growth = yf_data.get('revenueQuarterlyGrowth')
+        ps_ratio = yf_data.get('priceToSalesTrailing12Months')
+        pb_ratio = yf_data.get('priceToBook')
+        roe = yf_data.get('returnOnEquity')
 
-    return {
-        'symbol': symbol,
-        'industry': industry,
-        'trailing_pe': round(trailing, 2) if trailing else None,
-        'forward_pe': round(forward, 2) if forward else None,
-        'beta': round(beta, 2) if beta else None,
-        'dividend_yield': dividend_yield,
-        'debt_to_equity': debt_to_equity,
-        'earnings_growth': earnings_growth,
-        'ps_ratio': ps_ratio,
-        'pb_ratio': pb_ratio,
-        'roe': roe,
-    }
+        # Get growth estimates
+        next_5y_eps_growth = yf_data.get('next5YearsPerShareEarningsGrowthAnnual')
+        next_year_eps_growth = yf_data.get('earningsGrowth')
+        forward_eps = yf_data.get('forwardEps')
+        peg_ratio = yf_data.get('pegRatio')
+
+        return {
+            'symbol': symbol,
+            'industry': industry,
+            'trailing_pe': round(trailing_pe, 2) if trailing_pe else None,
+            'forward_pe': round(forward_pe, 2) if forward_pe else None,
+            'beta': round(beta, 2) if beta else None,
+            'dividend_yield': round(dividend_yield, 4) if dividend_yield else None,
+            'debt_to_equity': round(debt_to_equity, 2) if debt_to_equity else None,
+            'earnings_growth': round(earnings_growth, 2) if earnings_growth else None,
+            'ps_ratio': round(ps_ratio, 2) if ps_ratio else None,
+            'pb_ratio': round(pb_ratio, 2) if pb_ratio else None,
+            'roe': round(roe, 2) if roe else None,
+            'next_5y_eps_growth': round(next_5y_eps_growth, 4) if next_5y_eps_growth else None,
+            'next_year_eps_growth': round(next_year_eps_growth, 4) if next_year_eps_growth else None,
+            'forward_eps': round(forward_eps, 2) if forward_eps else None,
+            'peg_ratio': round(peg_ratio, 2) if peg_ratio else None
+        }
+    except Exception as e:
+        logger.error(f"Error fetching data for {symbol}: {str(e)}")
+        return {
+            'symbol': symbol,
+            'industry': 'Unknown',
+            'next_5y_eps_growth': None,
+            'next_year_eps_growth': None,
+            'forward_eps': None,
+            'peg_ratio': None
+        }
 
 
 def fetch_valid_tickers(tickers):
@@ -194,64 +184,123 @@ def build_training_set(df, years):
 
 
 # ——— Train, CV, Recommend ———
-def train_rank(df, years, top_n):
-    # Prepare features & target
-    X = df.drop(columns=['symbol', 'annual_return'])
-    y = df['annual_return']
+def train_rank(
+        df, years, top_n, min_ann_return=10, max_pe=40, max_ann_return=25,
+        investing_style=None, risk_free_rate=4
+):
+    # Early exit for invalid input
+    if df.empty or 'annual_return' not in df.columns:
+        print("Empty dataframe or missing annual_return column")
+        return pd.DataFrame()
 
-    # Identify numeric and categorical features
-    num_feats = ['trailing_pe', 'forward_pe', 'beta', 'dividend_yield',
-                 'debt_to_equity', 'earnings_growth', 'ps_ratio', 'pb_ratio', 'roe']
-    cat_feats = ['industry']
+    # Updated features including growth estimates
+    required_columns = [
+        'symbol', 'annual_return', 'trailing_pe', 'forward_pe', 'beta',
+        'dividend_yield', 'debt_to_equity', 'earnings_growth', 'ps_ratio',
+        'pb_ratio', 'roe', 'industry', 'next_5y_eps_growth',
+        'next_year_eps_growth', 'peg_ratio'
+    ]
 
-    # Build preprocessing + model pipeline
-    preprocessor = ColumnTransformer([
-        ('num', StandardScaler(), num_feats),
-        ('cat', OneHotEncoder(handle_unknown='ignore'), cat_feats)
-    ])
-    model = Pipeline([
-        ('pre', preprocessor),
-        ('rf', RandomForestRegressor(n_estimators=200, random_state=42))
-    ])
+    missing_cols = [col for col in required_columns if col not in df.columns]
+    if missing_cols:
+        print(f"Missing required columns: {missing_cols}")
+        return pd.DataFrame()
 
-    # Dynamically choose CV folds
-    n_samples = X.shape[0]
-    cv = min(5, n_samples) if n_samples > 1 else 1
+    try:
+        # Prepare features
+        numeric_features = [
+            'trailing_pe', 'forward_pe', 'beta', 'dividend_yield',
+            'debt_to_equity', 'earnings_growth', 'ps_ratio', 'pb_ratio',
+            'roe', 'next_5y_eps_growth', 'next_year_eps_growth', 'peg_ratio'
+        ]
+        categorical_features = ['industry']
 
-    # Fit on full data
-    model.fit(X, y)
+        # Fill missing values
+        df[numeric_features] = df[numeric_features].fillna(0)
+        df[categorical_features] = df[categorical_features].fillna('Unknown')
 
-    # Generate predictions
-    preds = model.predict(X)
+        y = df['annual_return'].values
 
-    # Apply conservative shrinkage
-    df['predicted_ann_return'] = np.round(preds * 0.8, 2)
-    df['predicted_total_return'] = (
-        ((1 + df['predicted_ann_return'] / 100) ** years - 1) * 100
-    ).round(0).astype(int)
+        # Preprocessing and model pipeline
+        preprocessor = ColumnTransformer([
+            ('num', Pipeline([
+                ('imputer', SimpleImputer(strategy='constant', fill_value=0)),
+                ('scaler', StandardScaler())
+            ]), numeric_features),
+            ('cat', Pipeline([
+                ('imputer', SimpleImputer(strategy='constant', fill_value='Unknown')),
+                ('encoder', get_one_hot_encoder())
+            ]), categorical_features)
+        ])
 
-    # Select top N
-    top = (
-        df.sort_values('predicted_ann_return', ascending=False)
-          .head(top_n)
-          .copy()
-    )
+        model = Pipeline([
+            ('pre', preprocessor),
+            ('rf', RandomForestRegressor(n_estimators=100, random_state=42, max_depth=5))
+        ])
 
-    # Return only the relevant columns
-    return top[[
-        'symbol',
-        'predicted_ann_return',
-        'predicted_total_return',
-        'industry',
-        'trailing_pe',
-        'forward_pe',
-        'beta',
-        'dividend_yield',
-        'debt_to_equity',
-        'ps_ratio',
-        'pb_ratio',
-        'roe'
-    ]]
+        model.fit(df[numeric_features + categorical_features], y)
+        df['predicted_ann_return'] = model.predict(df[numeric_features + categorical_features])
+
+        # Apply growth-based adjustments
+        growth_weight = {
+            'conservative': 0.3,
+            'moderate': 0.5,
+            'aggressive': 0.7
+        }.get(investing_style, 0.5)
+
+        # Apply growth multiplier
+        df['growth_multiplier'] = 1 + (df['next_5y_eps_growth'].fillna(0) * growth_weight
+                                       df['predicted_ann_return'] = df['predicted_ann_return'] * df['growth_multiplier']
+
+                                       # Add growth premium for reasonably priced growth stocks
+                                       df['growth_premium'] = np.where(
+                                       (df['peg_ratio'] < 2.0) & (df['next_5y_eps_growth'] > 0.1),
+                                  df['next_5y_eps_growth'] * 0.25,  # 25% of growth rate as premium
+        0
+        )
+        df['predicted_ann_return'] = df['predicted_ann_return'] + df['growth_premium']
+
+        # Apply style adjustments
+        shrinkage_factors = {
+            'conservative': 0.75,
+            'moderate': 0.8,
+            'aggressive': 0.9
+        }
+        if investing_style in shrinkage_factors:
+            df['predicted_ann_return'] *= shrinkage_factors[investing_style]
+
+        # Apply return caps and filters
+        df['predicted_ann_return'] = np.where(
+            df['predicted_ann_return'] > 25,
+            df['predicted_ann_return'] * 0.87,
+            df['predicted_ann_return']
+        )
+        df['predicted_ann_return'] = np.where(
+            df['predicted_ann_return'] > 20,
+            df['predicted_ann_return'] * 0.87,
+            df['predicted_ann_return']
+        )
+        df['predicted_ann_return'] = np.where(
+            df['predicted_ann_return'] > 15,
+            df['predicted_ann_return'] * 0.9,
+            df['predicted_ann_return']
+        )
+
+        df['predicted_ann_return'] = df['predicted_ann_return'] - 0.17 * np.maximum(df['forward_pe'] - 15, 0)
+        df['predicted_total_return'] = ((1 + df['predicted_ann_return'] / 100) ** years - 1) * 100
+
+        # Apply filters
+        df = df[df['predicted_ann_return'] >= min_ann_return]
+        df = df[df['trailing_pe'] <= max_pe]
+        if max_ann_return is not None:
+            df['predicted_ann_return'] = np.minimum(df['predicted_ann_return'], max_ann_return)
+
+        return df.nlargest(top_n, 'predicted_ann_return').copy()
+
+    except Exception as e:
+        print(f"Error in train_rank: {str(e)}")
+        traceback.print_exc()
+        return pd.DataFrame()
 
 
 def main():
