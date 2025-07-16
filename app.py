@@ -380,7 +380,7 @@ class RecommendationForm(FlaskForm):
     )
     time_horizon = IntegerField(  # Corrected field name
         'Time Horizon (years, min: 5, max: 30)',
-        validators=[DataRequired(), NumberRange(min=5, max=30)]
+        validators=[DataRequired(), NumberRange(min=5, max=15)]
     )
     stocks_amount = IntegerField(
         'Number of Stocks (min: 5, max: 20)',
@@ -498,7 +498,7 @@ def load_user(user_id):
 # Helper functions
 def get_industry_pe_beta(symbol):
     """
-    Fetch fundamental data for a stock with robust None handling
+    Fetch fundamental data for a stock with robust None handling and multiple EPS growth sources
     Args:
         symbol (str): Stock ticker symbol
     Returns:
@@ -537,7 +537,7 @@ def get_industry_pe_beta(symbol):
         yf_data = yf.Ticker(symbol).info
         result['market_cap'] = safe_get(yf_data, 'marketCap', round_digits=None)
 
-        # Define growth caps
+        # Define growth caps based on company size
         GROWTH_CAPS = {
             'mega': 0.25,  # >$200B
             'large': 0.35,  # $10B-$200B
@@ -557,52 +557,58 @@ def get_industry_pe_beta(symbol):
             except Exception as e:
                 logger.debug(f"Finnhub data fetch failed for {symbol}: {e}")
 
-        # Get growth rates with safe handling
-        def get_safe_growth():
-            sources = []
+        # Get EPS growth estimates from multiple sources
+        def get_eps_growth_estimates():
+            sources = {
+                'yf_5y': None,
+                'yf_next': None,
+                'finnhub_5y': None,
+                'historical': None
+            }
 
             # Yahoo Finance analyst estimates
             try:
-                analyst_estimates = yf.Ticker(symbol).analyst_price_target
-                if not analyst_estimates.empty:
-                    growth = safe_get(analyst_estimates, 'growth', round_digits=None)
-                    if growth is not None:
-                        sources.append(growth / 100)
-            except Exception:
-                pass
+                yf_estimates = yf.Ticker(symbol).analyst_price_target
+                if not yf_estimates.empty:
+                    if 'growth' in yf_estimates.columns:
+                        sources['yf_5y'] = safe_get(yf_estimates, 'growth', round_digits=None) / 100
+            except Exception as e:
+                logger.debug(f"YF analyst estimates failed for {symbol}: {e}")
 
             # Finnhub 5Y growth
-            finnhub_growth = safe_get(finnhub_metrics, '5YAvgEPSGrowth', round_digits=None)
-            if finnhub_growth is not None:
-                sources.append(finnhub_growth)
+            sources['finnhub_5y'] = safe_get(finnhub_metrics, '5YAvgEPSGrowth', round_digits=None)
 
-            # Historical EPS growth
+            # Historical EPS growth (5 years)
             try:
                 hist = yf.Ticker(symbol).history(period="5y")
                 if 'EPS' in hist.columns and len(hist['EPS']) >= 2:
-                    eps_growth = (hist['EPS'].iloc[-1] / hist['EPS'].iloc[0]) ** (1 / 5) - 1
-                    sources.append(eps_growth)
-            except Exception:
-                pass
+                    eps_growth = (hist['EPS'].iloc[-1] / hist['EPS'].iloc[0]) ** (1/5) - 1
+                    sources['historical'] = eps_growth
+            except Exception as e:
+                logger.debug(f"Historical EPS calc failed for {symbol}: {e}")
 
-            return min(np.nanmedian(sources), max_growth) if sources else min(0.15, max_growth)
+            # Next year growth from Yahoo
+            sources['yf_next'] = safe_get(yf_data, 'earningsGrowth', round_digits=None)
 
-        result['next_5y_eps_growth'] = get_safe_growth()
+            # Filter out None values and calculate medians
+            valid_5y = [v for v in [sources['yf_5y'], sources['finnhub_5y'], sources['historical']] if v is not None]
+            median_5y = np.median(valid_5y) if valid_5y else None
+            next_year = sources['yf_next'] if sources['yf_next'] is not None else (median_5y * 1.2 if median_5y else None)
 
-        # Next year growth (allow 1.5x higher than 5Y)
-        next_year = safe_get(yf_data, 'earningsGrowth', round_digits=None)
-        result['next_year_eps_growth'] = (
-            min(next_year, max_growth * 1.5)
-            if next_year is not None
-            else min(result['next_5y_eps_growth'] * 1.2, max_growth * 1.5)
-        )
+            # Apply reasonable caps
+            if median_5y:
+                median_5y = min(median_5y, max_growth)
+            if next_year:
+                next_year = min(next_year, max_growth * 1.5)
+
+            return median_5y or min(0.15, max_growth), next_year or min(0.18, max_growth * 1.5)
+
+        result['next_5y_eps_growth'], result['next_year_eps_growth'] = get_eps_growth_estimates()
 
         # Calculate PEG ratio safely
         forward_pe = safe_get(finnhub_metrics, 'forwardPE') or safe_get(yf_data, 'forwardPE')
         if forward_pe and result['next_5y_eps_growth'] > 0:
-            result['peg_ratio'] = safe_get({
-                'value': forward_pe / (result['next_5y_eps_growth'] * 100)
-            }, 'value')
+            result['peg_ratio'] = forward_pe / (result['next_5y_eps_growth'] * 100)
 
         # Populate remaining metrics with safe rounding
         result.update({
@@ -731,45 +737,51 @@ def train_rank(
             'aggressive': 0.7
         }.get(investing_style, 0.5)
 
-        # Apply growth multiplier
+        # Apply growth multiplier - more weight to stocks with higher growth
         df['growth_multiplier'] = 1 + (df['next_5y_eps_growth'].fillna(0) * growth_weight)
         df['predicted_ann_return'] = df['predicted_ann_return'] * df['growth_multiplier']
 
-        # Add growth premium for reasonably priced growth stocks
+        # Add growth premium for reasonably priced growth stocks (PEG < 2)
         df['growth_premium'] = np.where(
             (df['peg_ratio'] < 2.0) & (df['next_5y_eps_growth'] > 0.1),
-            df['next_5y_eps_growth'] * 0.25,
+            df['next_5y_eps_growth'] * 0.25,  # Add 25% of growth rate as premium
             0
         )
         df['predicted_ann_return'] = df['predicted_ann_return'] + df['growth_premium']
 
         # Apply style adjustments
-        shrinkage_factors = {
-            'conservative': 0.75,
-            'moderate': 0.8,
-            'aggressive': 0.9
+        style_adjustments = {
+            'conservative': 0.7,  # More conservative estimates
+            'moderate': 0.75,
+            'aggressive': 0.8  # More aggressive estimates
         }
-        if investing_style in shrinkage_factors:
-            df['predicted_ann_return'] *= shrinkage_factors[investing_style]
+        if investing_style in style_adjustments:
+            df['predicted_ann_return'] *= style_adjustments[investing_style]
 
         # Apply return caps and filters
         df['predicted_ann_return'] = np.where(
             df['predicted_ann_return'] > 25,
-            df['predicted_ann_return'] * 0.87,
+            df['predicted_ann_return'] * 0.87,  # Cap very high returns
             df['predicted_ann_return']
         )
+
+        # Progressive capping for different return levels
         df['predicted_ann_return'] = np.where(
             df['predicted_ann_return'] > 20,
             df['predicted_ann_return'] * 0.87,
             df['predicted_ann_return']
         )
+
         df['predicted_ann_return'] = np.where(
             df['predicted_ann_return'] > 15,
             df['predicted_ann_return'] * 0.9,
             df['predicted_ann_return']
         )
 
+        # Penalty for high P/E ratios
         df['predicted_ann_return'] = df['predicted_ann_return'] - 0.17 * np.maximum(df['forward_pe'] - 15, 0)
+
+        # Calculate total return over the time horizon
         df['predicted_total_return'] = ((1 + df['predicted_ann_return'] / 100) ** years - 1) * 100
 
         # Apply filters
