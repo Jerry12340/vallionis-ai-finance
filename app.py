@@ -470,13 +470,19 @@ def get_industry_pe_beta(symbol):
         peg_ratio = yf_data.get('pegRatio')
 
         # Next quarter EPS estimate
-        earnings = yf.Ticker(symbol).earnings_forecasts
-        if earnings is not None and not earnings.empty:
-            try:
-                next_q_eps_est = earnings.loc['Next Qtr.']['Earnings Estimate']
-            except Exception:
+        try:
+            earnings_est = yf.Ticker(symbol).get_earnings_estimates()
+            if earnings_est is not None and not earnings_est.empty and 'Earnings Estimate' in earnings_est.columns:
+                # Try both 'nextQ' and 'next qtr' as index, depending on yfinance version
+                if 'nextQ' in earnings_est.index:
+                    next_q_eps_est = earnings_est.loc['nextQ', 'Earnings Estimate']
+                elif 'next qtr' in earnings_est.index:
+                    next_q_eps_est = earnings_est.loc['next qtr', 'Earnings Estimate']
+                else:
+                    next_q_eps_est = None
+            else:
                 next_q_eps_est = None
-        else:
+        except Exception as e:
             next_q_eps_est = None
 
         # EPS increase
