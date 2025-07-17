@@ -882,10 +882,10 @@ def process_request(
                         'roe': f"{row.get('roe', 0) * 100:.2f}%",
                         'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
                         'industry': row.get('industry', 'N/A'),
-                        'current_eps': f"{row.get('current_eps', 0):.2f}",
-                        'next_quarter_eps_estimate': f"{row.get('next_quarter_eps_estimate', 0):.2f}",
-                        'next_quarter_eps_increase': f"{row.get('next_quarter_eps_increase', 0):.2f}",
-                        'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
+                        'current_eps': f"{row.get('current_eps', 0):.2f}" if row.get('current_eps') is not None else "N/A",
+                        'next_quarter_eps_estimate': f"{row.get('next_quarter_eps_estimate', 0):.2f}" if row.get('next_quarter_eps_estimate') is not None else "N/A",
+                        'next_quarter_eps_increase': f"{row.get('next_quarter_eps_increase'):.2f}" if row.get('next_quarter_eps_increase') is not None else "N/A",
+                        'peg_ratio': f"{row.get('peg_ratio'):.2f}" if row.get('peg_ratio') is not None else "N/A",
                     })
             return formatted
 
