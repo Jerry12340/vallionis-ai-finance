@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, session, Response, abort, redirect, url_for, jsonify, send_from_directory
+from flask import Flask, render_template, request, session, Response, abort, redirect, url_for, jsonify, \
+    send_from_directory
 import time
 import pandas as pd
 import yfinance as yf
@@ -39,6 +40,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from psycopg2 import OperationalError as Psycopg2OpError
 from flask import send_file
+from alpha_vantage.alphavantage import AlphaVantage
+import requests
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -145,6 +148,54 @@ def initialize_database(retries=5, delay=20):
 
 
 initialize_database()
+
+
+def fetch_valid_tickers(tickers, premium):
+    import time
+    rows = []
+    skipped_tickers = []
+
+    # Define expected columns with defaults
+    base_template = {
+        'symbol': None,
+        'industry': 'Unknown',
+        'trailing_pe': None,
+        'forward_pe': None,
+        'beta': None,
+        'dividend_yield': None,
+        'debt_to_equity': None,
+        'earnings_growth': None,
+        'ps_ratio': None,
+        'pb_ratio': None,
+        'roe': None,
+        'next_5y_eps_growth': np.nan,
+        'next_year_eps_growth': np.nan,
+        'peg_ratio': np.nan
+    }
+
+    for sym in tickers:
+        try:
+            data = get_industry_pe_beta(sym) or {}  # Ensure we get a dict
+            # Merge with base template to ensure all keys exist
+            merged_data = {**base_template, **data}
+            merged_data['symbol'] = sym  # Ensure symbol is always set
+            rows.append(merged_data)
+        except Exception as e:
+            print(f"Error fetching {sym}: {e}")
+            # Add fallback entry with symbol only
+            rows.append({**base_template, 'symbol': sym})
+            skipped_tickers.append(sym)
+        if premium:
+            time.sleep(1.5)
+        else:
+            time.sleep(3)
+
+    # Create DataFrame with guaranteed columns
+    df = pd.DataFrame(rows, columns=list(base_template.keys()))
+
+    # Fill remaining missing values
+    df['industry'] = df['industry'].fillna('Unknown')
+    return df
 
 
 def get_one_hot_encoder():
@@ -311,11 +362,13 @@ class User(db.Model, UserMixin):
             logger.error(f"Error updating preferences for user {self.id}: {str(e)}")
             return False
 
+
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
+
 
 class RecommendationForm(FlaskForm):
     investing_style = SelectField(
@@ -328,8 +381,8 @@ class RecommendationForm(FlaskForm):
         validators=[DataRequired()]
     )
     time_horizon = IntegerField(  # Corrected field name
-        'Time Horizon (years, min: 5, max: 10)',
-        validators=[DataRequired(), NumberRange(min=5, max=10)]
+        'Time Horizon (years, min: 5, max: 15)',
+        validators=[DataRequired(), NumberRange(min=5, max=15)]
     )
     stocks_amount = IntegerField(
         'Number of Stocks (min: 5, max: 20)',
@@ -373,6 +426,14 @@ if not finnhub_api_key:
 else:
     finnhub_client = finnhub.Client(api_key=finnhub_api_key)
 
+# Initialize Alpha Vantage client
+alpha_vantage_api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
+if not alpha_vantage_api_key:
+    logger.error("ALPHA_VANTAGE_API_KEY not found in environment variables")
+    alpha_vantage_client = None
+else:
+    alpha_vantage_client = AlphaVantage(key=alpha_vantage_api_key, output_format='pandas')
+
 stripe.api_key = os.getenv('STRIPE_LIVE_SECRET_KEY')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_LIVE_PUBLISHABLE_KEY')
 STRIPE_PRICE_ID = os.getenv('STRIPE_LIVE_PRICE_ID_MONTHLY')
@@ -382,6 +443,7 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_LIVE_WEBHOOK_SECRET')
 if not all([stripe.api_key, STRIPE_PUBLISHABLE_KEY, STRIPE_PRICE_ID, STRIPE_LIFETIME_PRICE_ID, STRIPE_WEBHOOK_SECRET]):
     logger.error("Missing Stripe LIVE configuration in environment variables")
     raise ValueError("Stripe live credentials not configured")
+
 
 # =============================================
 # User Loader
@@ -398,7 +460,6 @@ class ChangePasswordForm(FlaskForm):
     confirm_password = PasswordField('Confirm New Password',
                                      validators=[DataRequired(), EqualTo('new_password')])
     submit = SubmitField('Change Password')
-
 
 
 class LoginForm(FlaskForm):
@@ -437,6 +498,7 @@ class RegistrationForm(FlaskForm):
         if User.query.filter_by(email=field.data).first():
             raise ValidationError('Email already registered')
 
+
 # Login manager
 @login_manager.user_loader
 def load_user(user_id):
@@ -445,123 +507,191 @@ def load_user(user_id):
 
 # Helper functions
 def get_industry_pe_beta(symbol):
-    try:
-        profile = finnhub_client.company_profile2(symbol=symbol)
-        industry = profile.get('finnhubIndustry', 'Unknown')
-        metrics = finnhub_client.company_basic_financials(symbol=symbol, metric='all').get('metric', {})
-
-        # Get data from both Finnhub and Yahoo Finance
-        yf_data = yf.Ticker(symbol).info
-
-        trailing_pe = metrics.get('peExclExtraTTM') or metrics.get('peInclExtraTTM') or metrics.get(
-            'peBasicExclExtraTTM')
-        forward_pe = metrics.get('forwardPE') or metrics.get('forwardPEInclExtraTTM') or yf_data.get('forwardPE')
-        beta = metrics.get('beta') or yf_data.get('beta')
-        dividend_yield = metrics.get('dividendYield') or yf_data.get('dividendYield')
-        debt_to_equity = yf_data.get('debtToEquity')
-        earnings_growth = yf_data.get('earningsQuarterlyGrowth')
-        revenue_growth = yf_data.get('revenueQuarterlyGrowth')
-        ps_ratio = yf_data.get('priceToSalesTrailing12Months')
-        pb_ratio = yf_data.get('priceToBook')
-        roe = yf_data.get('returnOnEquity')
-
-        # EPS and PEG
-        current_eps = yf_data.get('trailingEps') or yf_data.get('epsTrailingTwelveMonths')
-        peg_ratio = yf_data.get('pegRatio')
-
-        # Next quarter EPS estimate
-        try:
-            earnings_est = yf.Ticker(symbol).get_earnings_estimates()
-            if earnings_est is not None and not earnings_est.empty and 'Earnings Estimate' in earnings_est.columns:
-                # Try both 'nextQ' and 'next qtr' as index, depending on yfinance version
-                if 'nextQ' in earnings_est.index:
-                    next_q_eps_est = earnings_est.loc['nextQ', 'Earnings Estimate']
-                elif 'next qtr' in earnings_est.index:
-                    next_q_eps_est = earnings_est.loc['next qtr', 'Earnings Estimate']
-                else:
-                    next_q_eps_est = None
-            else:
-                next_q_eps_est = None
-        except Exception as e:
-            next_q_eps_est = None
-
-        # EPS increase
-        if current_eps is not None and next_q_eps_est is not None:
-            next_q_eps_increase = next_q_eps_est - current_eps
-        else:
-            next_q_eps_increase = None
-
-        return {
-            'symbol': symbol,
-            'industry': industry,
-            'trailing_pe': round(trailing_pe, 2) if trailing_pe else None,
-            'forward_pe': round(forward_pe, 2) if forward_pe else None,
-            'beta': round(beta, 2) if beta else None,
-            'dividend_yield': round(dividend_yield, 4) if dividend_yield else None,
-            'debt_to_equity': round(debt_to_equity, 2) if debt_to_equity else None,
-            'earnings_growth': round(earnings_growth, 2) if earnings_growth else None,
-            'ps_ratio': round(ps_ratio, 2) if ps_ratio else None,
-            'pb_ratio': round(pb_ratio, 2) if pb_ratio else None,
-            'roe': round(roe, 2) if roe else None,
-            'current_eps': current_eps,
-            'next_quarter_eps_estimate': next_q_eps_est,
-            'next_quarter_eps_increase': next_q_eps_increase,
-            'peg_ratio': peg_ratio,
-        }
-    except Exception as e:
-        logger.error(f"Error fetching data for {symbol}: {str(e)}")
-        return {
-            'symbol': symbol,
-            'industry': 'Unknown'
-        }
-
-
-def fetch_valid_tickers(tickers, premium):
-    rows = []
-    skipped_tickers = []
-
-    # Define expected columns with defaults
-    base_template = {
-        'symbol': None,
+    """
+    Fetch fundamental data for a stock with robust None handling and multiple EPS growth sources
+    Args:
+        symbol (str): Stock ticker symbol
+    Returns:
+        dict: Dictionary containing financial metrics with safe rounding
+    """
+    # Initialize with default values
+    result = {
+        'symbol': symbol,
         'industry': 'Unknown',
         'trailing_pe': None,
         'forward_pe': None,
         'beta': None,
         'dividend_yield': None,
         'debt_to_equity': None,
-        'earnings_growth': None,
         'ps_ratio': None,
         'pb_ratio': None,
         'roe': None,
-        'current_eps': None,
-        'next_quarter_eps_estimate': None,
-        'next_quarter_eps_increase': None,
-        'peg_ratio': None,
+        'next_5y_eps_growth': np.nan,
+        'next_year_eps_growth': np.nan,
+        'peg_ratio': np.nan,
+        'market_cap': None
     }
 
-    for sym in tickers:
-        try:
-            data = get_industry_pe_beta(sym) or {}  # Ensure we get a dict
-            # Merge with base template to ensure all keys exist
-            merged_data = {**base_template, **data}
-            merged_data['symbol'] = sym  # Ensure symbol is always set
-            rows.append(merged_data)
-        except Exception as e:
-            print(f"Error fetching {sym}: {e}")
-            # Add fallback entry with symbol only
-            rows.append({**base_template, 'symbol': sym})
-            skipped_tickers.append(sym)
-        if premium:
-            time.sleep(1.5)
-        else:
-            time.sleep(3)
+    try:
+        # Safe value retrieval with None checks
+        def safe_get(data, key, default=None, round_digits=2):
+            val = data.get(key, default)
+            if val is None or isinstance(val, (str, bool)):
+                return default
+            try:
+                if round_digits is None:
+                    return float(val)
+                return round(float(val), round_digits)
+            except (TypeError, ValueError):
+                return default
 
-    # Create DataFrame with guaranteed columns
-    df = pd.DataFrame(rows, columns=base_template.keys())
+        # Get market cap first
+        yf_data = yf.Ticker(symbol).info
+        result['market_cap'] = safe_get(yf_data, 'marketCap', round_digits=None)
 
-    # Fill remaining missing values
-    df['industry'] = df['industry'].fillna('Unknown')
-    return df
+        # Define growth caps based on company size
+        GROWTH_CAPS = {
+            'mega': 0.25,  # >$200B
+            'large': 0.35,  # $10B-$200B
+            'small': 0.50  # <$10B
+        }
+        company_size = 'mega' if (result['market_cap'] or 0) > 200e9 else \
+            'large' if (result['market_cap'] or 0) > 10e9 else 'small'
+        max_growth = GROWTH_CAPS[company_size]
+
+        # Get Finnhub data if available
+        finnhub_metrics = {}
+        if finnhub_client:
+            try:
+                profile = finnhub_client.company_profile2(symbol=symbol)
+                result['industry'] = profile.get('finnhubIndustry', 'Unknown')
+                finnhub_metrics = finnhub_client.company_basic_financials(symbol=symbol, metric='all').get('metric', {})
+            except Exception as e:
+                logger.debug(f"Finnhub data fetch failed for {symbol}: {e}")
+
+        # Get EPS growth estimates from multiple sources
+        def get_eps_growth_estimates():
+            sources = {
+                'yf_5y': None,
+                'yf_next': None,
+                'finnhub_5y': None,
+                'historical': None,
+                'alpha_vantage_5y': None,
+                'alpha_vantage_next': None
+            }
+
+            # Yahoo Finance analyst estimates
+            try:
+                yf_estimates = yf.Ticker(symbol).analyst_price_target
+                if not yf_estimates.empty:
+                    if 'growth' in yf_estimates.columns:
+                        sources['yf_5y'] = safe_get(yf_estimates, 'growth', round_digits=None) / 100
+            except Exception as e:
+                logger.debug(f"YF analyst estimates failed for {symbol}: {e}")
+
+            # Finnhub 5Y growth
+            sources['finnhub_5y'] = safe_get(finnhub_metrics, '5YAvgEPSGrowth', round_digits=None)
+
+            # Alpha Vantage growth estimates - using correct API methods
+            if alpha_vantage_client:
+                try:
+                    # Get company overview from Alpha Vantage
+                    overview_data = alpha_vantage_client.get_company_overview(symbol=symbol)
+                    if overview_data and not overview_data.empty:
+                        # Alpha Vantage doesn't provide 5-year EPS growth directly
+                        # We can use other available metrics for growth estimation
+
+                        # Get analyst target price and current price for growth estimation
+                        analyst_target = safe_get(overview_data.iloc[0], 'AnalystTargetPrice', round_digits=None)
+                        current_price = safe_get(overview_data.iloc[0], 'LatestPrice', round_digits=None)
+
+                        if analyst_target and current_price and current_price > 0:
+                            # Calculate implied growth from analyst target
+                            price_growth = (analyst_target - current_price) / current_price
+                            # Convert to annual growth estimate (rough approximation)
+                            sources['alpha_vantage_5y'] = price_growth / 5  # Assume 5-year target
+
+                        # Get earnings per share for growth calculation
+                        eps = safe_get(overview_data.iloc[0], 'EPS', round_digits=None)
+                        if eps:
+                            # Store EPS for potential use in growth calculations
+                            sources['alpha_vantage_eps'] = eps
+
+                except Exception as e:
+                    logger.debug(f"Alpha Vantage overview data failed for {symbol}: {e}")
+
+            # Historical EPS growth (5 years)
+            try:
+                hist = yf.Ticker(symbol).history(period="5y")
+                if 'EPS' in hist.columns and len(hist['EPS']) >= 2:
+                    eps_growth = (hist['EPS'].iloc[-1] / hist['EPS'].iloc[0]) ** (1 / 5) - 1
+                    sources['historical'] = eps_growth
+            except Exception as e:
+                logger.debug(f"Historical EPS calc failed for {symbol}: {e}")
+
+            # Next year growth from Yahoo
+            sources['yf_next'] = safe_get(yf_data, 'earningsGrowth', round_digits=None)
+
+            # Filter out None values and calculate medians
+            valid_5y = [v for v in
+                        [sources['yf_5y'], sources['finnhub_5y'], sources['alpha_vantage_5y'], sources['historical']] if
+                        v is not None]
+            median_5y = np.median(valid_5y) if valid_5y else None
+            next_year = sources['yf_next'] if sources['yf_next'] is not None else sources['alpha_vantage_next'] if \
+            sources['alpha_vantage_next'] is not None else (median_5y * 1.2 if median_5y else None)
+
+            # Apply reasonable caps
+            if median_5y:
+                median_5y = min(median_5y, max_growth)
+            if next_year:
+                next_year = min(next_year, max_growth * 1.5)
+
+            return median_5y or min(0.15, max_growth), next_year or min(0.18, max_growth * 1.5)
+
+        result['next_5y_eps_growth'], result['next_year_eps_growth'] = get_eps_growth_estimates()
+
+        # Calculate PEG ratio safely
+        forward_pe = safe_get(finnhub_metrics, 'forwardPE') or safe_get(yf_data, 'forwardPE')
+
+        # Get PEG ratio from Alpha Vantage if available
+        alpha_vantage_peg = None
+        if alpha_vantage_client:
+            try:
+                # Get company overview which includes PEG ratio
+                overview_data = alpha_vantage_client.get_company_overview(symbol=symbol)
+                if overview_data and not overview_data.empty:
+                    # Try different possible field names for PEG ratio
+                    peg_fields = ['PEGRatio', 'PEG', 'PEG_Ratio']
+                    for field in peg_fields:
+                        peg_value = safe_get(overview_data.iloc[0], field, round_digits=None)
+                        if peg_value is not None:
+                            alpha_vantage_peg = peg_value
+                            break
+            except Exception as e:
+                logger.debug(f"Alpha Vantage overview data failed for {symbol}: {e}")
+
+        # Use Alpha Vantage PEG if available, otherwise calculate from forward PE and growth
+        if alpha_vantage_peg is not None:
+            result['peg_ratio'] = alpha_vantage_peg
+        elif forward_pe and result['next_5y_eps_growth'] > 0:
+            result['peg_ratio'] = forward_pe / (result['next_5y_eps_growth'] * 100)
+
+        # Populate remaining metrics with safe rounding
+        result.update({
+            'trailing_pe': safe_get(yf_data, 'trailingPE'),
+            'forward_pe': forward_pe,
+            'beta': safe_get(yf_data, 'beta'),
+            'dividend_yield': safe_get(yf_data, 'dividendYield', 0),
+            'debt_to_equity': safe_get(yf_data, 'debtToEquity'),
+            'ps_ratio': safe_get(yf_data, 'priceToSalesTrailing12Months'),
+            'pb_ratio': safe_get(yf_data, 'priceToBook'),
+            'roe': safe_get(yf_data, 'returnOnEquity'),
+        })
+
+    except Exception as e:
+        logger.error(f"Error processing {symbol}: {str(e)}", exc_info=True)
+
+    return result
 
 
 def build_training_set(df, years):
@@ -610,17 +740,22 @@ def build_training_set(df, years):
 
 
 def train_rank(
-    df, years, top_n, min_ann_return=10, max_pe=40, max_ann_return=25, investing_style=None, risk_free_rate=4
+        df, years, top_n, min_ann_return=10, max_pe=40, max_ann_return=25,
+        investing_style=None, risk_free_rate=4
 ):
     # Early exit for invalid input
     if df.empty or 'annual_return' not in df.columns:
         print("Empty dataframe or missing annual_return column")
         return pd.DataFrame()
 
+    # Updated features including growth estimates
     required_columns = [
-        'symbol', 'annual_return', 'trailing_pe', 'forward_pe', 'beta', 'dividend_yield', 'debt_to_equity',
-        'earnings_growth', 'ps_ratio', 'pb_ratio', 'roe', 'industry'
+        'symbol', 'annual_return', 'trailing_pe', 'forward_pe', 'beta',
+        'dividend_yield', 'debt_to_equity', 'earnings_growth', 'ps_ratio',
+        'pb_ratio', 'roe', 'industry', 'next_5y_eps_growth',
+        'next_year_eps_growth', 'peg_ratio'
     ]
+
     missing_cols = [col for col in required_columns if col not in df.columns]
     if missing_cols:
         print(f"Missing required columns: {missing_cols}")
@@ -629,8 +764,9 @@ def train_rank(
     try:
         # Prepare features
         numeric_features = [
-            'trailing_pe', 'forward_pe', 'beta', 'dividend_yield', 'debt_to_equity', 'earnings_growth',
-            'ps_ratio', 'pb_ratio', 'roe', 'current_eps', 'next_quarter_eps_estimate', 'next_quarter_eps_increase', 'peg_ratio'
+            'trailing_pe', 'forward_pe', 'beta', 'dividend_yield',
+            'debt_to_equity', 'earnings_growth', 'ps_ratio', 'pb_ratio',
+            'roe', 'next_5y_eps_growth', 'next_year_eps_growth', 'peg_ratio'
         ]
         categorical_features = ['industry']
 
@@ -660,33 +796,58 @@ def train_rank(
         model.fit(df[numeric_features + categorical_features], y)
         df['predicted_ann_return'] = model.predict(df[numeric_features + categorical_features])
 
+        # Apply growth-based adjustments
+        growth_weight = {
+            'conservative': 0.3,
+            'moderate': 0.5,
+            'aggressive': 0.7
+        }.get(investing_style, 0.5)
+
+        # Apply growth multiplier - more weight to stocks with higher growth
+        df['growth_multiplier'] = 1 + (df['next_5y_eps_growth'].fillna(0) * growth_weight)
+        df['predicted_ann_return'] = df['predicted_ann_return'] * df['growth_multiplier']
+
+        # Add growth premium for reasonably priced growth stocks (PEG < 2)
+        df['growth_premium'] = np.where(
+            (df['peg_ratio'] < 2.0) & (df['next_5y_eps_growth'] > 0.1),
+            df['next_5y_eps_growth'] * 0.25,  # Add 25% of growth rate as premium
+            0
+        )
+        df['predicted_ann_return'] = df['predicted_ann_return'] + df['growth_premium']
+
         # Apply style adjustments
-        shrinkage_factors = {
-            'conservative': 0.75,
-            'moderate': 0.8,
-            'aggressive': 0.9
+        style_adjustments = {
+            'conservative': 0.7,  # More conservative estimates
+            'moderate': 0.75,
+            'aggressive': 0.8  # More aggressive estimates
         }
-        if investing_style in shrinkage_factors:
-            df['predicted_ann_return'] *= shrinkage_factors[investing_style]
+        if investing_style in style_adjustments:
+            df['predicted_ann_return'] *= style_adjustments[investing_style]
 
         # Apply return caps and filters
         df['predicted_ann_return'] = np.where(
             df['predicted_ann_return'] > 25,
-            df['predicted_ann_return'] * 0.87,
+            df['predicted_ann_return'] * 0.87,  # Cap very high returns
             df['predicted_ann_return']
         )
+
+        # Progressive capping for different return levels
         df['predicted_ann_return'] = np.where(
             df['predicted_ann_return'] > 20,
             df['predicted_ann_return'] * 0.87,
             df['predicted_ann_return']
         )
+
         df['predicted_ann_return'] = np.where(
             df['predicted_ann_return'] > 15,
             df['predicted_ann_return'] * 0.9,
             df['predicted_ann_return']
         )
 
+        # Penalty for high P/E ratios
         df['predicted_ann_return'] = df['predicted_ann_return'] - 0.17 * np.maximum(df['forward_pe'] - 15, 0)
+
+        # Calculate total return over the time horizon
         df['predicted_total_return'] = ((1 + df['predicted_ann_return'] / 100) ** years - 1) * 100
 
         # Apply filters
@@ -704,13 +865,13 @@ def train_rank(
 
 
 def process_request(
-    investing_style,
-    time_horizon,
-    stocks_amount,
-    premium,
-    sector_focus='all',
-    risk_tolerance='medium',
-    dividend_preference=False
+        investing_style,
+        time_horizon,
+        stocks_amount,
+        premium,
+        sector_focus='all',
+        risk_tolerance='medium',
+        dividend_preference=False
 ):
     try:
         if current_user.is_authenticated:
@@ -853,17 +1014,17 @@ def process_request(
         if not premium:
             final_recs = final_recs.iloc[3:].head(original_stocks)
 
-        # --- SORT BY predicted_ann_return DESCENDING ---
+        # Sort by predicted_ann_return descending
         if not final_recs.empty and 'predicted_ann_return' in final_recs.columns:
             final_recs = final_recs.sort_values('predicted_ann_return', ascending=False).reset_index(drop=True)
 
-        # --- CALCULATE SUGGESTED ALLOCATION (proportional to predicted_ann_return) ---
+        # Calculate suggested allocation
         if not final_recs.empty and final_recs['predicted_ann_return'].sum() > 0:
-            final_recs['suggested_allocation'] = final_recs['predicted_ann_return'] / final_recs['predicted_ann_return'].sum()
+            final_recs['suggested_allocation'] = final_recs['predicted_ann_return'] / final_recs[
+                'predicted_ann_return'].sum()
         else:
             final_recs['suggested_allocation'] = 1 / len(final_recs) if not final_recs.empty else 0
 
-        # Format recommendations
         def format_stocks(source_df):
             formatted = []
             if not source_df.empty:
@@ -880,18 +1041,23 @@ def process_request(
                         'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
                         'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
                         'roe': f"{row.get('roe', 0) * 100:.2f}%",
+                        'next_5y_growth': (
+                            f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%"
+                            if row.get('next_5y_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                        ),
+                        'next_year_growth': (
+                            f"{row.get('next_year_eps_growth', 0) * 100:.1f}%"
+                            if row.get('next_year_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                        ),
+                        'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
                         'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
-                        'industry': row.get('industry', 'N/A'),
-                        'current_eps': f"{row.get('current_eps', 0):.2f}" if row.get('current_eps') is not None else "N/A",
-                        'next_quarter_eps_estimate': f"{row.get('next_quarter_eps_estimate', 0):.2f}" if row.get('next_quarter_eps_estimate') is not None else "N/A",
-                        'next_quarter_eps_increase': f"{row.get('next_quarter_eps_increase'):.2f}" if row.get('next_quarter_eps_increase') is not None else "N/A",
-                        'peg_ratio': f"{row.get('peg_ratio'):.2f}" if row.get('peg_ratio') is not None else "N/A",
+                        'industry': row.get('industry', 'N/A')
                     })
             return formatted
 
         recommendations = format_stocks(final_recs)
 
-        # --- WEIGHTED AVERAGE STATS ---
+        # Calculate weighted averages
         if not final_recs.empty:
             avg_annual = (final_recs['predicted_ann_return'] * final_recs['suggested_allocation']).sum()
             avg_div = (final_recs['dividend_yield'] * final_recs['suggested_allocation']).sum()
@@ -928,6 +1094,66 @@ def process_request(
                 'total': '0%',
                 'annual': '0%',
                 'dividend': '0%'
+            },
+            'premium': premium,
+            'sector_focus': sector_focus,
+            'risk_tolerance': risk_tolerance,
+            'dividend_preference': dividend_preference
+        }
+
+    def format_stocks(source_df):
+        formatted = []
+        if not source_df.empty:
+            for _, row in source_df.iterrows():
+                formatted.append({
+                    'symbol': row.get('symbol', 'N/A'),
+                    'total_return': f"{row.get('predicted_total_return', 0):.0f}%",
+                    'annual_return': f"{row.get('predicted_ann_return', 0):.2f}%",
+                    'trailing_pe': f"{row.get('trailing_pe', 0):.2f}",
+                    'forward_pe': f"{row.get('forward_pe', 0):.2f}",
+                    'beta': f"{row.get('beta', 0):.2f}",
+                    'dividend_yield': f"{row.get('dividend_yield', 0):.2f}%",
+                    'debt_to_equity': f"{row.get('debt_to_equity', 0):.2f}%",
+                    'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
+                    'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
+                    'roe': f"{row.get('roe', 0) * 100:.2f}%",
+                    'next_5y_growth': (
+                        f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%"
+                        if row.get('next_5y_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                    ),
+                    'next_year_growth': (
+                        f"{row.get('next_year_eps_growth', 0) * 100:.1f}%"
+                        if row.get('next_year_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                    ),
+                    'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
+                    'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
+                    'industry': row.get('industry', 'N/A')
+                })
+        return formatted
+
+        recommendations = format_stocks(final_recs)
+
+        # --- WEIGHTED AVERAGE STATS ---
+        if not final_recs.empty:
+            avg_annual = (final_recs['predicted_ann_return'] * final_recs['suggested_allocation']).sum()
+            avg_div = (final_recs['dividend_yield'] * final_recs['suggested_allocation']).sum()
+            avg_total = (final_recs['predicted_total_return'] * final_recs['suggested_allocation']).sum()
+        else:
+            avg_annual = avg_div = avg_total = 0
+
+        # Prepare session data
+        csv_buffer = StringIO()
+        final_recs.to_csv(csv_buffer, index=False)
+        session['csv_data'] = csv_buffer.getvalue()
+        session['premium'] = premium
+
+        return {
+            'recommendations': recommendations,
+            'recs_count': len(final_recs),
+            'averages': {
+                'total': f"{avg_total:.0f}%",
+                'annual': f"{avg_annual:.2f}%",
+                'dividend': f"{avg_div:.2f}%"
             },
             'premium': premium,
             'sector_focus': sector_focus,
@@ -991,6 +1217,7 @@ def download():
         mimetype="text/csv",
         headers={"Content-disposition": "attachment; filename=recommended_portfolio.csv"}
     )
+
 
 def safe_stripe_call(func, *args, **kwargs):
     """Wrapper to handle Stripe ID inconsistencies"""
@@ -1404,6 +1631,7 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(check_expired_subscriptions, 'interval', hours=1)
 scheduler.start()
 
+
 @app.route('/change-password', methods=['GET', 'POST'])
 @login_required
 def change_password():
@@ -1436,11 +1664,13 @@ def create_portal_session():
         flash(f'Error accessing subscription portal: {str(e)}', 'danger')
         return redirect(url_for('subscription'))
 
+
 @app.context_processor
 def inject_user():
     return dict(
         is_premium=current_user.is_authenticated and current_user.get_subscription_status()
     )
+
 
 @app.route('/account', methods=['GET', 'POST'])
 @login_required
@@ -1514,6 +1744,7 @@ def fix_customer_id():
         app.logger.error(f"Customer ID recovery error: {str(e)}")
 
     return redirect(url_for('subscription'))
+
 
 @app.route('/delete-account', methods=['POST'])
 @login_required
