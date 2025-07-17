@@ -328,8 +328,8 @@ class RecommendationForm(FlaskForm):
         validators=[DataRequired()]
     )
     time_horizon = IntegerField(  # Corrected field name
-        'Time Horizon (years, min: 5, max: 30)',
-        validators=[DataRequired(), NumberRange(min=5, max=30)]
+        'Time Horizon (years, min: 5, max: 10)',
+        validators=[DataRequired(), NumberRange(min=5, max=10)]
     )
     stocks_amount = IntegerField(
         'Number of Stocks (min: 5, max: 20)',
@@ -465,6 +465,26 @@ def get_industry_pe_beta(symbol):
         pb_ratio = yf_data.get('priceToBook')
         roe = yf_data.get('returnOnEquity')
 
+        # EPS and PEG
+        current_eps = yf_data.get('trailingEps') or yf_data.get('epsTrailingTwelveMonths')
+        peg_ratio = yf_data.get('pegRatio')
+
+        # Next quarter EPS estimate
+        earnings = yf.Ticker(symbol).earnings_forecasts
+        if earnings is not None and not earnings.empty:
+            try:
+                next_q_eps_est = earnings.loc['Next Qtr.']['Earnings Estimate']
+            except Exception:
+                next_q_eps_est = None
+        else:
+            next_q_eps_est = None
+
+        # EPS increase
+        if current_eps is not None and next_q_eps_est is not None:
+            next_q_eps_increase = next_q_eps_est - current_eps
+        else:
+            next_q_eps_increase = None
+
         return {
             'symbol': symbol,
             'industry': industry,
@@ -476,7 +496,11 @@ def get_industry_pe_beta(symbol):
             'earnings_growth': round(earnings_growth, 2) if earnings_growth else None,
             'ps_ratio': round(ps_ratio, 2) if ps_ratio else None,
             'pb_ratio': round(pb_ratio, 2) if pb_ratio else None,
-            'roe': round(roe, 2) if roe else None
+            'roe': round(roe, 2) if roe else None,
+            'current_eps': current_eps,
+            'next_quarter_eps_estimate': next_q_eps_est,
+            'next_quarter_eps_increase': next_q_eps_increase,
+            'peg_ratio': peg_ratio,
         }
     except Exception as e:
         logger.error(f"Error fetching data for {symbol}: {str(e)}")
@@ -502,7 +526,11 @@ def fetch_valid_tickers(tickers, premium):
         'earnings_growth': None,
         'ps_ratio': None,
         'pb_ratio': None,
-        'roe': None
+        'roe': None,
+        'current_eps': None,
+        'next_quarter_eps_estimate': None,
+        'next_quarter_eps_increase': None,
+        'peg_ratio': None,
     }
 
     for sym in tickers:
@@ -596,7 +624,7 @@ def train_rank(
         # Prepare features
         numeric_features = [
             'trailing_pe', 'forward_pe', 'beta', 'dividend_yield', 'debt_to_equity', 'earnings_growth',
-            'ps_ratio', 'pb_ratio', 'roe'
+            'ps_ratio', 'pb_ratio', 'roe', 'current_eps', 'next_quarter_eps_estimate', 'next_quarter_eps_increase', 'peg_ratio'
         ]
         categorical_features = ['industry']
 
@@ -847,7 +875,11 @@ def process_request(
                         'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
                         'roe': f"{row.get('roe', 0) * 100:.2f}%",
                         'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
-                        'industry': row.get('industry', 'N/A')
+                        'industry': row.get('industry', 'N/A'),
+                        'current_eps': f"{row.get('current_eps', 0):.2f}",
+                        'next_quarter_eps_estimate': f"{row.get('next_quarter_eps_estimate', 0):.2f}",
+                        'next_quarter_eps_increase': f"{row.get('next_quarter_eps_increase', 0):.2f}",
+                        'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
                     })
             return formatted
 

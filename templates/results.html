@@ -136,18 +136,21 @@
                                     <td>ROE</td>
                                     <td>{{ stock.roe }}</td>
                                 </tr>
-                                <!-- NEW METRICS -->
+                                <tr>
+                                    <td>Current EPS</td>
+                                    <td>{{ stock.current_eps }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Next Qtr EPS Est.</td>
+                                    <td>{{ stock.next_quarter_eps_estimate }}</td>
+                                </tr>
+                                <tr>
+                                    <td>EPS Increase</td>
+                                    <td>{{ stock.next_quarter_eps_increase }}</td>
+                                </tr>
                                 <tr>
                                     <td>PEG Ratio</td>
                                     <td>{{ stock.peg_ratio }}</td>
-                                </tr>
-                                <tr>
-                                    <td>Next 5Y EPS Growth (analyst estimates)</td>
-                                    <td>{{ stock.next_5y_growth }}</td>
-                                </tr>
-                                <tr>
-                                    <td>Next Year EPS Growth (analyst estimates)</td>
-                                    <td>{{ stock.next_year_growth }}</td>
                                 </tr>
                             </table>
                         </div>
