@@ -381,8 +381,8 @@ class RecommendationForm(FlaskForm):
         validators=[DataRequired()]
     )
     time_horizon = IntegerField(  # Corrected field name
-        'Time Horizon (years, min: 5, max: 15)',
-        validators=[DataRequired(), NumberRange(min=5, max=15)]
+        'Time Horizon (years, min: 3, max: 10)',
+        validators=[DataRequired(), NumberRange(min=3, max=10)]
     )
     stocks_amount = IntegerField(
         'Number of Stocks (min: 5, max: 20)',
@@ -903,15 +903,16 @@ def process_request(
 
         # Main ticker list with deduplication
         raw_tickers = [
-            'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'BRK-B', 'AVGO', 'LLY',
-            'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'PG', 'JNJ', 'ORCL',
-            'KO', 'ABBV', 'TMUS', 'BAC', 'CVX', 'CRM', 'ABT', 'MCD',
-            'ADP', 'WFC', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'BX', 'GS', 'PGR',
-            'UBER', 'QCOM', 'BKNG', 'ADBE', 'TJX', 'BSX', 'AMD', 'CAT', 'NEE',
-            'BLK', 'TXN', 'SYK', 'GILD', 'HON', 'BA', 'MMC', 'COP', 'PANW',
-            'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV', 'ABNB', 'ICE',
-            'DELL', 'O', 'ASML', 'REGN', 'CDNS', 'HCA', 'FTNT',
-            'SNPS', 'TSM', 'HOOD'
+            'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'BRK-B', 'AVGO', 'LLY',
+            'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'PG', 'JNJ', 'ORCL', 'HD',
+            'KO', 'ABBV', 'TMUS', 'BAC', 'PM', 'CVX', 'CRM', 'ABT', 'CSCO', 'IBM', 'MCD',
+            'ADP', 'WFC', 'MRK', 'PEP', 'AXP', 'MS', 'ISRG',
+            'NOW', 'BX', 'GS', 'PGR', 'UBER', 'QCOM', 'BKNG', 'ADBE', 'AMGN',
+            'TJX', 'BSX', 'AMD', 'CAT', 'NEE', 'BLK', 'TXN', 'SYK',
+            'GILD', 'HON', 'VRTX', 'BA', 'MMC', 'COP',
+            'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV', 'ABNB', 'PYPL',
+            'MNST', 'ICE', 'INTC', 'DASH', 'DELL', 'O', 'AMD', 'ASML', 'REGN', 'HOOD',
+            'GIS', 'DUK', 'CAT', 'PGR', 'BAC', 'PFE', 'KO', 'MRK', 'TSLA'
         ]
 
         seen = set()

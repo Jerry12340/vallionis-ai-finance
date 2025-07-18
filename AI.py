@@ -315,7 +315,7 @@ def main():
         , 'WMT', 'BLK', 'ICE', 'MCD', 'CVX', 'HD'
     ]
     raw_tickers = [
-        'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'BRK-B', 'AVGO', 'LLY',
+        'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'BRK-B', 'AVGO', 'LLY',
         'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'PG', 'JNJ', 'ORCL', 'HD',
         'KO', 'ABBV', 'TMUS', 'BAC', 'PM', 'CVX', 'CRM', 'ABT', 'CSCO', 'IBM', 'MCD',
         'ADP', 'WFC', 'MRK', 'PEP', 'AXP', 'MS', 'ISRG',
@@ -323,8 +323,8 @@ def main():
         'TJX', 'BSX', 'AMD', 'CAT', 'NEE', 'BLK', 'TXN', 'SYK',
         'GILD', 'HON', 'VRTX', 'BA', 'MMC', 'COP',
         'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV', 'ABNB', 'PYPL',
-        'MNST', 'ICE', 'INTC', 'DASH', 'DELL', 'O', 'AVGO', 'ASML', 'REGN', 'HOOD',
-        'GIS', 'DUK', 'CAT', 'PGR', 'BAC', 'PFE', 'KO', 'MRK', 'JPM'
+        'MNST', 'ICE', 'INTC', 'DASH', 'DELL', 'O', 'AMD', 'ASML', 'REGN', 'HOOD',
+        'GIS', 'DUK', 'CAT', 'PGR', 'BAC', 'PFE', 'KO', 'MRK', 'TSLA'
     ]
 
     # 3. Deduplicate raw_tickers
