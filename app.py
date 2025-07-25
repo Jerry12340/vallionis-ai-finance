@@ -312,6 +312,23 @@ class User(db.Model, UserMixin):
     subscription_type = db.Column(db.String(20), default=None)
     subscription_status = db.Column(db.String(20), default=None)
 
+    # Relationships with proper cascade settings
+    current_preferences = db.relationship(
+        'CurrentUserPreferences',
+        backref=db.backref('user', uselist=False),
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
+
+    preference_history = db.relationship(
+        'UserPreferenceHistory',
+        backref='user',
+        lazy='dynamic',
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
+
     def get_subscription_status(self):
         if self.premium:
             if self.subscription_type == 'lifetime':
@@ -352,7 +369,7 @@ class User(db.Model, UserMixin):
                 self.current_preferences.risk_tolerance = risk_tolerance
                 self.current_preferences.sector_focus = sector_focus
                 self.current_preferences.dividend_preference = dividend_preference
-                self.current_preferences.last_updated = datetime.utcnow()  # asad
+                self.current_preferences.last_updated = datetime.utcnow()
 
             db.session.commit()
             return True
@@ -1691,13 +1708,16 @@ def fix_customer_id():
 @login_required
 def delete_account():
     try:
+        # Get the user ID before deletion
+        user_id = current_user.id
+
         # First delete the current_preferences record
         if current_user.current_preferences:
             db.session.delete(current_user.current_preferences)
             db.session.flush()  # Ensure deletion happens before user deletion
 
         # Then delete all preference history records
-        UserPreferenceHistory.query.filter_by(user_id=current_user.id).delete()
+        UserPreferenceHistory.query.filter_by(user_id=user_id).delete()
         db.session.flush()
 
         # If the user has a Stripe subscription, cancel it first
@@ -1718,9 +1738,11 @@ def delete_account():
 
         flash('Your account has been permanently deleted.', 'success')
         return redirect(url_for('index'))
+
     except Exception as e:
         db.session.rollback()
-        flash('Error deleting account: ' + str(e), 'danger')
+        logger.error(f"Error deleting account: {str(e)}", exc_info=True)
+        flash('Error deleting account. Please try again or contact support.', 'danger')
         return redirect(url_for('account'))
 
 
