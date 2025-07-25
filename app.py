@@ -878,22 +878,18 @@ def process_request(
         backup_tickers = {
             'conservative': [
                 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'LOW', 'O',
-                'V', 'MA', 'SPGI', 'MCD', 'BRK-B', 'CAT', 'WMT', 'JPM', 'XOM',
-                'COST', 'T', 'VZ', 'PFE', 'MRK', 'ABT', 'BMY', 'AMGN', 'TGT',
-                'CL', 'KMB', 'SYY', 'BDX', 'SRE', 'NEE', 'D', 'AEP', 'ED', 'EXC',
-                'FE', 'PEG', 'WEC', 'XEL', 'AEE', 'ATO', 'CNP', 'DUK', 'ETR'
+                'V', 'MA', 'SPGI', 'MCD', 'BRK-B', 'CAT', 'JPM', 'XOM',
+                'COST', 'T', 'VZ', 'PFE', 'MRK', 'ABT', 'BMY', 'AMGN',
             ],
             'moderate': [
                 'MSFT', 'GOOG', 'V', 'MA', 'ADP', 'ORCL', 'CRM', 'AAPL', 'PG',
                 'CAT', 'PGR', 'SPGI', 'DELL', 'AXP', 'ASML', 'AMAT', 'AMZN',
-                'QCOM', 'WMT', 'JPM', 'UNH', 'HD', 'LOW', 'TXN', 'INTU', 'SCHW',
-                'BLK', 'GS', 'PYPL', 'ADI', 'AVGO', 'CSCO', 'FIS', 'FISV', 'GPN'
+                'QCOM', 'WMT', 'JPM', 'UNH','BLK'
             ],
             'aggressive': [
                 'NVDA', 'MSFT', 'GOOG', 'AAPL', 'META', 'AMZN', 'ASML', 'CRM',
-                'ORCL', 'CAT', 'PGR', 'DELL', 'PFE', 'AXP', 'AMAT', 'MA', 'REGN',
-                'QCOM', 'ADP', 'AMD', 'INTC', 'MU', 'QCOM', 'ADI', 'AVGO', 'CDNS',
-                'KLAC', 'LRCX', 'MCHP', 'MRVL', 'NXPI', 'ON', 'SWKS', 'TXN', 'WDC'
+                'ORCL', 'DELL', 'PFE', 'AMAT', 'MA',
+                'QCOM', 'ADP', 'AMD', 'MU', 'QCOM', 'ADI', 'AVGO',
             ]
         }[investing_style]
 
@@ -907,9 +903,9 @@ def process_request(
         # Define style-specific parameters (relaxed for conservative)
         style_filters = {
             'conservative': {
-                'pe_max': 35,  # Increased from 30
-                'debt_max': 150,  # Increased from 100
-                'beta_max': 1.8,  # Increased from 1.7
+                'pe_max': 30,  # Increased from 30
+                'debt_max': 100,  # Increased from 100
+                'beta_max': 1.7,  # Increased from 1.7
                 'div_min': 2.0,  # Reduced from 3
                 'beta_min': 0.1  # Reduced from 0.2
             },
