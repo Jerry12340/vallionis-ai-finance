@@ -40,7 +40,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from psycopg2 import OperationalError as Psycopg2OpError
 from flask import send_file
-from alpha_vantage.alphavantage import AlphaVantage
 import requests
 
 # Suppress warnings
