@@ -868,9 +868,8 @@ def process_request(
                 'QCOM', 'WMT', 'JPM', 'UNH','BLK'
             ],
             'aggressive': [
-                'NVDA', 'MSFT', 'GOOG', 'AAPL', 'META', 'AMZN', 'ASML', 'CRM',
-                'ORCL', 'DELL', 'PFE', 'AMAT', 'MA',
-                'QCOM', 'ADP', 'AMD', 'MU', 'QCOM', 'ADI', 'AVGO',
+                'NVDA', 'MSFT', 'GOOG', 'META', 'AMZN', 'ASML', 'CRM',
+                'ORCL', 'AMAT', 'QCOM', 'ADP', 'AMD', 'MU', 'AVGO',
             ]
         }[investing_style]
 
