@@ -425,14 +425,6 @@ if not finnhub_api_key:
 else:
     finnhub_client = finnhub.Client(api_key=finnhub_api_key)
 
-# Initialize Alpha Vantage client
-alpha_vantage_api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
-if not alpha_vantage_api_key:
-    logger.error("ALPHA_VANTAGE_API_KEY not found in environment variables")
-    alpha_vantage_client = None
-else:
-    alpha_vantage_client = AlphaVantage(key=alpha_vantage_api_key, output_format='pandas')
-
 stripe.api_key = os.getenv('STRIPE_LIVE_SECRET_KEY')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_LIVE_PUBLISHABLE_KEY')
 STRIPE_PRICE_ID = os.getenv('STRIPE_LIVE_PRICE_ID_MONTHLY')
@@ -591,34 +583,6 @@ def get_industry_pe_beta(symbol):
             # Finnhub 5Y growth
             sources['finnhub_5y'] = safe_get(finnhub_metrics, '5YAvgEPSGrowth', round_digits=None)
 
-            # Alpha Vantage growth estimates - using correct API methods
-            if alpha_vantage_client:
-                try:
-                    # Get company overview from Alpha Vantage
-                    overview_data = alpha_vantage_client.get_company_overview(symbol=symbol)
-                    if overview_data and not overview_data.empty:
-                        # Alpha Vantage doesn't provide 5-year EPS growth directly
-                        # We can use other available metrics for growth estimation
-
-                        # Get analyst target price and current price for growth estimation
-                        analyst_target = safe_get(overview_data.iloc[0], 'AnalystTargetPrice', round_digits=None)
-                        current_price = safe_get(overview_data.iloc[0], 'LatestPrice', round_digits=None)
-
-                        if analyst_target and current_price and current_price > 0:
-                            # Calculate implied growth from analyst target
-                            price_growth = (analyst_target - current_price) / current_price
-                            # Convert to annual growth estimate (rough approximation)
-                            sources['alpha_vantage_5y'] = price_growth / 5  # Assume 5-year target
-
-                        # Get earnings per share for growth calculation
-                        eps = safe_get(overview_data.iloc[0], 'EPS', round_digits=None)
-                        if eps:
-                            # Store EPS for potential use in growth calculations
-                            sources['alpha_vantage_eps'] = eps
-
-                except Exception as e:
-                    logger.debug(f"Alpha Vantage overview data failed for {symbol}: {e}")
-
             # Historical EPS growth (5 years)
             try:
                 hist = yf.Ticker(symbol).history(period="5y")
@@ -651,29 +615,6 @@ def get_industry_pe_beta(symbol):
 
         # Calculate PEG ratio safely
         forward_pe = safe_get(finnhub_metrics, 'forwardPE') or safe_get(yf_data, 'forwardPE')
-
-        # Get PEG ratio from Alpha Vantage if available
-        alpha_vantage_peg = None
-        if alpha_vantage_client:
-            try:
-                # Get company overview which includes PEG ratio
-                overview_data = alpha_vantage_client.get_company_overview(symbol=symbol)
-                if overview_data and not overview_data.empty:
-                    # Try different possible field names for PEG ratio
-                    peg_fields = ['PEGRatio', 'PEG', 'PEG_Ratio']
-                    for field in peg_fields:
-                        peg_value = safe_get(overview_data.iloc[0], field, round_digits=None)
-                        if peg_value is not None:
-                            alpha_vantage_peg = peg_value
-                            break
-            except Exception as e:
-                logger.debug(f"Alpha Vantage overview data failed for {symbol}: {e}")
-
-        # Use Alpha Vantage PEG if available, otherwise calculate from forward PE and growth
-        if alpha_vantage_peg is not None:
-            result['peg_ratio'] = alpha_vantage_peg
-        elif forward_pe and result['next_5y_eps_growth'] > 0:
-            result['peg_ratio'] = forward_pe / (result['next_5y_eps_growth'] * 100)
 
         # Populate remaining metrics with safe rounding
         result.update({
