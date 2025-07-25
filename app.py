@@ -149,6 +149,42 @@ def initialize_database(retries=5, delay=20):
 initialize_database()
 
 
+def categorize_stock_risk(symbol, beta, dividend_yield, pe_ratio, industry):
+    """
+    Categorize stocks by risk profile to help with style-specific filtering
+    """
+    # Conservative stocks (low risk, stable, dividend-paying)
+    conservative_stocks = {
+        'LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 
+        'T', 'VZ', 'PFE', 'ABT', 'WMT', 'COST', 'MCD', 'GIS', 'ELV', 'BMY'
+    }
+    
+    # Aggressive stocks (high growth, high volatility)
+    aggressive_stocks = {
+        'NVDA', 'TSLA', 'HOOD', 'COIN', 'UBER', 'DASH', 'NOW', 'SNOW', 'PLTR', 
+        'CRWD', 'NET', 'SQ', 'ZM', 'ROKU', 'SPOT', 'SHOP', 'DOCU', 'TWLO', 
+        'OKTA', 'MELI', 'SE', 'JD', 'AMD', 'MU'
+    }
+    
+    # Check explicit categorization first
+    if symbol in conservative_stocks:
+        return 'conservative'
+    elif symbol in aggressive_stocks:
+        return 'aggressive'
+    
+    # Categorize based on metrics
+    if (beta <= 0.8 and dividend_yield >= 2.0 and pe_ratio <= 25):
+        return 'conservative'
+    elif (beta >= 1.3 and dividend_yield <= 1.0 and pe_ratio >= 30):
+        return 'aggressive'
+    elif industry in ['Technology', 'Semiconductors', 'Software'] and beta >= 1.2:
+        return 'aggressive'
+    elif industry in ['Consumer Defensive', 'Utilities'] and beta <= 1.0:
+        return 'conservative'
+    
+    return 'moderate'
+
+
 def fetch_valid_tickers(tickers, premium):
     import time
     rows = []
@@ -719,6 +755,33 @@ def train_rank(
         return pd.DataFrame()
 
     try:
+        # Style-specific filtering to exclude inappropriate stocks
+        if investing_style == 'aggressive':
+            # For aggressive portfolios, exclude conservative stocks
+            conservative_stocks = ['LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 'T', 'VZ', 'PFE', 'ABT', 'WMT', 'COST', 'MCD']
+            df = df[~df['symbol'].isin(conservative_stocks)].copy()
+            
+            # Also filter out stocks with very low beta (too conservative)
+            df = df[df['beta'].fillna(0) >= 0.8].copy()
+            
+            # Filter out stocks with very high dividend yields (typically conservative)
+            df = df[df['dividend_yield'].fillna(0) <= 3.0].copy()
+            
+        elif investing_style == 'conservative':
+            # For conservative portfolios, prefer stable, dividend-paying stocks
+            # Boost scores for stocks with good dividend yields and low beta
+            df['dividend_bonus'] = np.where(df['dividend_yield'].fillna(0) >= 2.0, 2.0, 0)
+            df['stability_bonus'] = np.where(df['beta'].fillna(1.0) <= 1.0, 1.5, 0)
+            
+        elif investing_style == 'moderate':
+            # For moderate portfolios, balance between growth and stability
+            # Slight preference for moderate beta and dividend yields
+            df['moderate_bonus'] = np.where(
+                (df['beta'].fillna(1.0).between(0.8, 1.5)) & 
+                (df['dividend_yield'].fillna(0).between(1.0, 4.0)), 
+                1.0, 0
+            )
+
         # Prepare features
         numeric_features = [
             'trailing_pe', 'forward_pe', 'beta', 'dividend_yield',
@@ -753,14 +816,20 @@ def train_rank(
         model.fit(df[numeric_features + categorical_features], y)
         df['predicted_ann_return'] = model.predict(df[numeric_features + categorical_features])
 
-        # Apply style adjustments
+        # Apply style-specific adjustments (FIXED: now properly reflects risk tolerance)
         style_adjustments = {
-            'conservative': 0.7,  # More conservative estimates
-            'moderate': 0.75,
-            'aggressive': 0.8  # More aggressive estimates
+            'conservative': 0.85,  # Conservative estimates (lower returns expected)
+            'moderate': 1.0,       # No adjustment
+            'aggressive': 1.15     # More aggressive estimates (higher returns expected)
         }
         if investing_style in style_adjustments:
             df['predicted_ann_return'] *= style_adjustments[investing_style]
+
+        # Apply style-specific bonuses
+        if investing_style == 'conservative':
+            df['predicted_ann_return'] += df.get('dividend_bonus', 0) + df.get('stability_bonus', 0)
+        elif investing_style == 'moderate':
+            df['predicted_ann_return'] += df.get('moderate_bonus', 0)
 
         # Apply return caps and filters
         df['predicted_ann_return'] = np.where(
@@ -845,31 +914,31 @@ def process_request(
 
         # Define ticker lists
         main_tickers = [
-            'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'BRK-B', 'AVGO', 'LLY',
-            'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'PG', 'JNJ', 'ORCL', 'HD',
-            'KO', 'BAC', 'CVX', 'CRM', 'ABT', 'CSCO', 'MCD',
-            'ADP', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'GS',
+            'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'AVGO', 'CRM',
+            'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'ORCL', 'HD',
+            'BAC', 'CSCO', 'ADP', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'GS',
             'PGR', 'UBER', 'QCOM', 'ADBE', 'TJX', 'BSX', 'AMD',
-            'CAT', 'BLK', 'TXN', 'BA',
-            'MMC', 'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV',
-            'ICE', 'INTC', 'DASH', 'DELL', 'O', 'ASML',
-            'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN', 'APD'
+            'CAT', 'BLK', 'TXN', 'BA', 'MMC', 'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV',
+            'INTC', 'DASH', 'DELL', 'ASML', 'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN', 'APD'
         ]
 
         backup_tickers = {
             'conservative': [
                 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O',
                 'V', 'MA', 'SPGI', 'MCD', 'BRK-B', 'CAT', 'JPM', 'XOM',
-                'COST', 'T', 'VZ', 'PFE', 'ABT'
+                'COST', 'T', 'VZ', 'PFE', 'ABT', 'LLY', 'WMT'
             ],
             'moderate': [
                 'MSFT', 'GOOG', 'V', 'MA', 'ADP', 'ORCL', 'CRM', 'AAPL', 'PG',
                 'CAT', 'PGR', 'SPGI', 'DELL', 'AXP', 'ASML', 'AMAT', 'AMZN',
-                'QCOM', 'WMT', 'JPM', 'UNH','BLK'
+                'QCOM', 'WMT', 'JPM', 'UNH', 'BLK', 'NVDA', 'META'
             ],
             'aggressive': [
                 'NVDA', 'MSFT', 'GOOG', 'META', 'AMZN', 'ASML', 'CRM',
                 'ORCL', 'AMAT', 'QCOM', 'ADP', 'AMD', 'MU', 'AVGO',
+                'TSLA', 'HOOD', 'COIN', 'UBER', 'DASH', 'NOW', 'ISRG',
+                'SNOW', 'PLTR', 'CRWD', 'NET', 'SQ', 'ZM', 'ROKU', 'SPOT',
+                'SHOP', 'ZM', 'DOCU', 'TWLO', 'OKTA', 'MELI', 'SE', 'JD'
             ]
         }[investing_style]
 
@@ -914,6 +983,50 @@ def process_request(
             (df_meta['debt_to_equity'].fillna(999) <= limits['debt_max'])
             ].copy()
 
+        # Additional style-specific filtering
+        if investing_style == 'aggressive':
+            # Exclude conservative stocks from aggressive portfolios
+            conservative_stocks = ['LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 'T', 'VZ', 'PFE', 'ABT', 'WMT', 'COST', 'MCD']
+            filtered_df = filtered_df[~filtered_df['symbol'].isin(conservative_stocks)].copy()
+            
+            # Use categorization function for additional filtering
+            filtered_df['risk_category'] = filtered_df.apply(
+                lambda row: categorize_stock_risk(
+                    row['symbol'], 
+                    row['beta'], 
+                    row['dividend_yield'], 
+                    row['trailing_pe'], 
+                    row['industry']
+                ), axis=1
+            )
+            filtered_df = filtered_df[filtered_df['risk_category'].isin(['aggressive', 'moderate'])].copy()
+            filtered_df = filtered_df.drop('risk_category', axis=1)  # Clean up
+            
+            # Prefer stocks with higher growth potential
+            filtered_df = filtered_df[filtered_df['next_5y_eps_growth'].fillna(0) >= 0.05].copy()  # At least 5% growth
+            
+        elif investing_style == 'conservative':
+            # Use categorization function for conservative filtering
+            filtered_df['risk_category'] = filtered_df.apply(
+                lambda row: categorize_stock_risk(
+                    row['symbol'], 
+                    row['beta'], 
+                    row['dividend_yield'], 
+                    row['trailing_pe'], 
+                    row['industry']
+                ), axis=1
+            )
+            filtered_df = filtered_df[filtered_df['risk_category'].isin(['conservative', 'moderate'])].copy()
+            filtered_df = filtered_df.drop('risk_category', axis=1)  # Clean up
+            
+            # Prefer stable, established companies
+            filtered_df = filtered_df[filtered_df['beta'].fillna(1.0) <= 1.2].copy()
+            filtered_df = filtered_df[filtered_df['dividend_yield'].fillna(0) >= 1.5].copy()
+            
+        elif investing_style == 'moderate':
+            # Balance between growth and stability
+            filtered_df = filtered_df[filtered_df['beta'].fillna(1.0).between(0.6, 1.4)].copy()
+
         # Handle premium features
         if premium and sector_focus != 'all':
             sector_map = {
@@ -937,18 +1050,59 @@ def process_request(
             investing_style=investing_style
         )
 
-        # Enhanced backup selection
+        # Enhanced backup selection with style-appropriate filtering
         backup_df = pd.DataFrame()
         if len(recs) < stocks_amount:
             needed = max((stocks_amount - len(recs)) * 3, 0)
             existing_symbols = recs['symbol'].tolist() if not recs.empty else []
 
-            # Get candidates from both backup and main tickers
-            fallback_tickers = [t for t in all_tickers if t not in existing_symbols]
+            # Get candidates from backup tickers only (not main tickers)
+            fallback_tickers = [t for t in backup_tickers if t not in existing_symbols]
             to_add = fallback_tickers[:needed]
 
             if to_add:
                 df_bu = fetch_valid_tickers(to_add, premium=premium)
+                
+                # Apply style-specific filtering to backup candidates
+                if investing_style == 'aggressive':
+                    # For aggressive, exclude conservative stocks from backup
+                    conservative_backup = ['LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 'T', 'VZ', 'PFE', 'ABT', 'WMT']
+                    df_bu = df_bu[~df_bu['symbol'].isin(conservative_backup)].copy()
+                    
+                    # Use categorization function
+                    df_bu['risk_category'] = df_bu.apply(
+                        lambda row: categorize_stock_risk(
+                            row['symbol'], 
+                            row['beta'], 
+                            row['dividend_yield'], 
+                            row['trailing_pe'], 
+                            row['industry']
+                        ), axis=1
+                    )
+                    df_bu = df_bu[df_bu['risk_category'].isin(['aggressive', 'moderate'])].copy()
+                    df_bu = df_bu.drop('risk_category', axis=1)  # Clean up
+                    
+                    df_bu = df_bu[df_bu['beta'].fillna(0) >= 0.8].copy()
+                    df_bu = df_bu[df_bu['dividend_yield'].fillna(0) <= 3.0].copy()
+                    
+                elif investing_style == 'conservative':
+                    # Use categorization function for conservative filtering
+                    df_bu['risk_category'] = df_bu.apply(
+                        lambda row: categorize_stock_risk(
+                            row['symbol'], 
+                            row['beta'], 
+                            row['dividend_yield'], 
+                            row['trailing_pe'], 
+                            row['industry']
+                        ), axis=1
+                    )
+                    df_bu = df_bu[df_bu['risk_category'].isin(['conservative', 'moderate'])].copy()
+                    df_bu = df_bu.drop('risk_category', axis=1)  # Clean up
+                    
+                    # For conservative, prefer stable stocks
+                    df_bu = df_bu[df_bu['beta'].fillna(1.0) <= 1.3].copy()
+                    df_bu = df_bu[df_bu['dividend_yield'].fillna(0) >= 1.5].copy()
+                
                 train_bu = build_training_set(df_bu, time_horizon)
                 if not train_bu.empty:
                     backup_candidates = train_rank(
@@ -965,6 +1119,11 @@ def process_request(
                             backup_candidates = backup_candidates.sort_values(
                                 ['dividend_yield', 'beta', 'predicted_ann_return'],
                                 ascending=[False, True, False]
+                            )
+                        elif investing_style == 'aggressive':
+                            backup_candidates = backup_candidates.sort_values(
+                                ['predicted_ann_return', 'beta', 'next_5y_eps_growth'],
+                                ascending=[False, False, False]
                             )
                         backup_df = backup_candidates.head(stocks_amount - len(recs))
 
