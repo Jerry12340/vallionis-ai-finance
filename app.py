@@ -753,25 +753,6 @@ def train_rank(
         model.fit(df[numeric_features + categorical_features], y)
         df['predicted_ann_return'] = model.predict(df[numeric_features + categorical_features])
 
-        # Apply growth-based adjustments
-        growth_weight = {
-            'conservative': 0.3,
-            'moderate': 0.5,
-            'aggressive': 0.7
-        }.get(investing_style, 0.5)
-
-        # Apply growth multiplier - more weight to stocks with higher growth
-        df['growth_multiplier'] = 1 + (df['next_5y_eps_growth'].fillna(0) * growth_weight)
-        df['predicted_ann_return'] = df['predicted_ann_return'] * df['growth_multiplier']
-
-        # Add growth premium for reasonably priced growth stocks (PEG < 2)
-        df['growth_premium'] = np.where(
-            (df['peg_ratio'] < 2.0) & (df['next_5y_eps_growth'] > 0.1),
-            df['next_5y_eps_growth'] * 0.25,  # Add 25% of growth rate as premium
-            0
-        )
-        df['predicted_ann_return'] = df['predicted_ann_return'] + df['growth_premium']
-
         # Apply style adjustments
         style_adjustments = {
             'conservative': 0.7,  # More conservative estimates
@@ -867,9 +848,9 @@ def process_request(
             'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'BRK-B', 'AVGO', 'LLY',
             'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'PG', 'JNJ', 'ORCL', 'HD',
             'KO', 'BAC', 'CVX', 'CRM', 'ABT', 'CSCO', 'MCD',
-            'ADP', 'WFC', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'GS',
+            'ADP', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'GS',
             'PGR', 'UBER', 'QCOM', 'ADBE', 'TJX', 'BSX', 'AMD',
-            'CAT', 'NEE', 'BLK', 'TXN', 'BA',
+            'CAT', 'BLK', 'TXN', 'BA',
             'MMC', 'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV',
             'ICE', 'INTC', 'DASH', 'DELL', 'O', 'ASML',
             'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN', 'APD'
@@ -879,7 +860,7 @@ def process_request(
             'conservative': [
                 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O',
                 'V', 'MA', 'SPGI', 'MCD', 'BRK-B', 'CAT', 'JPM', 'XOM',
-                'COST', 'T', 'VZ', 'PFE', 'MRK', 'ABT'
+                'COST', 'T', 'VZ', 'PFE', 'ABT'
             ],
             'moderate': [
                 'MSFT', 'GOOG', 'V', 'MA', 'ADP', 'ORCL', 'CRM', 'AAPL', 'PG',
