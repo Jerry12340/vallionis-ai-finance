@@ -844,83 +844,91 @@ def process_request(
             premium = False
             flash('Premium features disabled - subscription required', 'warning')
 
-        original_stocks = stocks_amount  # Store original requested amount
+        original_stocks = stocks_amount
         if not premium:
             stocks_amount += 3
 
-        # Define allocation recommendations based on investment style
+        # Define allocation recommendations
         allocation_recommendations = {
             'conservative': {
-                'sp500': 25,
-                'bonds': 10,
-                'btc': 0,
-                'stocks': 65,
-                'notes': []
+                'sp500': 25, 'bonds': 10, 'btc': 0, 'stocks': 65, 'notes': []
             },
             'moderate': {
-                'sp500': 10,
-                'bonds': 5,
-                'btc': 2,
-                'stocks': 83,
-                'notes': ['BTC allocation is optional']
+                'sp500': 10, 'bonds': 5, 'btc': 2, 'stocks': 83, 'notes': ['BTC allocation is optional']
             },
             'aggressive': {
-                'sp500': 5,
-                'bonds': 0,
-                'btc': 5,
-                'stocks': 90,
-                'notes': ['BTC allocation is optional']
+                'sp500': 5, 'bonds': 0, 'btc': 5, 'stocks': 90, 'notes': ['BTC allocation is optional']
             }
         }
         allocation = allocation_recommendations[investing_style]
 
-        # Define backup tickers for each investment style
-        backup_tickers = {
-            'conservative': ['JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'LOW', 'O', 'V', 'MA', 'SPGI',
-                             'MCD', 'BRK-B', 'CAT'],
-            'moderate': ['MSFT', 'GOOG', 'V', 'MA', 'ADP', 'ORCL', 'CRM', 'AAPL', 'PG', 'CAT', 'PGR', 'SPGI', 'DELL',
-                         'AXP', 'ASML', 'AMAT', 'AMZN', 'QCOM', 'WMT'],
-            'aggressive': ['NVDA', 'MSFT', 'GOOG', 'AAPL', 'META', 'AMZN', 'ASML', 'CRM', 'ORCL', 'CAT',
-                           'PGR', 'DELL', 'PFE', 'AXP', 'AMAT', 'MA', 'REGN', 'QCOM', 'ADP']
-        }[investing_style]
-
-        # Main ticker list with deduplication
-        raw_tickers = [
+        # Define ticker lists
+        main_tickers = [
             'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'BRK-B', 'AVGO', 'LLY',
             'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'PG', 'JNJ', 'ORCL', 'HD',
             'KO', 'ABBV', 'TMUS', 'BAC', 'PM', 'CVX', 'CRM', 'ABT', 'CSCO', 'IBM', 'MCD',
-            'ADP', 'WFC', 'MRK', 'PEP', 'AXP', 'MS', 'ISRG',
-            'NOW', 'BX', 'GS', 'PGR', 'UBER', 'QCOM', 'BKNG', 'ADBE', 'AMGN',
-            'TJX', 'BSX', 'AMD', 'CAT', 'NEE', 'BLK', 'TXN', 'SYK',
-            'GILD', 'HON', 'VRTX', 'BA', 'MMC', 'COP',
-            'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV', 'ABNB', 'PYPL',
-            'MNST', 'ICE', 'INTC', 'DASH', 'DELL', 'O', 'ASML', 'REGN', 'HOOD',
-            'GIS', 'DUK', 'CAT', 'PGR', 'BAC', 'PFE', 'KO', 'MRK', 'TSLA', 'MU', 'COIN',
-            'APD'
+            'ADP', 'WFC', 'MRK', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'BX', 'GS',
+            'PGR', 'UBER', 'QCOM', 'BKNG', 'ADBE', 'AMGN', 'TJX', 'BSX', 'AMD',
+            'CAT', 'NEE', 'BLK', 'TXN', 'SYK', 'GILD', 'HON', 'VRTX', 'BA',
+            'MMC', 'COP', 'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV',
+            'ABNB', 'PYPL', 'MNST', 'ICE', 'INTC', 'DASH', 'DELL', 'O', 'ASML',
+            'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN', 'APD'
         ]
 
+        backup_tickers = {
+            'conservative': [
+                'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'LOW', 'O',
+                'V', 'MA', 'SPGI', 'MCD', 'BRK-B', 'CAT', 'WMT', 'JPM', 'XOM',
+                'COST', 'T', 'VZ', 'PFE', 'MRK', 'ABT', 'BMY', 'AMGN', 'TGT',
+                'CL', 'KMB', 'SYY', 'BDX', 'SRE', 'NEE', 'D', 'AEP', 'ED', 'EXC',
+                'FE', 'PEG', 'WEC', 'XEL', 'AEE', 'ATO', 'CNP', 'DUK', 'ETR'
+            ],
+            'moderate': [
+                'MSFT', 'GOOG', 'V', 'MA', 'ADP', 'ORCL', 'CRM', 'AAPL', 'PG',
+                'CAT', 'PGR', 'SPGI', 'DELL', 'AXP', 'ASML', 'AMAT', 'AMZN',
+                'QCOM', 'WMT', 'JPM', 'UNH', 'HD', 'LOW', 'TXN', 'INTU', 'SCHW',
+                'BLK', 'GS', 'PYPL', 'ADI', 'AVGO', 'CSCO', 'FIS', 'FISV', 'GPN'
+            ],
+            'aggressive': [
+                'NVDA', 'MSFT', 'GOOG', 'AAPL', 'META', 'AMZN', 'ASML', 'CRM',
+                'ORCL', 'CAT', 'PGR', 'DELL', 'PFE', 'AXP', 'AMAT', 'MA', 'REGN',
+                'QCOM', 'ADP', 'AMD', 'INTC', 'MU', 'QCOM', 'ADI', 'AVGO', 'CDNS',
+                'KLAC', 'LRCX', 'MCHP', 'MRVL', 'NXPI', 'ON', 'SWKS', 'TXN', 'WDC'
+            ]
+        }[investing_style]
+
+        # Combine all unique tickers we might use
         seen = set()
-        tickers = [sym for sym in raw_tickers if not (sym in seen or seen.add(sym))]
-        seen_backup = set()
-        backup_tickers = [sym for sym in backup_tickers if not (sym in seen_backup or seen_backup.add(sym))]
+        all_tickers = [x for x in main_tickers + backup_tickers if not (x in seen or seen.add(x))]
 
-        # Fetch and filter data
-        df_meta = fetch_valid_tickers(tickers, premium=premium)
+        # Fetch data for all tickers at once
+        df_meta = fetch_valid_tickers(all_tickers, premium=premium)
 
-        # Define style-specific parameters
+        # Define style-specific parameters (relaxed for conservative)
         style_filters = {
-            'conservative': {'pe_max': 30, 'debt_max': 100, 'beta_max': 1.7, 'div_min': 3, 'beta_min': 0.2},
-            'moderate': {'pe_max': 35, 'debt_max': 150, 'beta_max': 2.0, 'div_min': 1.5, 'beta_min': 0.4},
-            'aggressive': {'pe_max': 50, 'debt_max': 500, 'beta_max': 3.5, 'div_min': 0.0, 'beta_min': 0.7}
+            'conservative': {
+                'pe_max': 35,  # Increased from 30
+                'debt_max': 150,  # Increased from 100
+                'beta_max': 1.8,  # Increased from 1.7
+                'div_min': 2.0,  # Reduced from 3
+                'beta_min': 0.1  # Reduced from 0.2
+            },
+            'moderate': {
+                'pe_max': 35,
+                'debt_max': 150,
+                'beta_max': 2.0,
+                'div_min': 1.5,
+                'beta_min': 0.4
+            },
+            'aggressive': {
+                'pe_max': 50,
+                'debt_max': 500,
+                'beta_max': 3.5,
+                'div_min': 0.0,
+                'beta_min': 0.7
+            }
         }
         limits = style_filters[investing_style]
-
-        style_params = {
-            'conservative': {'min_ann_return': 8, 'max_pe': 30, 'max_ann_return': 20},
-            'moderate': {'min_ann_return': 10, 'max_pe': 35, 'max_ann_return': 20},
-            'aggressive': {'min_ann_return': 10, 'max_pe': 40, 'max_ann_return': 25}
-        }
-        params = style_params[investing_style]
 
         # Initial filtering
         filtered_df = df_meta[
@@ -941,58 +949,50 @@ def process_request(
             }
             filtered_df = filtered_df[filtered_df['industry'].isin(sector_map[sector_focus])]
 
-        # Build training set and get recommendations
+        # Build training set and get initial recommendations
         train_primary = build_training_set(filtered_df, time_horizon)
         recs = train_rank(
-            train_primary, time_horizon, stocks_amount,
-            min_ann_return=params['min_ann_return'],
-            max_pe=params['max_pe'],
-            max_ann_return=params['max_ann_return'],
+            train_primary,
+            time_horizon,
+            stocks_amount * 2,  # Get more candidates initially
+            min_ann_return=6 if investing_style == 'conservative' else 10,  # Reduced for conservative
+            max_pe=limits['pe_max'],
+            max_ann_return=20 if investing_style == 'conservative' else 25,
             investing_style=investing_style
         )
 
-        # Apply premium adjustments
-        if premium:
-            if not recs.empty and 'predicted_ann_return' in recs.columns:
-                recs['predicted_ann_return'] *= {
-                    'low': 0.8,
-                    'medium': 1.0,
-                    'high': 1.2
-                }[risk_tolerance]
-
-            if dividend_preference and not recs.empty:
-                recs = recs.sort_values(['dividend_yield', 'predicted_ann_return'], ascending=[False, False])
-
-        # Non-premium adjustments
-        elif investing_style == 'aggressive':
-            filtered_df = filtered_df[
-                ~filtered_df['industry'].isin(['Energy', 'Machinery', 'Industrial Machinery'])].copy()
-
-        # Handle backup tickers if needed
+        # Enhanced backup selection
         backup_df = pd.DataFrame()
         if len(recs) < stocks_amount:
-            needed = max((stocks_amount - len(recs)) + 1, 0)
+            needed = max((stocks_amount - len(recs)) * 3, 0)
             existing_symbols = recs['symbol'].tolist() if not recs.empty else []
-            to_add = [s for s in backup_tickers if s not in existing_symbols][:needed]
+
+            # Get candidates from both backup and main tickers
+            fallback_tickers = [t for t in all_tickers if t not in existing_symbols]
+            to_add = fallback_tickers[:needed]
 
             if to_add:
                 df_bu = fetch_valid_tickers(to_add, premium=premium)
                 train_bu = build_training_set(df_bu, time_horizon)
                 if not train_bu.empty:
                     backup_candidates = train_rank(
-                        train_bu, time_horizon, len(to_add),
-                        min_ann_return=0,
-                        max_pe=100,
+                        train_bu,
+                        time_horizon,
+                        len(to_add),
+                        min_ann_return=0,  # No minimum for backups
+                        max_pe=100,  # Higher P/E allowed
                         max_ann_return=None,
                         investing_style=investing_style
                     )
                     if not backup_candidates.empty:
-                        backup_order = {sym: idx for idx, sym in enumerate(backup_tickers)}
-                        backup_candidates['order'] = backup_candidates['symbol'].map(backup_order)
-                        backup_df = backup_candidates.sort_values('order').dropna(subset=['order']).head(needed).drop(
-                            columns=['order'])
+                        if investing_style == 'conservative':
+                            backup_candidates = backup_candidates.sort_values(
+                                ['dividend_yield', 'beta', 'predicted_ann_return'],
+                                ascending=[False, True, False]
+                            )
+                        backup_df = backup_candidates.head(stocks_amount - len(recs))
 
-        # Combine recommendations
+        # Combine and finalize recommendations
         final_recs = pd.concat([recs, backup_df], ignore_index=True).head(stocks_amount)
 
         # Remove top 3 for non-premium users
