@@ -353,7 +353,7 @@ class User(db.Model, UserMixin):
                 self.current_preferences.risk_tolerance = risk_tolerance
                 self.current_preferences.sector_focus = sector_focus
                 self.current_preferences.dividend_preference = dividend_preference
-                self.current_preferences.last_updated = datetime.utcnow()
+                self.current_preferences.last_updated = datetime.utcnow()  # asad
 
             db.session.commit()
             return True
