@@ -278,8 +278,8 @@ class UserPreferenceHistory(db.Model):
     sector_focus = db.Column(db.String(20))
     dividend_preference = db.Column(db.Boolean)
 
-    # Relationship
-    user = db.relationship('User', backref=db.backref('preference_history', lazy='dynamic'))
+    # Relationship (using back_populates)
+    user = db.relationship('User', back_populates='preference_history')
 
 
 class CurrentUserPreferences(db.Model):
@@ -289,15 +289,15 @@ class CurrentUserPreferences(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    # Preference fields (same as above)
+    # Preference fields
     investing_style = db.Column(db.String(20))
     time_horizon = db.Column(db.Integer)
     risk_tolerance = db.Column(db.String(20))
     sector_focus = db.Column(db.String(20))
     dividend_preference = db.Column(db.Boolean)
 
-    # Relationship
-    user = db.relationship('User', backref=db.backref('current_preferences', uselist=False))
+    # Relationship (using back_populates)
+    user = db.relationship('User', back_populates='current_preferences')
 
 
 class User(db.Model, UserMixin):
@@ -312,10 +312,10 @@ class User(db.Model, UserMixin):
     subscription_type = db.Column(db.String(20), default=None)
     subscription_status = db.Column(db.String(20), default=None)
 
-    # Relationships with proper cascade settings
+    # Relationships (using back_populates)
     current_preferences = db.relationship(
         'CurrentUserPreferences',
-        backref=db.backref('user', uselist=False),
+        back_populates='user',
         uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True
@@ -323,7 +323,7 @@ class User(db.Model, UserMixin):
 
     preference_history = db.relationship(
         'UserPreferenceHistory',
-        backref='user',
+        back_populates='user',
         lazy='dynamic',
         cascade="all, delete-orphan",
         passive_deletes=True
@@ -339,7 +339,7 @@ class User(db.Model, UserMixin):
         return False
 
     def update_preferences(self, investing_style, time_horizon, risk_tolerance=None,
-                           sector_focus=None, dividend_preference=None):
+                         sector_focus=None, dividend_preference=None):
         """Update user preferences with history tracking"""
         try:
             # Create historical record
