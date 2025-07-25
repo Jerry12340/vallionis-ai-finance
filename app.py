@@ -866,20 +866,20 @@ def process_request(
         main_tickers = [
             'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'BRK-B', 'AVGO', 'LLY',
             'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'PG', 'JNJ', 'ORCL', 'HD',
-            'KO', 'ABBV', 'TMUS', 'BAC', 'PM', 'CVX', 'CRM', 'ABT', 'CSCO', 'IBM', 'MCD',
-            'ADP', 'WFC', 'MRK', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'BX', 'GS',
-            'PGR', 'UBER', 'QCOM', 'BKNG', 'ADBE', 'AMGN', 'TJX', 'BSX', 'AMD',
-            'CAT', 'NEE', 'BLK', 'TXN', 'SYK', 'GILD', 'HON', 'VRTX', 'BA',
-            'MMC', 'COP', 'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV',
-            'ABNB', 'PYPL', 'MNST', 'ICE', 'INTC', 'DASH', 'DELL', 'O', 'ASML',
+            'KO', 'BAC', 'CVX', 'CRM', 'ABT', 'CSCO', 'MCD',
+            'ADP', 'WFC', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'GS',
+            'PGR', 'UBER', 'QCOM', 'ADBE', 'TJX', 'BSX', 'AMD',
+            'CAT', 'NEE', 'BLK', 'TXN', 'BA',
+            'MMC', 'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV',
+            'ICE', 'INTC', 'DASH', 'DELL', 'O', 'ASML',
             'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN', 'APD'
         ]
 
         backup_tickers = {
             'conservative': [
-                'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'LOW', 'O',
+                'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O',
                 'V', 'MA', 'SPGI', 'MCD', 'BRK-B', 'CAT', 'JPM', 'XOM',
-                'COST', 'T', 'VZ', 'PFE', 'MRK', 'ABT', 'BMY', 'AMGN',
+                'COST', 'T', 'VZ', 'PFE', 'MRK', 'ABT'
             ],
             'moderate': [
                 'MSFT', 'GOOG', 'V', 'MA', 'ADP', 'ORCL', 'CRM', 'AAPL', 'PG',
