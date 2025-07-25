@@ -161,9 +161,7 @@ def categorize_stock_risk(symbol, beta, dividend_yield, pe_ratio, industry):
     
     # Aggressive stocks (high growth, high volatility)
     aggressive_stocks = {
-        'NVDA', 'TSLA', 'HOOD', 'COIN', 'UBER', 'DASH', 'NOW', 'SNOW', 'PLTR', 
-        'CRWD', 'NET', 'SQ', 'ZM', 'ROKU', 'SPOT', 'SHOP', 'DOCU', 'TWLO', 
-        'OKTA', 'MELI', 'SE', 'JD', 'AMD', 'MU'
+        'NVDA', 'HOOD', 'COIN', 'AMD', 'MU'
     }
     
     # Check explicit categorization first
@@ -917,9 +915,9 @@ def process_request(
             'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'AVGO', 'CRM',
             'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'ORCL', 'HD',
             'BAC', 'CSCO', 'ADP', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'GS',
-            'PGR', 'UBER', 'QCOM', 'ADBE', 'TJX', 'BSX', 'AMD',
-            'CAT', 'BLK', 'TXN', 'BA', 'MMC', 'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV',
-            'INTC', 'DASH', 'DELL', 'ASML', 'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN', 'APD'
+            'PGR', 'QCOM', 'ADBE', 'TJX', 'BSX', 'AMD',
+            'CAT', 'BLK', 'TXN', 'BA', 'MMC', 'PANW', 'LMT', 'AMAT', 'SO', 'BMY', 'ELV',
+            'INTC', 'DASH', 'ASML', 'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN', 'APD'
         ]
 
         backup_tickers = {
@@ -929,16 +927,13 @@ def process_request(
                 'COST', 'T', 'VZ', 'PFE', 'ABT', 'LLY', 'WMT'
             ],
             'moderate': [
-                'MSFT', 'GOOG', 'V', 'MA', 'ADP', 'ORCL', 'CRM', 'AAPL', 'PG',
-                'CAT', 'PGR', 'SPGI', 'DELL', 'AXP', 'ASML', 'AMAT', 'AMZN',
-                'QCOM', 'WMT', 'JPM', 'UNH', 'BLK', 'NVDA', 'META'
+                'MSFT', 'GOOG', 'V', 'MA', 'ADP', 'AAPL', 'PG',
+                'CAT', 'PGR', 'SPGI', 'AXP', 'ASML', 'AMAT', 'AMZN',
+                'QCOM', 'WMT', 'JPM', 'BLK'
             ],
             'aggressive': [
                 'NVDA', 'MSFT', 'GOOG', 'META', 'AMZN', 'ASML', 'CRM',
-                'ORCL', 'AMAT', 'QCOM', 'ADP', 'AMD', 'MU', 'AVGO',
-                'TSLA', 'HOOD', 'COIN', 'UBER', 'DASH', 'NOW', 'ISRG',
-                'SNOW', 'PLTR', 'CRWD', 'NET', 'SQ', 'ZM', 'ROKU', 'SPOT',
-                'SHOP', 'ZM', 'DOCU', 'TWLO', 'OKTA', 'MELI', 'SE', 'JD'
+                'ORCL', 'AMAT', 'QCOM', 'ADP', 'AMD', 'MU', 'AVGO', 'HOOD'
             ]
         }[investing_style]
 
