@@ -1750,6 +1750,15 @@ def fix_customer_id():
 @login_required
 def delete_account():
     try:
+        # First delete the current_preferences record
+        if current_user.current_preferences:
+            db.session.delete(current_user.current_preferences)
+            db.session.flush()  # Ensure deletion happens before user deletion
+
+        # Then delete all preference history records
+        UserPreferenceHistory.query.filter_by(user_id=current_user.id).delete()
+        db.session.flush()
+
         # If the user has a Stripe subscription, cancel it first
         if current_user.stripe_customer_id:
             try:
@@ -1759,7 +1768,7 @@ def delete_account():
             except stripe.error.StripeError:
                 pass  # Subscription might already be canceled
 
-        # Delete the user from the database
+        # Now delete the user
         db.session.delete(current_user)
         db.session.commit()
 
