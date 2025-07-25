@@ -11,6 +11,54 @@
         {% endif %}
     </div>
 
+    <!-- Portfolio Allocation Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Suggested Portfolio Allocation</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>{{ investing_style|capitalize }} Strategy Allocation</h5>
+                    <ul class="list-group mb-3">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            S&P 500 Index
+                            <span class="badge badge-primary badge-pill">{{ allocation.sp500 }}%</span>
+                        </li>
+                        {% if allocation.bonds > 0 %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Bonds
+                            <span class="badge badge-primary badge-pill">{{ allocation.bonds }}%</span>
+                        </li>
+                        {% endif %}
+                        {% if allocation.btc > 0 %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Bitcoin
+                            <span class="badge badge-primary badge-pill">{{ allocation.btc }}%
+                                {% if allocation.notes %}<small class="text-muted">(optional)</small>{% endif %}
+                            </span>
+                        </li>
+                        {% endif %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Individual Stocks
+                            <span class="badge badge-primary badge-pill">{{ allocation.stocks }}%</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>Allocation Visualization</h5>
+                    <div style="height: 200px;">
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="alert alert-info mt-3">
+                <small>This allocation is based on your selected {{ investing_style }} strategy. Adjust according to your personal risk tolerance.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics Cards -->
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="card text-white bg-primary">
@@ -75,6 +123,7 @@
     </div>
     {% endif %}
 
+    <!-- Stock Recommendations -->
     <div class="row">
         {% for stock in recommendations %}
         <div class="col-lg-4 col-md-6 mb-4">
@@ -193,6 +242,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Card hover effect
@@ -227,12 +277,66 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Allocation Chart
+    const ctx = document.getElementById('allocationChart').getContext('2d');
+    const allocationChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                'S&P 500',
+                {% if allocation.bonds > 0 %}'Bonds',{% endif %}
+                {% if allocation.btc > 0 %}'Bitcoin',{% endif %}
+                'Stocks'
+            ],
+            datasets: [{
+                data: [
+                    {{ allocation.sp500 }},
+                    {% if allocation.bonds > 0 %}{{ allocation.bonds }},{% endif %}
+                    {% if allocation.btc > 0 %}{{ allocation.btc }},{% endif %}
+                    {{ allocation.stocks }}
+                ],
+                backgroundColor: [
+                    '#4e73df',
+                    {% if allocation.bonds > 0 %}'#1cc88a',{% endif %}
+                    {% if allocation.btc > 0 %}'#f6c23e',{% endif %}
+                    '#36b9cc'
+                ],
+                hoverBackgroundColor: [
+                    '#2e59d9',
+                    {% if allocation.bonds > 0 %}'#17a673',{% endif %}
+                    {% if allocation.btc > 0 %}'#dda20a',{% endif %}
+                    '#2c9faf'
+                ],
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.raw + '%';
+                        }
+                    }
+                }
+            },
+            cutout: '70%',
+        },
+    });
 });
 </script>
 
 <style>
 .collapse {
     display: none;
+}
+.allocation-card {
+    border-left: 5px solid #4e73df;
 }
 </style>
 {% endblock %}

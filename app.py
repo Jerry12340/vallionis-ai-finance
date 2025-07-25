@@ -848,6 +848,32 @@ def process_request(
         if not premium:
             stocks_amount += 3
 
+        # Define allocation recommendations based on investment style
+        allocation_recommendations = {
+            'conservative': {
+                'sp500': 25,
+                'bonds': 10,
+                'btc': 0,
+                'stocks': 65,
+                'notes': []
+            },
+            'moderate': {
+                'sp500': 10,
+                'bonds': 5,
+                'btc': 2,
+                'stocks': 83,
+                'notes': ['BTC allocation is optional']
+            },
+            'aggressive': {
+                'sp500': 5,
+                'bonds': 0,
+                'btc': 5,
+                'stocks': 90,
+                'notes': ['BTC allocation is optional']
+            }
+        }
+        allocation = allocation_recommendations[investing_style]
+
         # Define backup tickers for each investment style
         backup_tickers = {
             'conservative': ['JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'LOW', 'O', 'V', 'MA', 'SPGI',
@@ -868,8 +894,9 @@ def process_request(
             'TJX', 'BSX', 'AMD', 'CAT', 'NEE', 'BLK', 'TXN', 'SYK',
             'GILD', 'HON', 'VRTX', 'BA', 'MMC', 'COP',
             'PANW', 'LMT', 'AMAT', 'AMT', 'SO', 'BMY', 'ELV', 'ABNB', 'PYPL',
-            'MNST', 'ICE', 'INTC', 'DASH', 'DELL', 'O', 'AMD', 'ASML', 'REGN', 'HOOD',
-            'GIS', 'DUK', 'CAT', 'PGR', 'BAC', 'PFE', 'KO', 'MRK', 'TSLA'
+            'MNST', 'ICE', 'INTC', 'DASH', 'DELL', 'O', 'ASML', 'REGN', 'HOOD',
+            'GIS', 'DUK', 'CAT', 'PGR', 'BAC', 'PFE', 'KO', 'MRK', 'TSLA', 'MU', 'COIN',
+            'APD'
         ]
 
         seen = set()
@@ -1040,7 +1067,9 @@ def process_request(
             'premium': premium,
             'sector_focus': sector_focus,
             'risk_tolerance': risk_tolerance,
-            'dividend_preference': dividend_preference
+            'dividend_preference': dividend_preference,
+            'allocation': allocation,
+            'investing_style': investing_style
         }
 
     except Exception as e:
@@ -1056,67 +1085,9 @@ def process_request(
             'premium': premium,
             'sector_focus': sector_focus,
             'risk_tolerance': risk_tolerance,
-            'dividend_preference': dividend_preference
-        }
-
-    def format_stocks(source_df):
-        formatted = []
-        if not source_df.empty:
-            for _, row in source_df.iterrows():
-                formatted.append({
-                    'symbol': row.get('symbol', 'N/A'),
-                    'total_return': f"{row.get('predicted_total_return', 0):.0f}%",
-                    'annual_return': f"{row.get('predicted_ann_return', 0):.2f}%",
-                    'trailing_pe': f"{row.get('trailing_pe', 0):.2f}",
-                    'forward_pe': f"{row.get('forward_pe', 0):.2f}",
-                    'beta': f"{row.get('beta', 0):.2f}",
-                    'dividend_yield': f"{row.get('dividend_yield', 0):.2f}%",
-                    'debt_to_equity': f"{row.get('debt_to_equity', 0):.2f}%",
-                    'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
-                    'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
-                    'roe': f"{row.get('roe', 0) * 100:.2f}%",
-                    'next_5y_growth': (
-                        f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%"
-                        if row.get('next_5y_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
-                    ),
-                    'next_year_growth': (
-                        f"{row.get('next_year_eps_growth', 0) * 100:.1f}%"
-                        if row.get('next_year_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
-                    ),
-                    'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
-                    'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
-                    'industry': row.get('industry', 'N/A')
-                })
-        return formatted
-
-        recommendations = format_stocks(final_recs)
-
-        # --- WEIGHTED AVERAGE STATS ---
-        if not final_recs.empty:
-            avg_annual = (final_recs['predicted_ann_return'] * final_recs['suggested_allocation']).sum()
-            avg_div = (final_recs['dividend_yield'] * final_recs['suggested_allocation']).sum()
-            avg_total = (final_recs['predicted_total_return'] * final_recs['suggested_allocation']).sum()
-        else:
-            avg_annual = avg_div = avg_total = 0
-
-        # Prepare session data
-        csv_buffer = StringIO()
-        final_recs.to_csv(csv_buffer, index=False)
-        session['csv_data'] = csv_buffer.getvalue()
-        session['premium'] = premium
-
-        return {
-            'recommendations': recommendations,
-            'recs_count': len(final_recs),
-            'averages': {
-                'total': f"{avg_total:.0f}%",
-                'annual': f"{avg_annual:.2f}%",
-                'dividend': f"{avg_div:.2f}%"
-            },
-            'premium': premium,
-            'sector_focus': sector_focus,
-            'risk_tolerance': risk_tolerance,
-            'dividend_preference': dividend_preference
+            'dividend_preference': dividend_preference,
+            'allocation': allocation_recommendations.get(investing_style, {}),
+            'investing_style': investing_style
         }
 
 
