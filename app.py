@@ -914,7 +914,7 @@ def process_request(
         main_tickers = [
             'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'AVGO', 'CRM',
             'WMT', 'JPM', 'V', 'MA', 'XOM', 'COST', 'ORCL', 'HD',
-            'BAC', 'CSCO', 'ADP', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'GS',
+            'BAC', 'ADP', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'GS',
             'PGR', 'QCOM', 'ADBE', 'TJX', 'BSX', 'AMD',
             'CAT', 'BLK', 'TXN', 'BA', 'MMC', 'PANW', 'LMT', 'AMAT', 'SO', 'BMY', 'ELV',
             'INTC', 'DASH', 'ASML', 'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN', 'APD'
