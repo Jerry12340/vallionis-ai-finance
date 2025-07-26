@@ -197,10 +197,13 @@ def fetch_valid_tickers(tickers, premium):
         'beta': None,
         'dividend_yield': None,
         'debt_to_equity': None,
+        'earnings_growth': None,
         'ps_ratio': None,
         'pb_ratio': None,
         'roe': None,
-        'market_cap': None
+        'next_5y_eps_growth': np.nan,
+        'next_year_eps_growth': np.nan,
+        'peg_ratio': np.nan
     }
 
     for sym in tickers:
@@ -565,6 +568,9 @@ def get_industry_pe_beta(symbol):
         'ps_ratio': None,
         'pb_ratio': None,
         'roe': None,
+        'next_5y_eps_growth': np.nan,
+        'next_year_eps_growth': np.nan,
+        'peg_ratio': np.nan,
         'market_cap': None
     }
 
@@ -605,10 +611,66 @@ def get_industry_pe_beta(symbol):
             except Exception as e:
                 logger.debug(f"Finnhub data fetch failed for {symbol}: {e}")
 
+        # Get EPS growth estimates from multiple sources
+        def get_eps_growth_estimates():
+            sources = {
+                'yf_5y': None,
+                'yf_next': None,
+                'finnhub_5y': None,
+                'historical': None,
+                'alpha_vantage_5y': None,
+                'alpha_vantage_next': None
+            }
+
+            # Yahoo Finance analyst estimates
+            try:
+                yf_estimates = yf.Ticker(symbol).analyst_price_target
+                if not yf_estimates.empty:
+                    if 'growth' in yf_estimates.columns:
+                        sources['yf_5y'] = safe_get(yf_estimates, 'growth', round_digits=None) / 100
+            except Exception as e:
+                logger.debug(f"YF analyst estimates failed for {symbol}: {e}")
+
+            # Finnhub 5Y growth
+            sources['finnhub_5y'] = safe_get(finnhub_metrics, '5YAvgEPSGrowth', round_digits=None)
+
+            # Historical EPS growth (5 years)
+            try:
+                hist = yf.Ticker(symbol).history(period="5y")
+                if 'EPS' in hist.columns and len(hist['EPS']) >= 2:
+                    eps_growth = (hist['EPS'].iloc[-1] / hist['EPS'].iloc[0]) ** (1 / 5) - 1
+                    sources['historical'] = eps_growth
+            except Exception as e:
+                logger.debug(f"Historical EPS calc failed for {symbol}: {e}")
+
+            # Next year growth from Yahoo
+            sources['yf_next'] = safe_get(yf_data, 'earningsGrowth', round_digits=None)
+
+            # Filter out None values and calculate medians
+            valid_5y = [v for v in
+                        [sources['yf_5y'], sources['finnhub_5y'], sources['alpha_vantage_5y'], sources['historical']] if
+                        v is not None]
+            median_5y = np.median(valid_5y) if valid_5y else None
+            next_year = sources['yf_next'] if sources['yf_next'] is not None else sources['alpha_vantage_next'] if \
+            sources['alpha_vantage_next'] is not None else (median_5y * 1.2 if median_5y else None)
+
+            # Apply reasonable caps
+            if median_5y:
+                median_5y = min(median_5y, max_growth)
+            if next_year:
+                next_year = min(next_year, max_growth * 1.5)
+
+            return median_5y or min(0.15, max_growth), next_year or min(0.18, max_growth * 1.5)
+
+        result['next_5y_eps_growth'], result['next_year_eps_growth'] = get_eps_growth_estimates()
+
+        # Calculate PEG ratio safely
+        forward_pe = safe_get(finnhub_metrics, 'forwardPE') or safe_get(yf_data, 'forwardPE')
+
         # Populate remaining metrics with safe rounding
         result.update({
             'trailing_pe': safe_get(yf_data, 'trailingPE'),
-            'forward_pe': safe_get(finnhub_metrics, 'forwardPE') or safe_get(yf_data, 'forwardPE'),
+            'forward_pe': forward_pe,
             'beta': safe_get(yf_data, 'beta'),
             'dividend_yield': safe_get(yf_data, 'dividendYield', 0),
             'debt_to_equity': safe_get(yf_data, 'debtToEquity'),
@@ -680,8 +742,9 @@ def train_rank(
     # Updated features including growth estimates
     required_columns = [
         'symbol', 'annual_return', 'trailing_pe', 'forward_pe', 'beta',
-        'dividend_yield', 'debt_to_equity', 'ps_ratio',
-        'pb_ratio', 'roe', 'industry'
+        'dividend_yield', 'debt_to_equity', 'earnings_growth', 'ps_ratio',
+        'pb_ratio', 'roe', 'industry', 'next_5y_eps_growth',
+        'next_year_eps_growth', 'peg_ratio'
     ]
 
     missing_cols = [col for col in required_columns if col not in df.columns]
@@ -720,8 +783,8 @@ def train_rank(
         # Prepare features
         numeric_features = [
             'trailing_pe', 'forward_pe', 'beta', 'dividend_yield',
-            'debt_to_equity', 'ps_ratio', 'pb_ratio',
-            'roe'
+            'debt_to_equity', 'earnings_growth', 'ps_ratio', 'pb_ratio',
+            'roe', 'next_5y_eps_growth', 'next_year_eps_growth', 'peg_ratio'
         ]
         categorical_features = ['industry']
 
@@ -1054,8 +1117,8 @@ def process_request(
                             )
                         elif investing_style == 'aggressive':
                             backup_candidates = backup_candidates.sort_values(
-                                ['predicted_ann_return', 'beta'],
-                                ascending=[False, False]
+                                ['predicted_ann_return', 'beta', 'next_5y_eps_growth'],
+                                ascending=[False, False, False]
                             )
                         backup_df = backup_candidates.head(stocks_amount - len(recs))
 
@@ -1093,6 +1156,15 @@ def process_request(
                         'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
                         'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
                         'roe': f"{row.get('roe', 0) * 100:.2f}%",
+                        'next_5y_growth': (
+                            f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%"
+                            if row.get('next_5y_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                        ),
+                        'next_year_growth': (
+                            f"{row.get('next_year_eps_growth', 0) * 100:.1f}%"
+                            if row.get('next_year_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
+                        ),
+                        'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
                         'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
                         'industry': row.get('industry', 'N/A')
                     })
