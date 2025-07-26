@@ -201,9 +201,6 @@ def fetch_valid_tickers(tickers, premium):
         'ps_ratio': None,
         'pb_ratio': None,
         'roe': None,
-        'next_5y_eps_growth': np.nan,
-        'next_year_eps_growth': np.nan,
-        'peg_ratio': np.nan
     }
 
     for sym in tickers:
@@ -568,9 +565,6 @@ def get_industry_pe_beta(symbol):
         'ps_ratio': None,
         'pb_ratio': None,
         'roe': None,
-        'next_5y_eps_growth': np.nan,
-        'next_year_eps_growth': np.nan,
-        'peg_ratio': np.nan,
         'market_cap': None
     }
 
@@ -611,66 +605,10 @@ def get_industry_pe_beta(symbol):
             except Exception as e:
                 logger.debug(f"Finnhub data fetch failed for {symbol}: {e}")
 
-        # Get EPS growth estimates from multiple sources
-        def get_eps_growth_estimates():
-            sources = {
-                'yf_5y': None,
-                'yf_next': None,
-                'finnhub_5y': None,
-                'historical': None,
-                'alpha_vantage_5y': None,
-                'alpha_vantage_next': None
-            }
-
-            # Yahoo Finance analyst estimates
-            try:
-                yf_estimates = yf.Ticker(symbol).analyst_price_target
-                if not yf_estimates.empty:
-                    if 'growth' in yf_estimates.columns:
-                        sources['yf_5y'] = safe_get(yf_estimates, 'growth', round_digits=None) / 100
-            except Exception as e:
-                logger.debug(f"YF analyst estimates failed for {symbol}: {e}")
-
-            # Finnhub 5Y growth
-            sources['finnhub_5y'] = safe_get(finnhub_metrics, '5YAvgEPSGrowth', round_digits=None)
-
-            # Historical EPS growth (5 years)
-            try:
-                hist = yf.Ticker(symbol).history(period="5y")
-                if 'EPS' in hist.columns and len(hist['EPS']) >= 2:
-                    eps_growth = (hist['EPS'].iloc[-1] / hist['EPS'].iloc[0]) ** (1 / 5) - 1
-                    sources['historical'] = eps_growth
-            except Exception as e:
-                logger.debug(f"Historical EPS calc failed for {symbol}: {e}")
-
-            # Next year growth from Yahoo
-            sources['yf_next'] = safe_get(yf_data, 'earningsGrowth', round_digits=None)
-
-            # Filter out None values and calculate medians
-            valid_5y = [v for v in
-                        [sources['yf_5y'], sources['finnhub_5y'], sources['alpha_vantage_5y'], sources['historical']] if
-                        v is not None]
-            median_5y = np.median(valid_5y) if valid_5y else None
-            next_year = sources['yf_next'] if sources['yf_next'] is not None else sources['alpha_vantage_next'] if \
-            sources['alpha_vantage_next'] is not None else (median_5y * 1.2 if median_5y else None)
-
-            # Apply reasonable caps
-            if median_5y:
-                median_5y = min(median_5y, max_growth)
-            if next_year:
-                next_year = min(next_year, max_growth * 1.5)
-
-            return median_5y or min(0.15, max_growth), next_year or min(0.18, max_growth * 1.5)
-
-        result['next_5y_eps_growth'], result['next_year_eps_growth'] = get_eps_growth_estimates()
-
-        # Calculate PEG ratio safely
-        forward_pe = safe_get(finnhub_metrics, 'forwardPE') or safe_get(yf_data, 'forwardPE')
-
         # Populate remaining metrics with safe rounding
         result.update({
             'trailing_pe': safe_get(yf_data, 'trailingPE'),
-            'forward_pe': forward_pe,
+            'forward_pe': safe_get(finnhub_metrics, 'forwardPE') or safe_get(yf_data, 'forwardPE'),
             'beta': safe_get(yf_data, 'beta'),
             'dividend_yield': safe_get(yf_data, 'dividendYield', 0),
             'debt_to_equity': safe_get(yf_data, 'debtToEquity'),
@@ -739,12 +677,11 @@ def train_rank(
         print("Empty dataframe or missing annual_return column")
         return pd.DataFrame()
 
-    # Updated features including growth estimates
+    # Updated features
     required_columns = [
         'symbol', 'annual_return', 'trailing_pe', 'forward_pe', 'beta',
-        'dividend_yield', 'debt_to_equity', 'earnings_growth', 'ps_ratio',
-        'pb_ratio', 'roe', 'industry', 'next_5y_eps_growth',
-        'next_year_eps_growth', 'peg_ratio'
+        'dividend_yield', 'debt_to_equity', 'ps_ratio',
+        'pb_ratio', 'roe', 'industry'
     ]
 
     missing_cols = [col for col in required_columns if col not in df.columns]
@@ -783,8 +720,7 @@ def train_rank(
         # Prepare features
         numeric_features = [
             'trailing_pe', 'forward_pe', 'beta', 'dividend_yield',
-            'debt_to_equity', 'earnings_growth', 'ps_ratio', 'pb_ratio',
-            'roe', 'next_5y_eps_growth', 'next_year_eps_growth', 'peg_ratio'
+            'debt_to_equity', 'ps_ratio', 'pb_ratio', 'roe'
         ]
         categorical_features = ['industry']
 
@@ -997,8 +933,8 @@ def process_request(
             filtered_df = filtered_df[filtered_df['risk_category'].isin(['aggressive', 'moderate'])].copy()
             filtered_df = filtered_df.drop('risk_category', axis=1)  # Clean up
             
-            # Prefer stocks with higher growth potential
-            filtered_df = filtered_df[filtered_df['next_5y_eps_growth'].fillna(0) >= 0.05].copy()  # At least 5% growth
+            # Prefer stocks with higher beta (growth potential)
+            filtered_df = filtered_df[filtered_df['beta'].fillna(1.0) >= 0.8].copy()  # At least moderate volatility
             
         elif investing_style == 'conservative':
             # Use categorization function for conservative filtering
@@ -1117,8 +1053,8 @@ def process_request(
                             )
                         elif investing_style == 'aggressive':
                             backup_candidates = backup_candidates.sort_values(
-                                ['predicted_ann_return', 'beta', 'next_5y_eps_growth'],
-                                ascending=[False, False, False]
+                                ['predicted_ann_return', 'beta', 'market_cap'],
+                                ascending=[False, False, True]
                             )
                         backup_df = backup_candidates.head(stocks_amount - len(recs))
 
@@ -1133,12 +1069,13 @@ def process_request(
         if not final_recs.empty and 'predicted_ann_return' in final_recs.columns:
             final_recs = final_recs.sort_values('predicted_ann_return', ascending=False).reset_index(drop=True)
 
-        # Calculate suggested allocation
-        if not final_recs.empty and final_recs['predicted_ann_return'].sum() > 0:
-            final_recs['suggested_allocation'] = final_recs['predicted_ann_return'] / final_recs[
-                'predicted_ann_return'].sum()
-        else:
-            final_recs['suggested_allocation'] = 1 / len(final_recs) if not final_recs.empty else 0
+        # Calculate optimal allocation using modern portfolio theory
+        final_recs = calculate_optimal_allocation(
+            final_recs, 
+            investing_style, 
+            time_horizon, 
+            dividend_preference
+        )
 
         def format_stocks(source_df):
             formatted = []
@@ -1156,15 +1093,6 @@ def process_request(
                         'ps_ratio': f"{row.get('ps_ratio', 0):.2f}",
                         'pb_ratio': f"{row.get('pb_ratio', 0):.2f}",
                         'roe': f"{row.get('roe', 0) * 100:.2f}%",
-                        'next_5y_growth': (
-                            f"{row.get('next_5y_eps_growth', 0) * 100:.1f}%"
-                            if row.get('next_5y_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
-                        ),
-                        'next_year_growth': (
-                            f"{row.get('next_year_eps_growth', 0) * 100:.1f}%"
-                            if row.get('next_year_eps_growth') not in [None, '', 0, np.nan] else 'N/A'
-                        ),
-                        'peg_ratio': f"{row.get('peg_ratio', 0):.2f}",
                         'suggested_allocation': f"{row.get('suggested_allocation', 0) * 100:.2f}%",
                         'industry': row.get('industry', 'N/A')
                     })
@@ -2160,6 +2088,142 @@ def contact():
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_customer_ids, 'interval', hours=1)
 scheduler.start()
+
+
+def calculate_optimal_allocation(df, investing_style, time_horizon, dividend_preference=False):
+    """
+    Calculate optimal portfolio allocation using modern portfolio theory principles
+    """
+    if df.empty:
+        return df
+    
+    # Create a copy to avoid modifying original
+    df = df.copy()
+    
+    # Calculate risk-adjusted metrics
+    df['risk_adjusted_return'] = df['predicted_ann_return'] / (df['beta'].fillna(1.0) + 0.1)
+    df['volatility_score'] = 1 / (df['beta'].fillna(1.0) + 0.1)  # Lower beta = lower volatility = higher score
+    
+    # Calculate Sharpe-like ratio (assuming risk-free rate of 4%)
+    risk_free_rate = 4.0
+    df['sharpe_ratio'] = (df['predicted_ann_return'] - risk_free_rate) / (df['beta'].fillna(1.0) + 0.1)
+    
+    # Calculate quality score based on ROE and debt levels
+    df['quality_score'] = np.where(
+        (df['roe'].fillna(0) > 0.15) & (df['debt_to_equity'].fillna(0) < 50),
+        10,  # High quality
+        np.where(
+            (df['roe'].fillna(0) > 0.10) & (df['debt_to_equity'].fillna(0) < 100),
+            5,   # Medium quality
+            0    # Low quality
+        )
+    )
+    
+    # Calculate market cap score (prefer mid-cap for better risk/reward)
+    # Assuming market_cap is in billions, we'll create a bell curve preference
+    df['market_cap_score'] = np.where(
+        df['market_cap'].fillna(100) < 10,  # Small cap
+        3,
+        np.where(
+            df['market_cap'].fillna(100) < 100,  # Mid cap
+            10,
+            np.where(
+                df['market_cap'].fillna(100) < 500,  # Large cap
+                7,
+                5  # Mega cap
+            )
+        )
+    )
+    
+    # Style-specific scoring adjustments
+    if investing_style == 'conservative':
+        # Conservative: prioritize stability, dividends, and low volatility
+        df['style_score'] = (
+            df['dividend_yield'].fillna(0) * 2.0 +  # Higher weight on dividends
+            df['volatility_score'] * 3.0 +          # Higher weight on low volatility
+            df['quality_score'] * 2.0 +             # Higher weight on quality
+            df['risk_adjusted_return'] * 1.5 +      # Moderate weight on returns
+            df['market_cap_score'] * 1.0            # Moderate weight on market cap
+        )
+        
+        # Penalize high beta stocks
+        df['style_score'] = df['style_score'] * np.where(df['beta'].fillna(1.0) > 1.2, 0.7, 1.0)
+        
+    elif investing_style == 'aggressive':
+        # Aggressive: prioritize high returns and momentum
+        df['style_score'] = (
+            df['predicted_ann_return'] * 2.5 +      # Higher weight on returns
+            df['sharpe_ratio'] * 2.0 +              # Higher weight on risk-adjusted returns
+            df['quality_score'] * 1.0 +             # Lower weight on quality
+            df['market_cap_score'] * 1.5            # Higher weight on market cap (prefer mid-cap)
+        )
+        
+        # Boost high beta stocks slightly (but not too much)
+        df['style_score'] = df['style_score'] * np.where(df['beta'].fillna(1.0) > 1.3, 1.1, 1.0)
+        
+    else:  # moderate
+        # Moderate: balance between growth and stability
+        df['style_score'] = (
+            df['risk_adjusted_return'] * 2.0 +      # Balanced weight on risk-adjusted returns
+            df['dividend_yield'].fillna(0) * 1.0 +  # Moderate weight on dividends
+            df['quality_score'] * 1.5 +             # Moderate weight on quality
+            df['volatility_score'] * 1.5 +          # Moderate weight on low volatility
+            df['market_cap_score'] * 1.2            # Moderate weight on market cap
+        )
+    
+    # Apply dividend preference if specified
+    if dividend_preference:
+        df['style_score'] = df['style_score'] * (1 + df['dividend_yield'].fillna(0) / 10)
+    
+    # Calculate sector diversification penalty
+    sector_counts = df['industry'].value_counts()
+    sector_penalty = {}
+    for sector in df['industry'].unique():
+        if sector in sector_counts:
+            # Penalize over-concentration in any sector
+            if sector_counts[sector] > len(df) * 0.3:  # More than 30% in one sector
+                sector_penalty[sector] = 0.8
+            elif sector_counts[sector] > len(df) * 0.2:  # More than 20% in one sector
+                sector_penalty[sector] = 0.9
+            else:
+                sector_penalty[sector] = 1.0
+    
+    # Apply sector diversification penalty
+    df['sector_penalty'] = df['industry'].map(sector_penalty).fillna(1.0)
+    df['style_score'] = df['style_score'] * df['sector_penalty']
+    
+    # Calculate final allocation weights using softmax-like function
+    # This creates more balanced allocations than simple proportional
+    df['raw_allocation'] = np.exp(df['style_score'] / 10)  # Softmax-like transformation
+    
+    # Normalize to sum to 1
+    total_weight = df['raw_allocation'].sum()
+    if total_weight > 0:
+        df['suggested_allocation'] = df['raw_allocation'] / total_weight
+    else:
+        df['suggested_allocation'] = 1 / len(df)
+    
+    # Apply minimum and maximum allocation constraints
+    min_allocation = 0.02  # Minimum 2% allocation
+    max_allocation = 0.25  # Maximum 25% allocation
+    
+    # First pass: ensure minimum allocation
+    df['suggested_allocation'] = np.maximum(df['suggested_allocation'], min_allocation)
+    
+    # Second pass: cap maximum allocation
+    df['suggested_allocation'] = np.minimum(df['suggested_allocation'], max_allocation)
+    
+    # Third pass: renormalize
+    total_weight = df['suggested_allocation'].sum()
+    if total_weight > 0:
+        df['suggested_allocation'] = df['suggested_allocation'] / total_weight
+    
+    # Clean up temporary columns
+    df = df.drop(['risk_adjusted_return', 'volatility_score', 'sharpe_ratio', 
+                  'growth_score', 'quality_score', 'market_cap_score', 'style_score', 
+                  'sector_penalty', 'raw_allocation'], axis=1, errors='ignore')
+    
+    return df
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
