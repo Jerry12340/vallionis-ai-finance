@@ -1135,8 +1135,9 @@ def process_request(
 
         # Calculate suggested allocation
         if not final_recs.empty and final_recs['predicted_ann_return'].sum() > 0:
-            final_recs['suggested_allocation'] = final_recs['predicted_ann_return'] / final_recs[
-                'predicted_ann_return'].sum()
+            # Avoid division by zero or missing beta
+            adj_return = final_recs['predicted_ann_return'] / final_recs['beta'].replace(0, 1).fillna(1)
+            final_recs['suggested_allocation'] = adj_return / adj_return.sum()
         else:
             final_recs['suggested_allocation'] = 1 / len(final_recs) if not final_recs.empty else 0
 
