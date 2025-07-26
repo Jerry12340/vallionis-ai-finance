@@ -817,8 +817,8 @@ def train_rank(
         # Apply style-specific adjustments (FIXED: now properly reflects risk tolerance)
         style_adjustments = {
             'conservative': 0.85,  # Conservative estimates (lower returns expected)
-            'moderate': 1.0,       # No adjustment
-            'aggressive': 1.15     # More aggressive estimates (higher returns expected)
+            'moderate': 0.9,       # No adjustment
+            'aggressive': 1.0     # More aggressive estimates (higher returns expected)
         }
         if investing_style in style_adjustments:
             df['predicted_ann_return'] *= style_adjustments[investing_style]
@@ -850,7 +850,7 @@ def train_rank(
         )
 
         # Penalty for high P/E ratios
-        df['predicted_ann_return'] = df['predicted_ann_return'] - 0.17 * np.maximum(df['forward_pe'] - 15, 0)
+        df['predicted_ann_return'] = df['predicted_ann_return'] - 0.25 * np.maximum(df['forward_pe'] - 15, 0)
 
         # Calculate total return over the time horizon
         df['predicted_total_return'] = ((1 + df['predicted_ann_return'] / 100) ** years - 1) * 100
