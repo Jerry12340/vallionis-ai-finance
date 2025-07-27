@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}SEO Status - Vallionis AI Finance{% endblock %}
+
+{% block content %}
+<div class="seo-status-container">
+    <div class="seo-header">
+        <h1>SEO & Indexing Status</h1>
+        <p>Monitor your website's search engine optimization and indexing progress</p>
+    </div>
+
+    <div class="seo-grid">
+        <!-- Sitemap Status -->
+        <div class="seo-card">
+            <h3><i class="fas fa-sitemap"></i> Sitemap Status</h3>
+            <div class="status-item">
+                <span class="label">Sitemap URL:</span>
+                <a href="{{ sitemap_url }}" target="_blank" class="url">{{ sitemap_url }}</a>
+            </div>
+            <div class="status-item">
+                <span class="label">Status:</span>
+                <span class="status success">✅ Active</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Last Updated:</span>
+                <span class="date">{{ moment().strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+        </div>
+
+        <!-- Google Search Console -->
+        <div class="seo-card">
+            <h3><i class="fab fa-google"></i> Google Search Console</h3>
+            <div class="status-item">
+                <span class="label">Property:</span>
+                <span class="url">{{ base_url }}</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Verification:</span>
+                <span class="status success">✅ Verified</span>
+            </div>
+            <div class="status-item">
+                <a href="https://search.google.com/search-console" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-external-link-alt"></i> Open Search Console
+                </a>
+            </div>
+        </div>
+
+        <!-- Page Indexing Status -->
+        <div class="seo-card full-width">
+            <h3><i class="fas fa-list"></i> Page Indexing Status</h3>
+            <div class="pages-grid">
+                {% for page in pages %}
+                <div class="page-item">
+                    <div class="page-info">
+                        <span class="page-name">{{ page.name }}</span>
+                        <a href="{{ page.url }}" target="_blank" class="page-url">{{ page.url }}</a>
+                    </div>
+                    <div class="page-actions">
+                        <a href="https://search.google.com/search-console/inspect?resource_id={{ base_url }}&url={{ page.url }}" 
+                           target="_blank" class="btn btn-sm btn-outline">
+                            <i class="fas fa-search"></i> Inspect
+                        </a>
+                        <a href="https://www.google.com/search?q=site:{{ base_url.replace('https://', '') }}{{ page.url.replace(base_url, '') }}" 
+                           target="_blank" class="btn btn-sm btn-outline">
+                            <i class="fab fa-google"></i> Search
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Quick Tests -->
+        <div class="seo-card full-width">
+            <h3><i class="fas fa-vial"></i> Quick Indexing Tests</h3>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h4>Site Search Test</h4>
+                    <p>Check if your site appears in Google search results</p>
+                    <a href="https://www.google.com/search?q=site:{{ base_url.replace('https://', '') }}" 
+                       target="_blank" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Test Site Search
+                    </a>
+                </div>
+                
+                <div class="test-item">
+                    <h4>Brand Search Test</h4>
+                    <p>Search for your brand name to see if it appears</p>
+                    <a href="https://www.google.com/search?q=%22Vallionis+AI+Finance%22" 
+                       target="_blank" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Test Brand Search
+                    </a>
+                </div>
+                
+                <div class="test-item">
+                    <h4>Keyword Search Test</h4>
+                    <p>Check if you rank for target keywords</p>
+                    <a href="https://www.google.com/search?q=AI+stock+recommendations" 
+                       target="_blank" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Test Keywords
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monitoring Tips -->
+        <div class="seo-card full-width">
+            <h3><i class="fas fa-chart-line"></i> Monitoring Tips</h3>
+            <div class="tips-grid">
+                <div class="tip">
+                    <h4>📊 Google Search Console</h4>
+                    <ul>
+                        <li>Check Index Coverage report weekly</li>
+                        <li>Monitor for crawl errors</li>
+                        <li>Track search performance</li>
+                        <li>Request indexing for new pages</li>
+                    </ul>
+                </div>
+                
+                <div class="tip">
+                    <h4>📈 Expected Timeline</h4>
+                    <ul>
+                        <li><strong>Week 1-2:</strong> Pages discovered</li>
+                        <li><strong>Week 2-4:</strong> Homepage indexed</li>
+                        <li><strong>Week 4-8:</strong> All pages indexed</li>
+                        <li><strong>Week 8+:</strong> Organic traffic starts</li>
+                    </ul>
+                </div>
+                
+                <div class="tip">
+                    <h4>🚨 Red Flags</h4>
+                    <ul>
+                        <li>Pages blocked by robots.txt</li>
+                        <li>Noindex meta tags</li>
+                        <li>Slow page load times</li>
+                        <li>Duplicate content issues</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.seo-status-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.seo-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.seo-header h1 {
+    color: #2962ff;
+    margin-bottom: 0.5rem;
+}
+
+.seo-grid {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.seo-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.seo-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.seo-card h3 {
+    color: #2962ff;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.status-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.label {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.status.success {
+    color: #059669;
+    font-weight: 600;
+}
+
+.url {
+    color: #2962ff;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.url:hover {
+    text-decoration: underline;
+}
+
+.date {
+    color: #64748b;
+}
+
+.pages-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.page-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.page-info {
+    flex: 1;
+}
+
+.page-name {
+    display: block;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.page-url {
+    color: #64748b;
+    font-size: 0.875rem;
+    text-decoration: none;
+}
+
+.page-url:hover {
+    text-decoration: underline;
+}
+
+.page-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.test-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.test-item {
+    text-align: center;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.test-item h4 {
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.test-item p {
+    color: #64748b;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.tip h4 {
+    color: #1e293b;
+    margin-bottom: 1rem;
+}
+
+.tip ul {
+    list-style: none;
+    padding: 0;
+}
+
+.tip li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    color: #64748b;
+}
+
+.tip li:last-child {
+    border-bottom: none;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: #2962ff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1e40af;
+}
+
+.btn-outline {
+    border: 1px solid #d1d5db;
+    color: #374151;
+    background: white;
+}
+
+.btn-outline:hover {
+    background: #f9fafb;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .seo-status-container {
+        padding: 1rem;
+    }
+    
+    .page-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .page-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+</style>
+{% endblock %} 

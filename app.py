@@ -2192,18 +2192,27 @@ def sitemap():
         # Fallback to static sitemap
         return send_from_directory('static', 'sitemap.xml', mimetype='application/xml')
 
-@app.route('/test-sitemap')
-def test_sitemap():
-    """Test route to verify sitemap generation"""
-    try:
-        base_url = request.url_root.rstrip('/')
-        test_pages = [
-            {'url': f"{base_url}/", 'priority': '1.0', 'changefreq': 'daily'},
-        ]
-        sitemap_xml = render_template('sitemap.xml', pages=test_pages, moment=datetime.now())
-        return f"<pre>{sitemap_xml}</pre>"
-    except Exception as e:
-        return f"Error: {str(e)}"
+@app.route('/seo-status')
+def seo_status():
+    """SEO status monitoring page"""
+    base_url = request.url_root.rstrip('/')
+    
+    # Define pages to check
+    pages_to_check = [
+        {'url': f"{base_url}/", 'name': 'Homepage'},
+        {'url': f"{base_url}/login", 'name': 'Login'},
+        {'url': f"{base_url}/register", 'name': 'Register'},
+        {'url': f"{base_url}/subscription", 'name': 'Subscription'},
+        {'url': f"{base_url}/privacy", 'name': 'Privacy'},
+        {'url': f"{base_url}/terms", 'name': 'Terms'},
+        {'url': f"{base_url}/disclaimer", 'name': 'Disclaimer'},
+        {'url': f"{base_url}/contact", 'name': 'Contact'},
+    ]
+    
+    return render_template('seo_status.html', 
+                         pages=pages_to_check, 
+                         base_url=base_url,
+                         sitemap_url=f"{base_url}/sitemap.xml")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
