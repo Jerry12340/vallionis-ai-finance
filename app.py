@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, session, Response, abort, redirect, url_for, jsonify, \
-    send_from_directory
+    send_from_directory, make_response
 import time
 import pandas as pd
 import yfinance as yf
@@ -2161,6 +2161,28 @@ def contact():
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_customer_ids, 'interval', hours=1)
 scheduler.start()
+
+@app.route('/sitemap.xml')
+def sitemap():
+    """Generate sitemap for search engines"""
+    from flask import make_response
+    
+    # Define your main pages
+    pages = [
+        {'url': url_for('index', _external=True), 'priority': '1.0', 'changefreq': 'daily'},
+        {'url': url_for('login', _external=True), 'priority': '0.8', 'changefreq': 'monthly'},
+        {'url': url_for('register', _external=True), 'priority': '0.8', 'changefreq': 'monthly'},
+        {'url': url_for('subscription', _external=True), 'priority': '0.7', 'changefreq': 'weekly'},
+        {'url': url_for('privacy', _external=True), 'priority': '0.5', 'changefreq': 'monthly'},
+        {'url': url_for('terms', _external=True), 'priority': '0.5', 'changefreq': 'monthly'},
+        {'url': url_for('disclaimer', _external=True), 'priority': '0.5', 'changefreq': 'monthly'},
+        {'url': url_for('contact', _external=True), 'priority': '0.6', 'changefreq': 'monthly'},
+    ]
+    
+    sitemap_xml = render_template('sitemap.xml', pages=pages, moment=datetime.now())
+    response = make_response(sitemap_xml)
+    response.headers["Content-Type"] = "application/xml"
+    return response
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

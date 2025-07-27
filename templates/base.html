@@ -3,56 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}AI-powered stock recommendations and portfolio analysis. Get personalized investment advice based on your risk tolerance and investment goals.{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}stock recommendations, AI finance, investment advice, portfolio analysis, stock market, financial planning, investment strategy{% endblock %}">
+    <meta name="author" content="Vallionis AI Finance">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+    <meta name="revisit-after" content="7 days">
+    <meta name="distribution" content="global">
+    <meta name="rating" content="general">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ request.url }}">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:title" content="{% block og_title %}Vallionis AI Finance - Smart Stock Recommendations{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Get AI-powered stock recommendations tailored to your investment style and risk tolerance.{% endblock %}">
+    <meta property="og:image" content="{{ url_for('static', filename='og-image.jpg', _external=True) }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="Vallionis AI Finance">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ request.url }}">
+    <meta property="twitter:title" content="{% block twitter_title %}Vallionis AI Finance - Smart Stock Recommendations{% endblock %}">
+    <meta property="twitter:description" content="{% block twitter_description %}Get AI-powered stock recommendations tailored to your investment style and risk tolerance.{% endblock %}">
+    <meta property="twitter:image" content="{{ url_for('static', filename='og-image.jpg', _external=True) }}">
+    <meta property="twitter:site" content="@vallionisai">
 
     <meta name="google-site-verification" content="5_JqfNYlF-YmL1jD96Lk839p3UAUW0j1bd0wd0kOnCc" />
 
-    <title>{% block title %}Stock Recommender{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>{% block title %}Vallionis AI Finance - Smart Stock Recommendations{% endblock %}</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="{{ url_for('static', filename='styles.css') }}" as="style">
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Vallionis AI Finance",
+        "description": "AI-powered stock recommendations and portfolio analysis platform",
+        "url": "{{ request.url_root }}",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+            "@type": "Offer",
+            "price": "4.99",
+            "priceCurrency": "GBP",
+            "availability": "https://schema.org/InStock"
+        },
+        "provider": {
+            "@type": "Organization",
+            "name": "Vallionis AI Finance",
+            "url": "{{ request.url_root }}"
+        }
+    }
+    </script>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'GA_MEASUREMENT_ID');
+    </script>
+
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="5_JqfNYlF-YmL1jD96Lk839p3UAUW0j1bd0wd0kOnCc" />
+    
+    <!-- Hotjar -->
+    <script>
+        (function(h,o,t,j,a,r){
+            h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+            h._hjSettings={hjid:YOUR_HOTJAR_ID,hjsv:6};
+            a=o.getElementsByTagName('head')[0];
+            r=o.createElement('script');r.async=1;
+            r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+            a.appendChild(r);
+        })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+    </script>
+    
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <div class="theme-toggle" id="themeToggle">
-        <span id="themeIcon">☀️</span>
+    <!-- Skip to main content link for accessibility -->
+    <a href="#main-content" class="skip-link sr-only">Skip to main content</a>
+
+    <!-- Theme Toggle -->
+    <div class="theme-toggle" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">
+        <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
     </div>
 
-    <header class="header">
+    <!-- Header -->
+    <header class="header" role="banner">
         {% block navbar %}
-        <nav class="nav">
-            <a href="/" class="logo">Vallionis finance AI</a>
+        <nav class="nav" role="navigation" aria-label="Main navigation">
+            <a href="/" class="logo" aria-label="Vallionis AI Finance Home">
+                <i class="fas fa-chart-line" aria-hidden="true"></i>
+                <span>Vallionis AI Finance</span>
+            </a>
             <div class="nav-links">
-                <a href="{{ url_for('account') }}">Account</a>
-                <a href="{{ url_for('subscription') }}">Subscription</a>
-                <form action="{{ url_for('logout') }}" method="post">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-logout">Logout</button>
-                </form>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('index') }}" title="Dashboard" aria-label="Go to dashboard">
+                        <i class="fas fa-home" aria-hidden="true"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('account') }}" title="Account Settings" aria-label="Account settings">
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                        <span class="nav-text">Account</span>
+                    </a>
+                    <a href="{{ url_for('subscription') }}" title="Subscription" aria-label="Manage subscription">
+                        <i class="fas fa-crown" aria-hidden="true"></i>
+                        <span class="nav-text">Premium</span>
+                    </a>
+                    <form action="{{ url_for('logout') }}" method="post" class="logout-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-logout" title="Logout" aria-label="Logout">
+                            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                            <span class="nav-text">Logout</span>
+                        </button>
+                    </form>
+                {% else %}
+                    <a href="{{ url_for('login') }}" title="Login" aria-label="Login to your account">
+                        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                        <span class="nav-text">Login</span>
+                    </a>
+                    <a href="{{ url_for('register') }}" title="Register" aria-label="Create new account">
+                        <i class="fas fa-user-plus" aria-hidden="true"></i>
+                        <span class="nav-text">Register</span>
+                    </a>
+                {% endif %}
             </div>
         </nav>
         {% endblock %}
     </header>
 
-    <main class="container">
+    <!-- Main Content -->
+    <main class="container" id="main-content" role="main">
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+                <div class="flash-messages" role="alert" aria-live="polite">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} fade-in-up">
+                            <div class="alert-content">
+                                <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
+                                <span>{{ message }}</span>
+                                <button type="button" class="alert-close" onclick="this.parentElement.parentElement.remove()" aria-label="Close alert">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
 
+        <!-- Page Content -->
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="footer">
-        <a href="{{ url_for('privacy') }}">Privacy</a>
-        <a href="{{ url_for('terms') }}">Terms</a>
-        <a href="mailto:vallionisai@gmail.com">Contact</a>
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Vallionis AI Finance</h4>
+                <p>AI-powered stock recommendations for smarter investing.</p>
+                <div class="social-links">
+                    <a href="#" aria-label="Follow us on Twitter">
+                        <i class="fab fa-twitter" aria-hidden="true"></i>
+                    </a>
+                    <a href="#" aria-label="Follow us on LinkedIn">
+                        <i class="fab fa-linkedin" aria-hidden="true"></i>
+                    </a>
+                    <a href="#" aria-label="Follow us on Facebook">
+                        <i class="fab fa-facebook" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h5>Quick Links</h5>
+                <a href="{{ url_for('privacy') }}">Privacy Policy</a>
+                <a href="{{ url_for('terms') }}">Terms of Service</a>
+                <a href="{{ url_for('disclaimer') }}">Disclaimer</a>
+                <a href="{{ url_for('contact') }}">Contact Us</a>
+            </div>
+            <div class="footer-section">
+                <h5>Support</h5>
+                <a href="{{ url_for('contact') }}">Contact Us</a>
+                <a href="mailto:vallionisai@gmail.com">Email Support</a>
+                <a href="{{ url_for('disclaimer') }}">Investment Disclaimer</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; {{ current_year or '2024' }} Vallionis AI Finance. All rights reserved.</p>
+            <p class="disclaimer-text">Past performance does not guarantee future results. Investment involves risk.</p>
+        </div>
     </footer>
 
+    <!-- JavaScript -->
     <script>
-        // Dark/Light mode toggle
+        // Theme Toggle
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
         const html = document.documentElement;
@@ -60,13 +235,85 @@
         // Check for saved theme preference
         const currentTheme = localStorage.getItem('theme') || 'light';
         html.setAttribute('data-theme', currentTheme);
-        themeIcon.textContent = currentTheme === 'dark' ? '🌙' : '☀️';
+        updateThemeIcon(currentTheme);
+
+        function updateThemeIcon(theme) {
+            if (theme === 'dark') {
+                themeIcon.className = 'fas fa-moon';
+            } else {
+                themeIcon.className = 'fas fa-sun';
+            }
+        }
 
         themeToggle.addEventListener('click', () => {
             const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', newTheme);
-            themeIcon.textContent = newTheme === 'dark' ? '🌙' : '☀️';
+            updateThemeIcon(newTheme);
             localStorage.setItem('theme', newTheme);
+            
+            // Track theme change
+            gtag('event', 'theme_change', {
+                'event_category': 'User Interaction',
+                'event_label': newTheme
+            });
+        });
+
+        // Auto-hide flash messages
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.remove(), 300);
+                }, 5000);
+            });
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add loading states to forms
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function() {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Processing...';
+                }
+                
+                // Track form submission
+                gtag('event', 'form_submit', {
+                    'event_category': 'User Interaction',
+                    'event_label': this.action
+                });
+            });
+        });
+
+        // Track page views
+        gtag('event', 'page_view', {
+            'page_title': document.title,
+            'page_location': window.location.href
+        });
+
+        // Track user interactions
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('a, button')) {
+                gtag('event', 'click', {
+                    'event_category': 'User Interaction',
+                    'event_label': e.target.textContent || e.target.getAttribute('aria-label') || 'Unknown'
+                });
+            }
         });
     </script>
 

@@ -1,149 +1,324 @@
 {% extends "base.html" %}
 
+{% block title %}AI Stock Recommendations - Vallionis AI Finance{% endblock %}
+
+{% block meta_description %}Get personalized AI-powered stock recommendations based on your risk tolerance and investment goals. Professional portfolio analysis and investment advice.{% endblock %}
+
+{% block meta_keywords %}AI stock recommendations, investment advice, portfolio analysis, stock market, financial planning, investment strategy, risk management, stock picks{% endblock %}
+
+{% block og_title %}AI Stock Recommendations - Vallionis AI Finance{% endblock %}
+
+{% block og_description %}Get personalized AI-powered stock recommendations tailored to your investment style and risk tolerance. Professional portfolio analysis and investment advice.{% endblock %}
+
+{% block twitter_title %}AI Stock Recommendations - Vallionis AI Finance{% endblock %}
+
+{% block twitter_description %}Get personalized AI-powered stock recommendations tailored to your investment style and risk tolerance.{% endblock %}
+
 {% block content %}
+<!-- Loading Overlay -->
 <div class="loading-overlay" id="loadingOverlay" style="display: none;">
     <div class="loading-content">
         <div class="spinner"></div>
-        <h3>Calculating Recommendations</h3>
-        <p>This may take a few moments...</p>
+        <h3>Analyzing Market Data</h3>
+        <p>Our AI is processing thousands of data points to find the best stocks for you...</p>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
     </div>
 </div>
 
-<div class="main-content">
-    <form method="POST" id="recommendationForm">
-        {{ form.hidden_tag() }}
-
-        <!-- Add error display for each field -->
-        {% if form.errors %}
-        <div class="alert alert-danger">
-            Please correct the errors below
-        </div>
-        {% endif %}
-
-        <div class="form-group">
-            {{ form.investing_style.label(class="font-weight-bold") }}
-            {{ form.investing_style(class="form-control form-control-lg") }}
-            {% for error in form.investing_style.errors %}
-                <small class="text-danger">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            {{ form.time_horizon.label(class="font-weight-bold") }}
-            {{ form.time_horizon(class="form-control form-control-lg") }}
-            {% for error in form.time_horizon.errors %}
-                <small class="text-danger">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <div class="form-group">
-            {{ form.stocks_amount.label(class="font-weight-bold") }}
-            {{ form.stocks_amount(class="form-control form-control-lg") }}
-            {% for error in form.stocks_amount.errors %}
-                <small class="text-danger">{{ error }}</small>
-            {% endfor %}
-        </div>
-
-        <!-- Premium Features Section -->
-        <div class="card premium-features mb-4">
-            <div class="card-header bg-dark text-white">
-                <h4 class="mb-0">Premium Features</h4>
-                <span class="badge badge-warning">PREMIUM</span>
+<!-- Hero Section -->
+<div class="hero-section fade-in-up">
+    <div class="hero-content">
+        <h1>AI-Powered Stock Recommendations</h1>
+        <p class="hero-subtitle">Get personalized investment advice based on your risk tolerance, time horizon, and investment goals.</p>
+        
+        {% if current_user.is_authenticated %}
+            <div class="user-welcome">
+                <i class="fas fa-user-circle"></i>
+                <span>Welcome back, {{ current_user.email.split('@')[0] }}!</span>
+                {% if current_user.get_subscription_status() %}
+                    <span class="premium-badge">
+                        <i class="fas fa-crown"></i>
+                        Premium Member
+                    </span>
+                {% endif %}
             </div>
-            <div class="card-body {% if not is_premium_user %}disabled{% endif %}">
-                <div class="form-check form-switch">
-                    {{ form.premium(class="form-check-input", id="premiumToggle", disabled=not is_premium_user) }}
-                    {{ form.premium.label(class="form-check-label font-weight-bold") }}
-                </div>
+        {% endif %}
+    </div>
+</div>
 
-                <div id="premiumFields" style="display: none;">
-                    <div class="form-group mt-3">
-                        {{ form.sector_focus.label(class="font-weight-bold") }}
-                        {{ form.sector_focus(class="form-control form-control-lg", disabled=not is_premium_user) }}
+<!-- Main Form Section -->
+<div class="main-content fade-in-up">
+    <div class="form-container">
+        <div class="form-header">
+            <h2>Get Your Personalized Recommendations</h2>
+            <p>Fill out the form below to receive AI-generated stock recommendations tailored to your investment profile.</p>
+        </div>
+
+        <form method="POST" id="recommendationForm" class="recommendation-form">
+            {{ form.hidden_tag() }}
+
+            <!-- Error Display -->
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Please correct the following errors:</strong>
+                <ul>
+                    {% for field, errors in form.errors.items() %}
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Basic Investment Preferences -->
+            <div class="form-section">
+                <h3><i class="fas fa-chart-line"></i> Investment Preferences</h3>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.investing_style.label(class="form-label") }}
+                        {{ form.investing_style(class="form-control form-control-lg") }}
+                        {% for error in form.investing_style.errors %}
+                            <small class="text-danger">{{ error }}</small>
+                        {% endfor %}
+                        <small class="form-help">
+                            <i class="fas fa-info-circle"></i>
+                            Conservative: Lower risk, stable returns | Moderate: Balanced approach | Aggressive: Higher risk, higher potential returns
+                        </small>
                     </div>
 
                     <div class="form-group">
-                        {{ form.risk_tolerance.label(class="font-weight-bold") }}
-                        {{ form.risk_tolerance(class="form-control form-control-lg", disabled=not is_premium_user) }}
+                        {{ form.time_horizon.label(class="form-label") }}
+                        {{ form.time_horizon(class="form-control form-control-lg") }}
+                        {% for error in form.time_horizon.errors %}
+                            <small class="text-danger">{{ error }}</small>
+                        {% endfor %}
+                        <small class="form-help">
+                            <i class="fas fa-calendar"></i>
+                            How long you plan to hold these investments
+                        </small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    {{ form.stocks_amount.label(class="form-label") }}
+                    {{ form.stocks_amount(class="form-control form-control-lg") }}
+                    {% for error in form.stocks_amount.errors %}
+                        <small class="text-danger">{{ error }}</small>
+                    {% endfor %}
+                    <small class="form-help">
+                        <i class="fas fa-list"></i>
+                        Number of stocks to include in your portfolio (5-20 recommended)
+                    </small>
+                </div>
+            </div>
+
+            <!-- Premium Features Section -->
+            <div class="form-section premium-section">
+                <div class="premium-header">
+                    <h3><i class="fas fa-crown"></i> Premium Features</h3>
+                    <span class="premium-badge">PREMIUM</span>
+                </div>
+                
+                <div class="premium-toggle">
+                    <div class="form-check form-switch">
+                        {{ form.premium(class="form-check-input", id="premiumToggle", disabled=not is_premium_user) }}
+                        {{ form.premium.label(class="form-check-label") }}
+                    </div>
+                    {% if not is_premium_user %}
+                        <small class="premium-note">
+                            <i class="fas fa-lock"></i>
+                            <a href="{{ url_for('subscription') }}">Upgrade to Premium</a> to unlock advanced features
+                        </small>
+                    {% endif %}
+                </div>
+
+                <div id="premiumFields" class="premium-fields" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form.sector_focus.label(class="form-label") }}
+                            {{ form.sector_focus(class="form-control form-control-lg", disabled=not is_premium_user) }}
+                            <small class="form-help">
+                                <i class="fas fa-industry"></i>
+                                Focus on specific sectors or diversify across all
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.risk_tolerance.label(class="form-label") }}
+                            {{ form.risk_tolerance(class="form-control form-control-lg", disabled=not is_premium_user) }}
+                            <small class="form-help">
+                                <i class="fas fa-shield-alt"></i>
+                                Fine-tune your risk tolerance level
+                            </small>
+                        </div>
                     </div>
 
-                    <div class="form-check form-switch">
-                        {{ form.dividend_preference(class="form-check-input", id="dividendPreference", disabled=not is_premium_user) }}
-                        {{ form.dividend_preference.label(class="form-check-label font-weight-bold") }}
+                    <div class="form-group">
+                        <div class="form-check form-switch">
+                            {{ form.dividend_preference(class="form-check-input", id="dividendPreference", disabled=not is_premium_user) }}
+                            {{ form.dividend_preference.label(class="form-check-label") }}
+                        </div>
+                        <small class="form-help">
+                            <i class="fas fa-coins"></i>
+                            Prioritize stocks that pay regular dividends
+                        </small>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <button type="submit" class="btn btn-primary btn-lg btn-block py-3 px-4 my-3" id="submitBtn" style="margin-bottom: 1rem;">
-            <i class="fas fa-chart-line mr-2"></i>Get Recommendations
-        </button>
-    </form>
+            <!-- Submit Button -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                    <i class="fas fa-magic"></i>
+                    Generate Recommendations
+                </button>
+                
+                <div class="form-note">
+                    <i class="fas fa-clock"></i>
+                    Analysis typically takes 30-60 seconds
+                </div>
+            </div>
+        </form>
+    </div>
 
-    <!-- Subscription buttons -->
+    <!-- Subscription CTA for Non-Premium Users -->
     {% if not is_premium_user %}
-    <div class="upgrade-cta mt-4 mb-4">
-        <div class="card p-3">
-            <div class="card-body text-center p-4">
-                <h4 class="card-title mb-4">Subscribe to access premium features</h4>
-                    <div class="cta-buttons d-flex justify-content-center">
-                        <form action="{{ url_for('subscribe') }}" method="POST" style="margin-bottom: 1rem;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-success btn-lg px-4 py-3">
-                                <i class="fas fa-calendar-alt mr-2"></i>£4.99/month
-                            </button>
-                        </form>
-                        <form action="{{ url_for('purchase_lifetime') }}" method="POST">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-warning btn-lg px-4 py-3">
-                                <i class="fas fa-gem mr-2"></i>£99.99 lifetime
-                            </button>
-                        </form>
-                    </div>
-                <p class="text-muted mt-4 mb-0">7-day free trial included with monthly subscription</p>
+    <div class="upgrade-cta fade-in-up">
+        <div class="cta-card">
+            <div class="cta-header">
+                <i class="fas fa-rocket"></i>
+                <h3>Unlock Premium Features</h3>
+                <p>Get more personalized recommendations with advanced filtering options</p>
+            </div>
+            
+            <div class="cta-features">
+                <div class="feature">
+                    <i class="fas fa-filter"></i>
+                    <span>Sector-specific filtering</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Advanced risk tolerance controls</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-download"></i>
+                    <span>Export recommendations to CSV</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-history"></i>
+                    <span>Preference history tracking</span>
+                </div>
+            </div>
+            
+            <div class="cta-buttons">
+                <form action="{{ url_for('subscribe') }}" method="POST" class="cta-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-calendar-alt"></i>
+                        £4.99/month
+                    </button>
+                </form>
+                <form action="{{ url_for('purchase_lifetime') }}" method="POST" class="cta-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-gem"></i>
+                        £99.99 lifetime
+                    </button>
+                </form>
             </div>
         </div>
     </div>
     {% endif %}
 </div>
+
+<!-- Features Section -->
+<div class="features-section fade-in-up">
+    <h2>Why Choose Vallionis AI Finance?</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <i class="fas fa-brain"></i>
+            <h3>AI-Powered Analysis</h3>
+            <p>Our advanced algorithms analyze thousands of data points to identify the best investment opportunities.</p>
+        </div>
+        <div class="feature-card">
+            <i class="fas fa-user-cog"></i>
+            <h3>Personalized Recommendations</h3>
+            <p>Get recommendations tailored to your specific risk tolerance, time horizon, and investment goals.</p>
+        </div>
+        <div class="feature-card">
+            <i class="fas fa-chart-bar"></i>
+            <h3>Comprehensive Data</h3>
+            <p>Access real-time market data, financial ratios, and growth projections for informed decisions.</p>
+        </div>
+        <div class="feature-card">
+            <i class="fas fa-shield-alt"></i>
+            <h3>Risk Management</h3>
+            <p>Our recommendations include risk assessment and portfolio diversification strategies.</p>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener('DOMContentLoaded', function() {
+    const premiumToggle = document.getElementById('premiumToggle');
+    const premiumFields = document.getElementById('premiumFields');
     const form = document.getElementById('recommendationForm');
     const loadingOverlay = document.getElementById('loadingOverlay');
-    const submitBtn = document.getElementById('submitBtn');
 
-    if (form && loadingOverlay && submitBtn) {
-        form.addEventListener('submit', function(e) {
-            // Only show loading if form is valid
-            if (form.checkValidity()) {
-                loadingOverlay.style.display = 'flex';
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Processing...';
-
-                // Prevent further clicks on the button
-                submitBtn.style.pointerEvents = 'none';
+    // Premium toggle functionality
+    if (premiumToggle) {
+        premiumToggle.addEventListener('change', function() {
+            if (this.checked) {
+                premiumFields.style.display = 'block';
+                premiumFields.classList.add('fade-in-up');
+            } else {
+                premiumFields.style.display = 'none';
             }
-            // Don't prevent default - allow normal form submission
         });
-
-        // Premium toggle functionality
-        const premiumToggle = document.getElementById('premiumToggle');
-        const premiumFields = document.getElementById('premiumFields');
-
-        if (premiumToggle && premiumFields) {
-            function updatePremiumDisplay() {
-                premiumFields.style.display = premiumToggle.checked ? 'block' : 'none';
-            }
-
-            premiumToggle.addEventListener('change', updatePremiumDisplay);
-
-            // Initialize display
-            updatePremiumDisplay();
-        }
     }
+
+    // Form submission with loading animation
+    form.addEventListener('submit', function(e) {
+        loadingOverlay.style.display = 'flex';
+        
+        // Simulate progress bar
+        const progressFill = document.querySelector('.progress-fill');
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            progressFill.style.width = progress + '%';
+        }, 500);
+        
+        // Store interval to clear later
+        window.progressInterval = interval;
+    });
+
+    // Add smooth animations to elements
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('fade-in-up');
+            }
+        });
+    }, observerOptions);
+
+    // Observe all feature cards and sections
+    document.querySelectorAll('.feature-card, .form-section, .upgrade-cta').forEach(el => {
+        observer.observe(el);
+    });
 });
 </script>
 {% endblock %}
