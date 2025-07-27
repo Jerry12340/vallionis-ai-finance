@@ -3,7 +3,7 @@
     {% for page in pages %}
     <url>
         <loc>{{ page.url }}</loc>
-        <lastmod>{{ moment().strftime('%Y-%m-%d') if moment else '2025-01-15' }}</lastmod>
+        <lastmod>{{ moment.strftime('%Y-%m-%d') if moment else '2025-01-15' }}</lastmod>
         <changefreq>{{ page.changefreq }}</changefreq>
         <priority>{{ page.priority }}</priority>
     </url>

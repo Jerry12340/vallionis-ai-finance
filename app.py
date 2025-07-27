@@ -2167,22 +2167,43 @@ def sitemap():
     """Generate sitemap for search engines"""
     from flask import make_response
     
-    # Define your main pages
+    # Get the base URL
+    base_url = request.url_root.rstrip('/')
+    
+    # Define your main pages with explicit URLs
     pages = [
-        {'url': url_for('index', _external=True), 'priority': '1.0', 'changefreq': 'daily'},
-        {'url': url_for('login', _external=True), 'priority': '0.8', 'changefreq': 'monthly'},
-        {'url': url_for('register', _external=True), 'priority': '0.8', 'changefreq': 'monthly'},
-        {'url': url_for('subscription', _external=True), 'priority': '0.7', 'changefreq': 'weekly'},
-        {'url': url_for('privacy', _external=True), 'priority': '0.5', 'changefreq': 'monthly'},
-        {'url': url_for('terms', _external=True), 'priority': '0.5', 'changefreq': 'monthly'},
-        {'url': url_for('disclaimer', _external=True), 'priority': '0.5', 'changefreq': 'monthly'},
-        {'url': url_for('contact', _external=True), 'priority': '0.6', 'changefreq': 'monthly'},
+        {'url': f"{base_url}/", 'priority': '1.0', 'changefreq': 'daily'},
+        {'url': f"{base_url}/login", 'priority': '0.8', 'changefreq': 'monthly'},
+        {'url': f"{base_url}/register", 'priority': '0.8', 'changefreq': 'monthly'},
+        {'url': f"{base_url}/subscription", 'priority': '0.7', 'changefreq': 'weekly'},
+        {'url': f"{base_url}/privacy", 'priority': '0.5', 'changefreq': 'monthly'},
+        {'url': f"{base_url}/terms", 'priority': '0.5', 'changefreq': 'monthly'},
+        {'url': f"{base_url}/disclaimer", 'priority': '0.5', 'changefreq': 'monthly'},
+        {'url': f"{base_url}/contact", 'priority': '0.6', 'changefreq': 'monthly'},
     ]
     
-    sitemap_xml = render_template('sitemap.xml', pages=pages, moment=datetime.now())
-    response = make_response(sitemap_xml)
-    response.headers["Content-Type"] = "application/xml"
-    return response
+    try:
+        sitemap_xml = render_template('sitemap.xml', pages=pages, moment=datetime.now())
+        response = make_response(sitemap_xml)
+        response.headers["Content-Type"] = "application/xml"
+        return response
+    except Exception as e:
+        logger.error(f"Error generating sitemap: {str(e)}")
+        # Fallback to static sitemap
+        return send_from_directory('static', 'sitemap.xml', mimetype='application/xml')
+
+@app.route('/test-sitemap')
+def test_sitemap():
+    """Test route to verify sitemap generation"""
+    try:
+        base_url = request.url_root.rstrip('/')
+        test_pages = [
+            {'url': f"{base_url}/", 'priority': '1.0', 'changefreq': 'daily'},
+        ]
+        sitemap_xml = render_template('sitemap.xml', pages=test_pages, moment=datetime.now())
+        return f"<pre>{sitemap_xml}</pre>"
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
