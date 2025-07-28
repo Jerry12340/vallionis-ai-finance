@@ -23,7 +23,7 @@
             </div>
             <div class="status-item">
                 <span class="label">Last Updated:</span>
-                <span class="date">{{ moment().strftime('%Y-%m-%d %H:%M') }}</span>
+                <span class="date">{{ moment.strftime('%Y-%m-%d %H:%M') if moment else 'N/A' }}</span>
             </div>
         </div>
 

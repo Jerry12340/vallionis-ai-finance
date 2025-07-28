@@ -2212,7 +2212,8 @@ def seo_status():
     return render_template('seo_status.html', 
                          pages=pages_to_check, 
                          base_url=base_url,
-                         sitemap_url=f"{base_url}/sitemap.xml")
+                         sitemap_url=f"{base_url}/sitemap.xml",
+                         moment=datetime.now())
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
