@@ -72,7 +72,7 @@
         "offers": {
             "@type": "Offer",
             "price": "4.99",
-            "priceCurrency": "GBP",
+            "priceCurrency": "{{ currency_config.currency if currency_config else 'GBP' }}",
             "availability": "https://schema.org/InStock"
         },
         "provider": {

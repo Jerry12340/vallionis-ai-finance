@@ -180,7 +180,7 @@
                 
                 <div class="form-note">
                     <i class="fas fa-clock"></i>
-                    Analysis typically takes 30-60 seconds
+                    Analysis typically takes 3-5 minutes
                 </div>
             </div>
         </form>
@@ -196,40 +196,19 @@
                 <p>Get more personalized recommendations with advanced filtering options</p>
             </div>
             
-            <div class="cta-features">
-                <div class="feature">
-                    <i class="fas fa-filter"></i>
-                    <span>Sector-specific filtering</span>
+            <div class="premium-features">
+                <h4>Premium Features</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Sector-specific recommendations</li>
+                    <li><i class="fas fa-check"></i> Custom risk tolerance settings</li>
+                    <li><i class="fas fa-check"></i> Dividend-focused portfolios</li>
+                    <li><i class="fas fa-check"></i> CSV export functionality</li>
+                    <li><i class="fas fa-check"></i> 3x faster processing</li>
+                </ul>
+                <div class="pricing-info">
+                    <p><strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.monthly_price if currency_config else '4.99' }}/month</strong> or <strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.lifetime_price if currency_config else '99.99' }} lifetime</strong></p>
+                    <a href="{{ url_for('subscription') }}" class="btn btn-primary">Upgrade to Premium</a>
                 </div>
-                <div class="feature">
-                    <i class="fas fa-sliders-h"></i>
-                    <span>Advanced risk tolerance controls</span>
-                </div>
-                <div class="feature">
-                    <i class="fas fa-download"></i>
-                    <span>Export recommendations to CSV</span>
-                </div>
-                <div class="feature">
-                    <i class="fas fa-history"></i>
-                    <span>Preference history tracking</span>
-                </div>
-            </div>
-            
-            <div class="cta-buttons">
-                <form action="{{ url_for('subscribe') }}" method="POST" class="cta-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-calendar-alt"></i>
-                        £4.99/month
-                    </button>
-                </form>
-                <form action="{{ url_for('purchase_lifetime') }}" method="POST" class="cta-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-gem"></i>
-                        £99.99 lifetime
-                    </button>
-                </form>
             </div>
         </div>
     </div>

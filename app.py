@@ -1267,10 +1267,14 @@ def index():
     # Use new design if feature flag is enabled
     template_name = 'index_new.html' if FEATURE_FLAGS['new_design'] else 'index.html'
     
+    # Get currency configuration for the template
+    currency_config = get_currency_config()
+    
     return render_template(template_name,
                            form=form,
                            is_premium_user=current_user.get_subscription_status(),
-                           feature_flags=FEATURE_FLAGS)
+                           feature_flags=FEATURE_FLAGS,
+                           currency_config=currency_config)
 
 
 @app.route('/download')
@@ -1322,9 +1326,13 @@ def subscribe():
 
     if request.method == 'POST':
         try:
+            # Get user's currency preference (could be from form or session)
+            currency = request.form.get('currency', 'GBP')
+            currency_config = get_currency_config(currency)
+            
             # Verify the price exists first
             try:
-                price = stripe.Price.retrieve(STRIPE_PRICE_ID)
+                price = stripe.Price.retrieve(currency_config['monthly_price_id'])
             except stripe.error.InvalidRequestError:
                 flash('Subscription product not properly configured. Please contact support.', 'danger')
                 return redirect(url_for('subscription'))
@@ -1334,7 +1342,7 @@ def subscribe():
                 customer_email=current_user.email,
                 payment_method_types=['card'],
                 line_items=[{
-                    'price': STRIPE_PRICE_ID,
+                    'price': currency_config['monthly_price_id'],
                     'quantity': 1,
                 }],
                 mode='subscription',
@@ -1604,9 +1612,13 @@ def purchase_lifetime():
         return redirect(url_for('subscription'))
 
     try:
+        # Get user's currency preference
+        currency = request.form.get('currency', 'GBP')
+        currency_config = get_currency_config(currency)
+        
         # Verify the price exists first
         try:
-            price = stripe.Price.retrieve(STRIPE_LIFETIME_PRICE_ID)
+            price = stripe.Price.retrieve(currency_config['lifetime_price_id'])
             logger.info(f"Lifetime price verified: {price.id} - {price.unit_amount / 100} {price.currency}")
         except stripe.error.InvalidRequestError as e:
             logger.error(f"Invalid lifetime price: {str(e)}")
@@ -1619,7 +1631,7 @@ def purchase_lifetime():
             customer_email=current_user.email,
             payment_method_types=['card'],
             line_items=[{
-                'price': STRIPE_LIFETIME_PRICE_ID,
+                'price': currency_config['lifetime_price_id'],
                 'quantity': 1,
             }],
             mode='payment',
@@ -1627,7 +1639,8 @@ def purchase_lifetime():
             cancel_url=url_for('subscription', _external=True),
             metadata={
                 'product_type': 'lifetime',
-                'user_id': current_user.id
+                'user_id': current_user.id,
+                'currency': currency
             }
         )
         logger.info(f"Created checkout session: {checkout_session.id}")
@@ -1695,10 +1708,16 @@ def subscription():
         flash(f'Error loading subscription: {str(e)}', 'danger')
         app.logger.error(f"Subscription error: {str(e)}", exc_info=True)
 
+    # Get currency configuration for the template
+    currency_config = get_currency_config()
+    available_currencies = CURRENCY_CONFIG.keys()
+
     return render_template('subscription.html',
                            subscription_active=current_user.get_subscription_status(),
                            expires=current_user.subscription_expires,
-                           subscription_info=subscription_info
+                           subscription_info=subscription_info,
+                           currency_config=currency_config,
+                           available_currencies=available_currencies
                            )
 
 
@@ -2258,6 +2277,46 @@ def health_check():
         'feature_flags': FEATURE_FLAGS,
         'database': 'connected' if db.engine.pool.checkedin() > 0 else 'disconnected'
     })
+
+# Currency configuration
+CURRENCY_CONFIG = {
+    'USD': {
+        'symbol': '$',
+        'monthly_price': 6.99,
+        'lifetime_price': 129.99,
+        'monthly_price_id': os.getenv('STRIPE_USD_MONTHLY_PRICE_ID'),
+        'lifetime_price_id': os.getenv('STRIPE_USD_LIFETIME_PRICE_ID')
+    },
+    'EUR': {
+        'symbol': '€',
+        'monthly_price': 5.99,
+        'lifetime_price': 109.99,
+        'monthly_price_id': os.getenv('STRIPE_EUR_MONTHLY_PRICE_ID'),
+        'lifetime_price_id': os.getenv('STRIPE_EUR_LIFETIME_PRICE_ID')
+    },
+    'GBP': {
+        'symbol': '£',
+        'monthly_price': 4.99,
+        'lifetime_price': 99.99,
+        'monthly_price_id': os.getenv('STRIPE_GBP_MONTHLY_PRICE_ID'),
+        'lifetime_price_id': os.getenv('STRIPE_GBP_LIFETIME_PRICE_ID')
+    }
+}
+
+# Default currency (fallback)
+DEFAULT_CURRENCY = 'GBP'
+
+def detect_user_currency():
+    """Detect user's preferred currency based on IP or browser settings"""
+    # Simple IP-based detection (you could use a service like ipapi.co)
+    # For now, return default currency
+    return DEFAULT_CURRENCY
+
+def get_currency_config(currency_code=None):
+    """Get currency configuration for the specified currency"""
+    if not currency_code:
+        currency_code = detect_user_currency()
+    return CURRENCY_CONFIG.get(currency_code, CURRENCY_CONFIG[DEFAULT_CURRENCY])
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
