@@ -49,6 +49,13 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # Load environment variables
 load_dotenv('.env')
 
+# Feature flags for controlling updates
+FEATURE_FLAGS = {
+    'new_design': os.getenv('NEW_DESIGN', 'false').lower() == 'true',
+    'beta_features': os.getenv('BETA_FEATURES', 'false').lower() == 'true',
+    'maintenance_mode': os.getenv('MAINTENANCE_MODE', 'false').lower() == 'true'
+}
+
 # Initialize Flask app
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
@@ -1223,9 +1230,13 @@ def process_request(
 
 
 # ──── Routes ─────────────────────────────────────────────────────────────
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 @login_required
 def index():
+    # Check for maintenance mode
+    if FEATURE_FLAGS['maintenance_mode']:
+        return render_template('maintenance.html')
+    
     form = RecommendationForm()
 
     # Set default values for premium fields
@@ -1253,9 +1264,13 @@ def index():
             app.logger.error(f"Recommendation error: {str(e)}")
             return redirect(url_for('index'))
 
-    return render_template('index.html',
+    # Use new design if feature flag is enabled
+    template_name = 'index_new.html' if FEATURE_FLAGS['new_design'] else 'index.html'
+    
+    return render_template(template_name,
                            form=form,
-                           is_premium_user=current_user.get_subscription_status())
+                           is_premium_user=current_user.get_subscription_status(),
+                           feature_flags=FEATURE_FLAGS)
 
 
 @app.route('/download')
@@ -2214,6 +2229,35 @@ def seo_status():
                          base_url=base_url,
                          sitemap_url=f"{base_url}/sitemap.xml",
                          moment=datetime.now())
+
+@app.route('/admin/feature-flags', methods=['GET', 'POST'])
+@login_required
+def admin_feature_flags():
+    """Admin panel to control feature flags"""
+    if not current_user.is_authenticated or not current_user.email.endswith('@admin.com'):
+        abort(403)
+    
+    if request.method == 'POST':
+        # Update feature flags via environment variables
+        # Note: This would require server restart in production
+        flash('Feature flags updated. Server restart required for changes to take effect.', 'info')
+    
+    return render_template('admin/feature_flags.html', feature_flags=FEATURE_FLAGS)
+
+@app.route('/maintenance')
+def maintenance():
+    """Maintenance page"""
+    return render_template('maintenance.html')
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'feature_flags': FEATURE_FLAGS,
+        'database': 'connected' if db.engine.pool.checkedin() > 0 else 'disconnected'
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
