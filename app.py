@@ -1234,7 +1234,7 @@ def process_request(
 
 
 # ──── Routes ─────────────────────────────────────────────────────────────
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
     # Check for maintenance mode
@@ -1677,11 +1677,11 @@ def check_expired_subscriptions():
             db.session.commit()
 
 
-@app.route('/subscription')
+@app.route('/subscription', methods=['GET'])
 @login_required
 def subscription():
-    subscription_info = None
     try:
+        subscription_info = None
         if current_user.stripe_customer_id:
             # Verify customer exists through safe call
             cust = safe_stripe_call(stripe.Customer.retrieve, current_user.stripe_customer_id)
@@ -1708,22 +1708,20 @@ def subscription():
                     )
                 db.session.commit()
 
-    except Exception as e:
-        flash(f'Error loading subscription: {str(e)}', 'danger')
-        app.logger.error(f"Subscription error: {str(e)}", exc_info=True)
+        # Get currency configuration for the template
+        currency_config = get_currency_config()
+        available_currencies = CURRENCY_CONFIG.keys()
 
-    # Get currency configuration for the template
-    currency_config = get_currency_config()
-    available_currencies = CURRENCY_CONFIG.keys()
-
-    return render_template('subscription.html',
+        return render_template('subscription.html',
                            subscription_active=current_user.get_subscription_status(),
                            expires=current_user.subscription_expires,
                            subscription_info=subscription_info,
                            currency_config=currency_config,
-                           available_currencies=available_currencies
-                           )
-
+                           available_currencies=available_currencies)
+    except Exception as e:
+        flash(f'Error loading subscription: {str(e)}', 'danger')
+        app.logger.error(f"Subscription error: {str(e)}", exc_info=True)
+        return redirect(url_for('index'))
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_expired_subscriptions, 'interval', hours=1)
