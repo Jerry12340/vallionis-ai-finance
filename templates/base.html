@@ -92,31 +92,116 @@
         gtag('config', 'GA_MEASUREMENT_ID');
     </script>
 
-    <!-- Global padding styles -->
+    <!-- Global padding and layout styles -->
     <style>
-        /* Main content padding */
-        .container {
-            padding-left: 2rem;
-            padding-right: 2rem;
-            max-width: 1400px;
+        :root {
+            --spacing-unit: 1rem;
+            --spacing-sm: calc(var(--spacing-unit) * 0.5);
+            --spacing-md: var(--spacing-unit);
+            --spacing-lg: calc(var(--spacing-unit) * 2);
+            --spacing-xl: calc(var(--spacing-unit) * 3);
+            --max-width: 1400px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Global wrapper for consistent side padding */
+        .global-wrapper {
+            flex: 1;
+            width: 100%;
+            padding: 0 var(--spacing-lg);
             margin: 0 auto;
         }
 
-        /* Header and footer padding */
-        .header,
-        .footer-content {
-            padding: 0 2rem;
-            max-width: 1400px;
+        /* Header styles */
+        .header {
+            width: 100%;
+            padding: var(--spacing-md) var(--spacing-lg);
+        }
+
+        .header-content {
+            max-width: var(--max-width);
             margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Main content container */
+        .container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            width: 100%;
+            padding: var(--spacing-md) 0;
+        }
+
+        /* Footer styles */
+        .footer {
+            width: 100%;
+            padding: var(--spacing-lg);
+        }
+
+        .footer-content {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Navbar adjustments */
+        .nav {
+            padding: var(--spacing-sm) 0;
+        }
+
+        /* Flash messages */
+        .flash-messages {
+            padding: var(--spacing-sm) 0;
+        }
+
+        /* Theme toggle positioning */
+        .theme-toggle {
+            position: fixed;
+            top: var(--spacing-md);
+            right: var(--spacing-lg);
+            z-index: 1000;
         }
 
         /* Mobile responsiveness */
         @media (max-width: 768px) {
-            .container,
-            .header,
-            .footer-content {
-                padding-left: 1rem;
-                padding-right: 1rem;
+            :root {
+                --spacing-unit: 0.8rem;
+            }
+
+            .global-wrapper,
+            .header {
+                padding: 0 var(--spacing-md);
+            }
+
+            .container {
+                padding: var(--spacing-sm) 0;
+            }
+
+            .theme-toggle {
+                right: var(--spacing-md);
+            }
+        }
+
+        @media (max-width: 480px) {
+            :root {
+                --spacing-unit: 0.6rem;
+            }
+
+            .global-wrapper,
+            .header {
+                padding: 0 var(--spacing-sm);
             }
         }
     </style>
@@ -132,76 +217,80 @@
         <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
     </div>
 
-    <!-- Header with padding -->
+    <!-- Header with consistent padding -->
     <header class="header" role="banner">
-        {% block navbar %}
-        <nav class="nav" role="navigation" aria-label="Main navigation">
-            <a href="/" class="logo" aria-label="Vallionis AI Finance Home">
-                <i class="fas fa-chart-line" aria-hidden="true"></i>
-                <span>Vallionis AI Finance</span>
-            </a>
-            <div class="nav-links">
-                {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('index') }}" title="Dashboard" aria-label="Go to dashboard">
-                        <i class="fas fa-home" aria-hidden="true"></i>
-                        <span class="nav-text">Dashboard</span>
-                    </a>
-                    <a href="{{ url_for('account') }}" title="Account Settings" aria-label="Account settings">
-                        <i class="fas fa-user" aria-hidden="true"></i>
-                        <span class="nav-text">Account</span>
-                    </a>
-                    <a href="{{ url_for('subscription') }}" title="Subscription" aria-label="Manage subscription">
-                        <i class="fas fa-crown" aria-hidden="true"></i>
-                        <span class="nav-text">Premium</span>
-                    </a>
-                    <form action="{{ url_for('logout') }}" method="post" class="logout-form">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-logout" title="Logout" aria-label="Logout">
-                            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
-                            <span class="nav-text">Logout</span>
-                        </button>
-                    </form>
-                {% else %}
-                    <a href="{{ url_for('login') }}" title="Login" aria-label="Login to your account">
-                        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-                        <span class="nav-text">Login</span>
-                    </a>
-                    <a href="{{ url_for('register') }}" title="Register" aria-label="Create new account">
-                        <i class="fas fa-user-plus" aria-hidden="true"></i>
-                        <span class="nav-text">Register</span>
-                    </a>
-                {% endif %}
-            </div>
-        </nav>
-        {% endblock %}
+        <div class="header-content">
+            {% block navbar %}
+            <nav class="nav" role="navigation" aria-label="Main navigation">
+                <a href="/" class="logo" aria-label="Vallionis AI Finance Home">
+                    <i class="fas fa-chart-line" aria-hidden="true"></i>
+                    <span>Vallionis AI Finance</span>
+                </a>
+                <div class="nav-links">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('index') }}" title="Dashboard" aria-label="Go to dashboard">
+                            <i class="fas fa-home" aria-hidden="true"></i>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                        <a href="{{ url_for('account') }}" title="Account Settings" aria-label="Account settings">
+                            <i class="fas fa-user" aria-hidden="true"></i>
+                            <span class="nav-text">Account</span>
+                        </a>
+                        <a href="{{ url_for('subscription') }}" title="Subscription" aria-label="Manage subscription">
+                            <i class="fas fa-crown" aria-hidden="true"></i>
+                            <span class="nav-text">Premium</span>
+                        </a>
+                        <form action="{{ url_for('logout') }}" method="post" class="logout-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-logout" title="Logout" aria-label="Logout">
+                                <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                                <span class="nav-text">Logout</span>
+                            </button>
+                        </form>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" title="Login" aria-label="Login to your account">
+                            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                            <span class="nav-text">Login</span>
+                        </a>
+                        <a href="{{ url_for('register') }}" title="Register" aria-label="Create new account">
+                            <i class="fas fa-user-plus" aria-hidden="true"></i>
+                            <span class="nav-text">Register</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+            {% endblock %}
+        </div>
     </header>
 
-    <!-- Main Content with padding -->
-    <main class="container" id="main-content" role="main">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages" role="alert" aria-live="polite">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} fade-in-up">
-                            <div class="alert-content">
-                                <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
-                                <span>{{ message }}</span>
-                                <button type="button" class="alert-close" onclick="this.parentElement.parentElement.remove()" aria-label="Close alert">
-                                    <i class="fas fa-times" aria-hidden="true"></i>
-                                </button>
+    <!-- Main Content with consistent padding -->
+    <div class="global-wrapper">
+        <main class="container" id="main-content" role="main">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages" role="alert" aria-live="polite">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} fade-in-up">
+                                <div class="alert-content">
+                                    <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
+                                    <span>{{ message }}</span>
+                                    <button type="button" class="alert-close" onclick="this.parentElement.parentElement.remove()" aria-label="Close alert">
+                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
 
-        <!-- Page Content -->
-        {% block content %}{% endblock %}
-    </main>
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 
-    <!-- Footer with padding -->
+    <!-- Footer with consistent padding -->
     <footer class="footer" role="contentinfo">
         <div class="footer-content">
             <div class="footer-section">
