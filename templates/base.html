@@ -612,10 +612,9 @@
             }
         });
 
-        // Auto-hide flash messages
         document.addEventListener('DOMContentLoaded', function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
+            const flashMessages = document.querySelectorAll('.flash-messages .alert');
+            flashMessages.forEach(alert => {
                 setTimeout(() => {
                     alert.style.opacity = '0';
                     setTimeout(() => alert.remove(), 300);
