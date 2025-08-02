@@ -190,25 +190,29 @@
     <!-- Subscription CTA for Non-Premium Users -->
     {% if not is_premium_user %}
     <div class="upgrade-cta fade-in-up">
-        <div class="cta-card">
-            <div class="cta-header">
-                <i class="fas fa-rocket"></i>
-                <h3>Unlock Premium Features</h3>
-                <p>Get more personalized recommendations with advanced filtering options</p>
+        <div class="cta-card" style="padding: 2.5rem;">
+            <div class="cta-header" style="padding-bottom: 1.75rem;">
+                <i class="fas fa-rocket" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <h3 style="margin-top: 0.75rem; margin-bottom: 0.5rem;">Unlock Premium Features</h3>
+                <p style="margin-bottom: 0; font-size: 1.1rem;">Get more personalized recommendations with advanced filtering options</p>
             </div>
-            
-            <div class="premium-features">
-                <h4>Premium Features</h4>
-                <ul>
-                    <li><i class="fas fa-check"></i> Sector-specific recommendations</li>
-                    <li><i class="fas fa-check"></i> Custom risk tolerance settings</li>
-                    <li><i class="fas fa-check"></i> Dividend-focused portfolios</li>
-                    <li><i class="fas fa-check"></i> CSV export functionality</li>
-                    <li><i class="fas fa-check"></i> 3x faster processing</li>
+
+            <div class="premium-features" style="padding: 1.75rem 0;">
+                <h4 style="margin-top: 0; margin-bottom: 1.25rem;">Premium Features</h4>
+                <ul style="margin-bottom: 2rem; padding-left: 1.5rem; list-style-type: none;">
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> Sector-specific recommendations</li>
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> Custom risk tolerance settings</li>
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> Dividend-focused portfolios</li>
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> CSV export functionality</li>
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> 3x faster processing</li>
                 </ul>
-                <div class="pricing-info">
-                    <p><strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.monthly_price if currency_config else '4.99' }}/month</strong> or <strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.lifetime_price if currency_config else '99.99' }} lifetime</strong></p>
-                    <a href="{{ url_for('subscription') }}" class="btn btn-primary">Upgrade to Premium</a>
+                <div class="pricing-info" style="padding-top: 1.5rem; border-top: 1px solid #eee;">
+                    <p style="margin-bottom: 1.5rem; font-size: 1.15rem;">
+                        <strong style="font-size: 1.25rem;">{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.monthly_price if currency_config else '4.99' }}/month</strong>
+                        <span style="margin: 0 0.5rem;">or</span>
+                        <strong style="font-size: 1.25rem;">{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.lifetime_price if currency_config else '99.99' }} lifetime</strong>
+                    </p>
+                    <a href="{{ url_for('subscription') }}" class="btn btn-primary" style="padding: 0.85rem 2rem; font-size: 1.1rem; border-radius: 6px;">Upgrade to Premium</a>
                 </div>
             </div>
         </div>
@@ -267,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission with loading animation
     form.addEventListener('submit', function(e) {
         loadingOverlay.style.display = 'flex';
-        
+
         // Simulate progress bar
         const progressFill = document.querySelector('.progress-fill');
         let progress = 0;
@@ -276,7 +280,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (progress > 90) progress = 90;
             progressFill.style.width = progress + '%';
         }, 500);
-        
+
         // Store interval to clear later
         window.progressInterval = interval;
     });
