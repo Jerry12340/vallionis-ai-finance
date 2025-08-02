@@ -223,22 +223,26 @@
                 <i class="fas fa-arrow-left mr-2"></i>Start New Analysis
             </a>
 
-            <details>
-                <summary class="btn btn-link text-muted py-2 px-3">
+            <div>
+                <button class="btn btn-link text-muted py-2 px-10" type="button"
+                        data-toggle="collapse"
+                        data-target="#calculationDetails"
+                        aria-expanded="false"
+                        aria-controls="calculationDetails">
                     <small>How these estimates were calculated</small>
-                </summary>
-                <div class="alert alert-light mt-2">
-                    <p class="small mb-0">
-                        These numbers are based on a simulated portfolio of stocks.
-                        Actual returns depend on market conditions, fees, and timing.
-                        <strong>Most investors earn closer to 5–10% annually long-term.</strong>
-                        *Actual results vary widely* based on entry/exit timing.*
-                    </p>
+                </button>
+                <div class="collapse" id="calculationDetails">
+                    <div class="alert alert-light mt-2">
+                        <p class="small mb-0">
+                            These numbers are based on a simulated portfolio of stocks.
+                            Actual returns depend on market conditions, fees, and timing.
+                            <strong>Most investors earn closer to 5-10% annually long-term.</strong>
+                            *Actual results vary widely* based on entry/exit timing.*
+                        </p>
+                    </div>
                 </div>
-            </details>
+            </div>
         </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
