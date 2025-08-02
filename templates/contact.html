@@ -182,17 +182,13 @@
             <div class="contact-card">
                 <h2><span class="contact-icon">📧</span> Email Support</h2>
                 <div class="contact-info">
-                    <p><strong>General Inquiries:</strong> info@stockadvisor.com</p>
-                    <p><strong>Technical Support:</strong> support@stockadvisor.com</p>
-                    <p><strong>Premium Members:</strong> premium-support@stockadvisor.com</p>
+                    <p><strong>General Inquiries:</strong> vallionis.finance.ai@gmail.com</p>
                 </div>
             </div>
 
             <div class="contact-card">
                 <h2><span class="contact-icon">📞</span> Phone Support</h2>
                 <div class="contact-info">
-                    <p><strong>US:</strong> +1 (555) 123-4567</p>
-                    <p><strong>International:</strong> +1 (555) 987-6543</p>
                     <p><strong>Hours:</strong> Mon-Fri, 9AM-5PM EST</p>
                 </div>
             </div>
@@ -200,7 +196,7 @@
             <div class="contact-card">
                 <h2><span class="contact-icon">🏢</span> Corporate Office</h2>
                 <div class="contact-info">
-                    <p>Stock Portfolio Advisor LLC</p>
+                    <p>Vallionis AI Finance</p>
                     <p>123 Financial District</p>
                     <p>New York, NY 10005</p>
                     <p>United States</p>
@@ -211,11 +207,7 @@
         <div class="contact-form">
             <h2 style="text-align: center; margin-top: 0;">Send Us a Message</h2>
 
-            <div class="success-message" id="successMessage">
-                Thank you! Your message has been sent successfully. We'll get back to you soon.
-            </div>
-
-            <form id="contactForm">
+            <form id="contactForm" action="mailto:vallionis.finance.ai@gmail.com" method="post" enctype="text/plain">
                 <div class="form-group">
                     <label for="name">Full Name</label>
                     <input type="text" id="name" name="name" required>
@@ -240,7 +232,7 @@
 
                 <div class="form-group">
                     <label for="message">Your Message</label>
-                    <textarea id="message" name="message" required></textarea>
+                    <textarea id="message" name="body" required></textarea>
                 </div>
 
                 <button type="submit" class="btn">Send Message</button>
@@ -249,27 +241,7 @@
     </div>
 
     <footer>
-        <p>&copy; {{ current_year }} Stock Portfolio Advisor. All rights reserved.</p>
+        <p>&copy; 2023 Vallionis AI Finance. All rights reserved.</p>
     </footer>
-
-    <script>
-        document.getElementById('contactForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            // In a real implementation, you would send the form data to your server here
-            // For this example, we'll just show the success message
-
-            document.getElementById('successMessage').style.display = 'block';
-            this.reset();
-
-            // Scroll to show the success message
-            document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
-
-            // Hide the success message after 5 seconds
-            setTimeout(function() {
-                document.getElementById('successMessage').style.display = 'none';
-            }, 5000);
-        });
-    </script>
 </body>
 </html>
