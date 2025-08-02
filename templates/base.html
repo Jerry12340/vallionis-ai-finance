@@ -92,21 +92,35 @@
         gtag('config', 'GA_MEASUREMENT_ID');
     </script>
 
-    <!-- Google Search Console -->
-    <meta name="google-site-verification" content="5_JqfNYlF-YmL1jD96Lk839p3UAUW0j1bd0wd0kOnCc" />
-    
-    <!-- Hotjar -->
-    <script>
-        (function(h,o,t,j,a,r){
-            h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
-            h._hjSettings={hjid:YOUR_HOTJAR_ID,hjsv:6};
-            a=o.getElementsByTagName('head')[0];
-            r=o.createElement('script');r.async=1;
-            r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
-            a.appendChild(r);
-        })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
-    </script>
-    
+    <!-- Global padding styles -->
+    <style>
+        /* Main content padding */
+        .container {
+            padding-left: 2rem;
+            padding-right: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header and footer padding */
+        .header,
+        .footer-content {
+            padding: 0 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .container,
+            .header,
+            .footer-content {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+        }
+    </style>
+
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -118,7 +132,7 @@
         <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
     </div>
 
-    <!-- Header -->
+    <!-- Header with padding -->
     <header class="header" role="banner">
         {% block navbar %}
         <nav class="nav" role="navigation" aria-label="Main navigation">
@@ -162,7 +176,7 @@
         {% endblock %}
     </header>
 
-    <!-- Main Content -->
+    <!-- Main Content with padding -->
     <main class="container" id="main-content" role="main">
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -187,7 +201,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
+    <!-- Footer with padding -->
     <footer class="footer" role="contentinfo">
         <div class="footer-content">
             <div class="footer-section">
@@ -250,7 +264,7 @@
             html.setAttribute('data-theme', newTheme);
             updateThemeIcon(newTheme);
             localStorage.setItem('theme', newTheme);
-            
+
             // Track theme change
             gtag('event', 'theme_change', {
                 'event_category': 'User Interaction',
@@ -291,7 +305,7 @@
                     submitBtn.disabled = true;
                     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Processing...';
                 }
-                
+
                 // Track form submission
                 gtag('event', 'form_submit', {
                     'event_category': 'User Interaction',
