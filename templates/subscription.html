@@ -263,9 +263,10 @@
 }
 
 [data-theme="dark"] .popular-badge {
-    background: #f8f9fa;  /* Light background in dark mode */
-    color: var(--primary-color);  /* Primary color text in dark mode */
-    border: 1px solid var(--primary-color);
+    background: var(--primary-color);  /* Keep the primary color background */
+    color: white;  /* Keep white text */
+    border: 1px solid rgba(255,255,255,0.2);  /* Optional: subtle border for contrast */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);  /* Optional: add shadow for better visibility */
 }
 </style>
 {% endblock %}
