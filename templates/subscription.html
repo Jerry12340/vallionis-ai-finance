@@ -250,6 +250,23 @@
         margin: 1.25rem 0;
     }
 }
+.popular-badge {
+    position: absolute;
+    top: -12px;
+    right: 20px;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .popular-badge {
+    background: #f8f9fa;  /* Light background in dark mode */
+    color: var(--primary-color);  /* Primary color text in dark mode */
+    border: 1px solid var(--primary-color);
+}
 </style>
 {% endblock %}
 
