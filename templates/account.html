@@ -14,7 +14,7 @@
         <div class="card-header">
             <h3>Account Information</h3>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="padding: 1rem 1rem 1rem 2rem;">  <!-- Added left padding -->
             <div class="account-info-grid">
                 <div>
                     <p><strong>Email:</strong> {{ current_user.email }}</p>
@@ -44,7 +44,7 @@
         <div class="card-header">
             <h3>Subscription Status</h3>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="padding: 1rem 1rem 1rem 2rem;">
             {% if current_user.get_subscription_status() %}
                 <div class="subscription-status">
                     <div class="status-details">
@@ -96,7 +96,7 @@
         <div class="card-header">
             <h3>Change Password</h3>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="padding: 1rem 1rem 1rem 2rem;">
             <form method="POST" action="{{ url_for('change_password') }}" class="password-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="form-group">
@@ -131,7 +131,7 @@
         <div class="card-header">
             <h3>Danger Zone</h3>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="padding: 1rem 1rem 1rem 2rem;">
             <div class="danger-content">
                 <p><strong>Delete Account:</strong> This will permanently remove all your data.</p>
                 <button class="btn btn-danger" data-toggle="modal" data-target="#deleteAccountModal">
