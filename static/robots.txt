@@ -1,15 +1,14 @@
 User-agent: *
 Allow: /
 
-# Disallow admin and private areas
+# Block sensitive paths
 Disallow: /admin/
 Disallow: /api/
-Disallow: /stripe-webhook
+Disallow: /stripe-webhook/
 Disallow: /instance/
 
-# Sitemap location
+# Sitemap (must be full URL)
 Sitemap: https://vallionis-ai-finance.onrender.com/sitemap.xml
 
-# Crawl delay (optional - helps with server load)
-Crawl-delay: 1
-    
+# Slow down aggressive bots (adjust as needed)
+Crawl-delay: 2

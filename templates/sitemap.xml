@@ -8,4 +8,4 @@
         <priority>{{ page.priority }}</priority>
     </url>
     {% endfor %}
-</urlset> 
+</urlset>
