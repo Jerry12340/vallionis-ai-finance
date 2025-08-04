@@ -250,6 +250,7 @@
         margin: 1.25rem 0;
     }
 }
+<style>
 .popular-badge {
     position: absolute;
     top: -12px;
@@ -263,10 +264,10 @@
 }
 
 [data-theme="dark"] .popular-badge {
-    background: var(--primary-color);  /* Keep the primary color background */
-    color: white;  /* Keep white text */
-    border: 1px solid rgba(255,255,255,0.2);  /* Optional: subtle border for contrast */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);  /* Optional: add shadow for better visibility */
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.1); /* Adds subtle outline for better visibility */
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3); /* Improves text readability */
 }
 </style>
 {% endblock %}
