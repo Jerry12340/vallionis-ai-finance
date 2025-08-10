@@ -134,33 +134,24 @@
         <div class="card-body" style="padding: 1rem 1rem 1rem 2rem;">
             <div class="danger-content">
                 <p><strong>Delete Account:</strong> This will permanently remove all your data.</p>
-                <button class="btn btn-danger" data-toggle="modal" data-target="#deleteAccountModal">
+                <button id="showDeleteConfirm" class="btn btn-danger">
                     Delete My Account
                 </button>
             </div>
-        </div>
-    </div>
 
-    <!-- Delete Account Modal (hidden by default) -->
-    <div class="modal fade" id="deleteAccountModal" tabindex="-1" role="dialog" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
+            <!-- Inline Delete Confirmation Card (hidden by default) -->
+            <div id="deleteConfirmCard" class="card mt-4" style="display:none; border: 1px solid #dc3545;">
+                <div class="card-body" style="padding: 1rem 1rem 1rem 2rem;">
+                    <h5 class="text-danger">Confirm Account Deletion</h5>
                     <p>Are you sure you want to delete your account? This action cannot be undone.</p>
                     <p class="text-danger"><strong>All your data will be permanently removed.</strong></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <form action="{{ url_for('delete_account') }}" method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <button type="submit" class="btn btn-danger">Delete My Account</button>
-                    </form>
+                    <div class="d-flex">
+                        <button id="cancelDelete" class="btn btn-secondary mr-2">Cancel</button>
+                        <form action="{{ url_for('delete_account') }}" method="POST" style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-danger">Delete My Account</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -187,8 +178,16 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 <script>
 $(document).ready(function() {
-    $('#deleteAccountModal').modal({
-        show: false
+    // Show the inline confirmation card
+    $('#showDeleteConfirm').click(function() {
+        $('#deleteConfirmCard').slideDown();
+        $(this).hide();
+    });
+
+    // Cancel deletion and hide the confirmation card
+    $('#cancelDelete').click(function() {
+        $('#deleteConfirmCard').slideUp();
+        $('#showDeleteConfirm').show();
     });
 });
 </script>
