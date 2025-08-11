@@ -163,7 +163,7 @@ def categorize_stock_risk(symbol, beta, dividend_yield, pe_ratio, industry):
     # Conservative stocks (low risk, stable, dividend-paying)
     conservative_stocks = {
         'LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 
-        'T', 'VZ', 'PFE', 'ABT', 'WMT', 'COST', 'MCD', 'GIS', 'ELV', 'BMY'
+        'T', 'PFE', 'ABT', 'WMT', 'COST', 'MCD', 'GIS', 'ELV', 'BMY'
     }
     
     # Aggressive stocks (high growth, high volatility)
@@ -767,7 +767,7 @@ def train_rank(
         # Style-specific filtering to exclude inappropriate stocks
         if investing_style == 'aggressive':
             # For aggressive portfolios, exclude conservative stocks
-            conservative_stocks = ['LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 'T', 'VZ', 'PFE', 'ABT', 'WMT', 'COST', 'MCD']
+            conservative_stocks = ['LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 'T', 'PFE', 'ABT', 'WMT', 'COST', 'MCD']
             df = df[~df['symbol'].isin(conservative_stocks)].copy()
             
             # Also filter out stocks with very low beta (too conservative)
@@ -909,19 +909,19 @@ def process_request(
 
         allocation_recommendations = {
             'conservative': {
-                'sp500': 15,  # Reduced from 25 to make room for gold
+                'sp500': 30,  # Reduced from 25 to make room for gold
                 'bonds': 10,
                 'btc': 0,
                 'gold': 10,  # New gold allocation
-                'stocks': 65,
+                'stocks': 50,
                 'notes': ['10% allocation to gold (e.g., IAU, GLD, physical gold)']
             },
             'moderate': {
                 'sp500': 10,
                 'bonds': 5,
                 'btc': 2,
-                'gold': 0,  # No gold for moderate
-                'stocks': 83,
+                'gold': 5,  # No gold for moderate
+                'stocks': 78,
                 'notes': ['BTC allocation is optional']
             },
             'aggressive': {
@@ -949,7 +949,7 @@ def process_request(
             'conservative': [
                 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O',
                 'V', 'MA', 'SPGI', 'MCD', 'BRK-B', 'CAT', 'JPM', 'XOM',
-                'COST', 'T', 'VZ', 'PFE', 'ABT', 'LLY', 'WMT'
+                'COST', 'T', 'PFE', 'ABT', 'LLY', 'WMT'
             ],
             'moderate': [
                 'MSFT', 'GOOG', 'V', 'MA', 'ADP', 'AAPL', 'PG',
@@ -1006,7 +1006,7 @@ def process_request(
         # Additional style-specific filtering
         if investing_style == 'aggressive':
             # Exclude conservative stocks from aggressive portfolios
-            conservative_stocks = ['LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 'T', 'VZ', 'PFE', 'ABT', 'WMT', 'COST', 'MCD']
+            conservative_stocks = ['LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 'T', 'PFE', 'ABT', 'WMT', 'COST', 'MCD']
             filtered_df = filtered_df[~filtered_df['symbol'].isin(conservative_stocks)].copy()
             
             # Use categorization function for additional filtering
@@ -1086,7 +1086,7 @@ def process_request(
                 # Apply style-specific filtering to backup candidates
                 if investing_style == 'aggressive':
                     # For aggressive, exclude conservative stocks from backup
-                    conservative_backup = ['LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 'T', 'VZ', 'PFE', 'ABT', 'WMT']
+                    conservative_backup = ['LLY', 'BRK-B', 'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'SO', 'DUK', 'CVX', 'O', 'T', 'PFE', 'ABT', 'WMT']
                     df_bu = df_bu[~df_bu['symbol'].isin(conservative_backup)].copy()
                     
                     # Use categorization function
