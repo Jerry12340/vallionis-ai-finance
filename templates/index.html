@@ -184,6 +184,17 @@
                     Analysis typically takes 3-5 minutes
                 </div>
             </div>
+
+            <!-- Long-term Investing Disclaimer -->
+            <div class="investing-disclaimer fade-in-up">
+                <div class="disclaimer-card">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="disclaimer-content">
+                        <h4>Investing Wisdom</h4>
+                        <p>Remember: This tool is designed for long-term investing. Short-term market fluctuations are normal - stay focused on your long-term goals.</p>
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
 
@@ -300,9 +311,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }, observerOptions);
 
     // Observe all feature cards and sections
-    document.querySelectorAll('.feature-card, .form-section, .upgrade-cta').forEach(el => {
+    document.querySelectorAll('.feature-card, .form-section, .upgrade-cta, .investing-disclaimer').forEach(el => {
         observer.observe(el);
     });
 });
 </script>
+
+<style>
+.investing-disclaimer {
+    margin: 2rem 0;
+}
+
+.disclaimer-card {
+    background: rgba(37, 99, 235, 0.08);
+    border-left: 4px solid #2563eb;
+    padding: 1.25rem;
+    border-radius: 0 8px 8px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.disclaimer-card i {
+    color: #2563eb;
+    font-size: 1.5rem;
+    margin-top: 0.25rem;
+}
+
+.disclaimer-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2563eb;
+    font-size: 1.1rem;
+}
+
+.disclaimer-content p {
+    margin: 0;
+    color: #4b5563;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+</style>
 {% endblock %}
