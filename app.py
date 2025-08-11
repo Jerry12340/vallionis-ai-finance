@@ -907,16 +907,30 @@ def process_request(
         if not premium:
             stocks_amount += 3
 
-        # Define allocation recommendations
         allocation_recommendations = {
             'conservative': {
-                'sp500': 25, 'bonds': 10, 'btc': 0, 'stocks': 65, 'notes': []
+                'sp500': 15,  # Reduced from 25 to make room for gold
+                'bonds': 10,
+                'btc': 0,
+                'gold': 10,  # New gold allocation
+                'stocks': 65,
+                'notes': ['10% allocation to gold (e.g., IAU, GLD, physical gold)']
             },
             'moderate': {
-                'sp500': 10, 'bonds': 5, 'btc': 2, 'stocks': 83, 'notes': ['BTC allocation is optional']
+                'sp500': 10,
+                'bonds': 5,
+                'btc': 2,
+                'gold': 0,  # No gold for moderate
+                'stocks': 83,
+                'notes': ['BTC allocation is optional']
             },
             'aggressive': {
-                'sp500': 5, 'bonds': 0, 'btc': 5, 'stocks': 90, 'notes': ['BTC allocation is optional']
+                'sp500': 5,
+                'bonds': 0,
+                'btc': 5,
+                'gold': 0,  # No gold for aggressive
+                'stocks': 90,
+                'notes': ['BTC allocation is optional']
             }
         }
         allocation = allocation_recommendations[investing_style]

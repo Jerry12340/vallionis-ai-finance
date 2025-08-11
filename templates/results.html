@@ -31,6 +31,12 @@
                             <span class="badge badge-primary badge-pill">{{ allocation.bonds }}%</span>
                         </li>
                         {% endif %}
+                        {% if allocation.gold > 0 %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-3">
+                            Gold
+                            <span class="badge badge-primary badge-pill">{{ allocation.gold }}%</span>
+                        </li>
+                        {% endif %}
                         {% if allocation.btc > 0 %}
                         <li class="list-group-item d-flex justify-content-between align-items-center px-3">
                             Bitcoin
@@ -53,7 +59,13 @@
                 </div>
             </div>
             <div class="alert alert-info mt-3 mx-2">
-                <small>This allocation is based on your selected {{ investing_style }} strategy. Adjust according to your personal risk tolerance.</small>
+                <small>
+                    This allocation is based on your selected {{ investing_style }} strategy.
+                    {% if allocation.gold > 0 %}
+                    The 10% gold allocation provides stability during market downturns (consider ETFs like GLD or IAU).
+                    {% endif %}
+                    Adjust according to your personal risk tolerance.
+                </small>
             </div>
         </div>
     </div>
@@ -135,11 +147,11 @@
                 <div class="card-body px-3 py-3">
                     <div class="d-flex justify-content-between mb-3">
                         <div class="text-center px-1">
-                            <small class="text-muted">Annual Return (Annual Return)</small>
+                            <small class="text-muted">Annual Return</small>
                             <h6 class="text-success mb-0">{{ stock.annual_return }}</h6>
                         </div>
                         <div class="text-center px-1">
-                            <small class="text-muted">Total Return (estimate)</small>
+                            <small class="text-muted">Total Return</small>
                             <h6 class="mb-0">{{ stock.total_return }}</h6>
                         </div>
                         <div class="text-center px-1">
@@ -271,6 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: [
                 'S&P 500',
                 {% if allocation.bonds > 0 %}'Bonds',{% endif %}
+                {% if allocation.gold > 0 %}'Gold',{% endif %}
                 {% if allocation.btc > 0 %}'Bitcoin',{% endif %}
                 'Stocks'
             ],
@@ -278,18 +291,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 data: [
                     {{ allocation.sp500 }},
                     {% if allocation.bonds > 0 %}{{ allocation.bonds }},{% endif %}
+                    {% if allocation.gold > 0 %}{{ allocation.gold }},{% endif %}
                     {% if allocation.btc > 0 %}{{ allocation.btc }},{% endif %}
                     {{ allocation.stocks }}
                 ],
                 backgroundColor: [
                     '#4e73df',
                     {% if allocation.bonds > 0 %}'#1cc88a',{% endif %}
+                    {% if allocation.gold > 0 %}'#FFD700',{% endif %}
                     {% if allocation.btc > 0 %}'#f6c23e',{% endif %}
                     '#36b9cc'
                 ],
                 hoverBackgroundColor: [
                     '#2e59d9',
                     {% if allocation.bonds > 0 %}'#17a673',{% endif %}
+                    {% if allocation.gold > 0 %}'#D4AF37',{% endif %}
                     {% if allocation.btc > 0 %}'#dda20a',{% endif %}
                     '#2c9faf'
                 ],
