@@ -263,11 +263,11 @@
 
 {% block scripts %}
 <style>
-/* Upgrade CTA Styling - Dark Theme Version */
+/* Upgrade CTA Styling - Matching Dark Theme */
 .upgrade-cta {
     padding: 40px 0;
     margin: 40px 0;
-    background-color: #1e1e1e; /* Dark background */
+    background-color: transparent; /* Matches page background */
     border-radius: 10px;
     border: 1px solid #333; /* Subtle border */
 }
@@ -276,42 +276,42 @@
     max-width: 800px;
     margin: 0 auto;
     padding: 30px;
-    background: #252525; /* Slightly lighter dark background */
+    background: transparent; /* Matches page background */
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .cta-header {
     text-align: center;
     margin-bottom: 30px;
     padding-bottom: 20px;
-    border-bottom: 1px solid #333; /* Darker border */
+    border-bottom: 1px solid #333; /* Dark border */
 }
 
 .cta-header i {
     font-size: 2.5rem;
-    color: #4a6baf;
+    color: #4a6baf; /* Blue accent */
     margin-bottom: 15px;
 }
 
 .cta-header h3 {
     margin: 15px 0 10px;
-    color: #f8f9fa; /* Light text */
+    color: #f8f9fa; /* White text */
+    font-size: 1.5rem;
 }
 
 .cta-header p {
-    color: #adb5bd; /* Lighter gray text */
+    color: #adb5bd; /* Light gray text */
     font-size: 1.1rem;
 }
 
 .premium-features {
     margin: 30px 0;
     padding: 20px 0;
-    border-bottom: 1px solid #333; /* Darker border */
+    border-bottom: 1px solid #333; /* Dark border */
 }
 
 .premium-features h4 {
-    color: #f8f9fa; /* Light text */
+    color: #f8f9fa; /* White text */
     margin-bottom: 20px;
     font-size: 1.3rem;
 }
@@ -329,7 +329,7 @@
 }
 
 .premium-features i {
-    color: #4CAF50;
+    color: #4CAF50; /* Green checkmark */
     margin-right: 10px;
 }
 
@@ -341,21 +341,21 @@
 .pricing-info p {
     margin-bottom: 25px;
     font-size: 1.2rem;
-    color: #adb5bd; /* Lighter gray text */
+    color: #adb5bd; /* Light gray text */
 }
 
 .pricing-info strong {
     font-size: 1.3rem;
-    color: #f8f9fa; /* Light text */
+    color: #f8f9fa; /* White text */
 }
 
 .pricing-info span {
     margin: 0 10px;
-    color: #adb5bd; /* Lighter gray text */
+    color: #adb5bd; /* Light gray text */
 }
 
 .btn-primary {
-    background-color: #4a6baf;
+    background-color: #4a6baf; /* Blue button */
     color: white;
     border: none;
     padding: 12px 30px;
@@ -365,7 +365,7 @@
 }
 
 .btn-primary:hover {
-    background-color: #3a5a9f;
+    background-color: #3a5a9f; /* Darker blue on hover */
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
@@ -378,17 +378,22 @@
 }
 
 /* Ensure all text in card is visible */
+.cta-card,
 .cta-card * {
-    color: #f8f9fa;
+    color: #f8f9fa; /* White text by default */
 }
 
-/* Specific exceptions for icons and buttons */
+/* Specific exceptions */
 .cta-card i {
-    color: #4a6baf !important;
+    color: #4a6baf !important; /* Blue icons */
 }
 
 .cta-card .btn-primary {
-    color: white !important;
+    color: white !important; /* White button text */
+}
+
+.cta-card .premium-features i {
+    color: #4CAF50 !important; /* Green checkmarks */
 }
 </style>
 
