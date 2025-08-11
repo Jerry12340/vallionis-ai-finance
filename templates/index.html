@@ -217,14 +217,15 @@
                     <li><i class="fas fa-check"></i> CSV export functionality</li>
                     <li><i class="fas fa-check"></i> 3x faster processing</li>
                 </ul>
-                <div class="pricing-info">
-                    <p>
-                        <strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.monthly_price if currency_config else '4.99' }}/month</strong>
-                        <span>or</span>
-                        <strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.lifetime_price if currency_config else '99.99' }} lifetime</strong>
-                    </p>
-                    <a href="{{ url_for('subscription') }}" class="btn btn-primary">Upgrade to Premium</a>
-                </div>
+            </div>
+
+            <div class="pricing-info">
+                <p>
+                    <strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.monthly_price if currency_config else '4.99' }}/month</strong>
+                    <span>or</span>
+                    <strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.lifetime_price if currency_config else '99.99' }} lifetime</strong>
+                </p>
+                <a href="{{ url_for('subscription') }}" class="btn btn-primary">Upgrade to Premium</a>
             </div>
         </div>
     </div>
@@ -262,128 +263,130 @@
 
 {% block scripts %}
 <style>
-/* Remove blue border/outline around upgrade CTA button and links */
-.upgrade-cta .btn,
-.upgrade-cta a,
-.upgrade-cta .btn:focus,
-.upgrade-cta a:focus,
-.upgrade-cta .btn:active,
-.upgrade-cta a:active {
-    outline: none !important;
-    box-shadow: none !important;
-    border: none !important;
+/* Upgrade CTA Styling with Added Spacing */
+.upgrade-cta {
+    padding: 40px 0;
+    margin: 40px 0;
+    background-color: #fff9e6; /* Light yellow background */
+    border-radius: 10px;
 }
 
-/* CTA card styles with yellow left border and padding */
 .cta-card {
-    padding: 2.5rem;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 30px;
+    background: white;
     border-radius: 8px;
-    box-shadow: none;
-    border-left: 5px solid #FFEB3B; /* bright yellow border */
-    padding-left: 3rem; /* space between border and content */
-    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-/* Header inside CTA card */
 .cta-header {
-    padding-bottom: 1.75rem;
-    /* Remove left padding to align with card padding */
-    padding-left: 0;
-    color: #004085; /* blue color for title and icon */
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
 }
 
 .cta-header i {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    color: #FFC107; /* yellow-ish icon color to complement border */
+    font-size: 2.5rem;
+    color: #4a6baf;
+    margin-bottom: 15px;
 }
 
 .cta-header h3 {
-    margin-top: 0.75rem;
-    margin-bottom: 0.5rem;
-    color: #0056b3; /* blue title */
+    margin: 15px 0 10px;
+    color: #2c3e50;
 }
 
-/* Premium features list */
+.cta-header p {
+    color: #7f8c8d;
+    font-size: 1.1rem;
+}
+
 .premium-features {
-    padding: 1.75rem 0 1.75rem 0;
-    padding-left: 0;
+    margin: 30px 0;
+    padding: 20px 0;
+    border-bottom: 1px solid #eee;
 }
 
 .premium-features h4 {
-    margin-top: 0;
-    margin-bottom: 1.25rem;
-    color: #333;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
 }
 
 .premium-features ul {
-    margin-bottom: 2rem;
-    padding-left: 1.5rem;
-    list-style-type: none;
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
-.premium-features ul li {
-    padding: 0.5rem 0;
-    font-size: 1.05rem;
+.premium-features li {
+    padding: 10px 0;
+    font-size: 1.1rem;
+    color: #34495e;
 }
 
-.premium-features ul li i {
+.premium-features i {
     color: #4CAF50;
-    margin-right: 0.75rem;
+    margin-right: 10px;
 }
 
-/* Pricing info */
 .pricing-info {
-    padding-top: 1.5rem;
-    border-top: 1px solid #eee;
-    padding-left: 0;
+    text-align: center;
+    margin-top: 30px;
 }
 
 .pricing-info p {
-    margin-bottom: 1.5rem;
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #444;
+    margin-bottom: 25px;
+    font-size: 1.2rem;
+}
+
+.pricing-info strong {
+    font-size: 1.3rem;
+    color: #2c3e50;
 }
 
 .pricing-info span {
-    margin: 0 1rem;
-    color: #888;
+    margin: 0 10px;
+    color: #7f8c8d;
 }
 
-/* Upgrade button */
-.pricing-info .btn {
-    display: inline-block;
-    width: 100%;
+.btn-primary {
+    background-color: #4a6baf;
+    border: none;
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .cta-card {
-        padding: 1.5rem 1rem;
-        padding-left: 2rem;
-    }
+.btn-primary:hover {
+    background-color: #3a5a9f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Remove focus outlines */
+.upgrade-cta .btn:focus,
+.upgrade-cta a:focus {
+    outline: none;
+    box-shadow: none;
 }
 </style>
 
 <script>
+// Show/hide premium fields on toggle
 document.addEventListener('DOMContentLoaded', function() {
     const premiumToggle = document.getElementById('premiumToggle');
     const premiumFields = document.getElementById('premiumFields');
+    if (premiumToggle) {
+        premiumToggle.addEventListener('change', function() {
+            premiumFields.style.display = this.checked ? 'block' : 'none';
+        });
 
-    function togglePremiumFields() {
-        if(premiumToggle && premiumFields) {
-            if(premiumToggle.checked) {
-                premiumFields.style.display = 'block';
-            } else {
-                premiumFields.style.display = 'none';
-            }
-        }
-    }
-
-    if(premiumToggle) {
-        premiumToggle.addEventListener('change', togglePremiumFields);
-        togglePremiumFields();
+        // Initialize display
+        premiumFields.style.display = premiumToggle.checked ? 'block' : 'none';
     }
 });
 </script>
