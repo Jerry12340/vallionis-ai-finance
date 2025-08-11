@@ -238,117 +238,62 @@
         <div class="feature-card">
             <i class="fas fa-brain"></i>
             <h3>AI-Powered Analysis</h3>
-            <p>Our advanced algorithms analyze thousands of data points to identify the best investment opportunities.</p>
+            <p>Our advanced algorithms analyze thousands of data points for accurate stock picks.</p>
         </div>
         <div class="feature-card">
-            <i class="fas fa-user-cog"></i>
-            <h3>Personalized Recommendations</h3>
-            <p>Get recommendations tailored to your specific risk tolerance, time horizon, and investment goals.</p>
+            <i class="fas fa-user-shield"></i>
+            <h3>Personalized to You</h3>
+            <p>Custom recommendations based on your unique risk tolerance and goals.</p>
         </div>
         <div class="feature-card">
-            <i class="fas fa-chart-bar"></i>
-            <h3>Comprehensive Data</h3>
-            <p>Access real-time market data, financial ratios, and growth projections for informed decisions.</p>
+            <i class="fas fa-clock"></i>
+            <h3>Long-Term Focus</h3>
+            <p>Designed to help you build wealth steadily and securely over time.</p>
         </div>
         <div class="feature-card">
-            <i class="fas fa-shield-alt"></i>
-            <h3>Risk Management</h3>
-            <p>Our recommendations include risk assessment and portfolio diversification strategies.</p>
+            <i class="fas fa-lock"></i>
+            <h3>Secure & Private</h3>
+            <p>Your data and privacy are protected with industry-leading security.</p>
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
+<style>
+/* Remove blue border/outline around upgrade CTA button and links */
+.upgrade-cta .btn,
+.upgrade-cta a,
+.upgrade-cta .btn:focus,
+.upgrade-cta a:focus,
+.upgrade-cta .btn:active,
+.upgrade-cta a:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Also remove border and outline from the cta card itself */
+.cta-card {
+    border: none !important;
+    outline: none !important;
+}
+</style>
+
 <script>
+// Show/hide premium fields on toggle (example behavior)
 document.addEventListener('DOMContentLoaded', function() {
     const premiumToggle = document.getElementById('premiumToggle');
     const premiumFields = document.getElementById('premiumFields');
-    const form = document.getElementById('recommendationForm');
-    const loadingOverlay = document.getElementById('loadingOverlay');
-
-    // Premium toggle functionality
     if (premiumToggle) {
         premiumToggle.addEventListener('change', function() {
-            if (this.checked) {
-                premiumFields.style.display = 'block';
-                premiumFields.classList.add('fade-in-up');
-            } else {
-                premiumFields.style.display = 'none';
-            }
+            premiumFields.style.display = this.checked ? 'block' : 'none';
         });
+
+        // Initialize display
+        premiumFields.style.display = premiumToggle.checked ? 'block' : 'none';
     }
-
-    // Form submission with loading animation
-    form.addEventListener('submit', function(e) {
-        loadingOverlay.style.display = 'flex';
-
-        // Simulate progress bar
-        const progressFill = document.querySelector('.progress-fill');
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 15;
-            if (progress > 90) progress = 90;
-            progressFill.style.width = progress + '%';
-        }, 500);
-
-        // Store interval to clear later
-        window.progressInterval = interval;
-    });
-
-    // Add smooth animations to elements
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('fade-in-up');
-            }
-        });
-    }, observerOptions);
-
-    // Observe all feature cards and sections
-    document.querySelectorAll('.feature-card, .form-section, .upgrade-cta, .investing-disclaimer').forEach(el => {
-        observer.observe(el);
-    });
 });
 </script>
-
-<style>
-.investing-disclaimer {
-    margin: 2rem 0;
-}
-
-.disclaimer-card {
-    background: rgba(37, 99, 235, 0.08);
-    border-left: 4px solid #2563eb;
-    padding: 1.25rem;
-    border-radius: 0 8px 8px 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-}
-
-.disclaimer-card i {
-    color: #2563eb;
-    font-size: 1.5rem;
-    margin-top: 0.25rem;
-}
-
-.disclaimer-content h4 {
-    margin: 0 0 0.5rem 0;
-    color: #2563eb;
-    font-size: 1.1rem;
-}
-
-.disclaimer-content p {
-    margin: 0;
-    color: #4b5563;
-    font-size: 0.95rem;
-    line-height: 1.5;
-}
-</style>
 {% endblock %}
