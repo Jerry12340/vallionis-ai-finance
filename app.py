@@ -928,7 +928,7 @@ def process_request(
             'BAC', 'ADP', 'PEP', 'AXP', 'MS', 'ISRG', 'NOW', 'GS',
             'PGR', 'QCOM', 'ADBE', 'TJX', 'BSX', 'AMD',
             'CAT', 'BLK', 'TXN', 'BA', 'MMC', 'PANW', 'LMT', 'AMAT', 'SO', 'BMY', 'ELV',
-            'INTC', 'DASH', 'ASML', 'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN', 'APD'
+            'DASH', 'ASML', 'REGN', 'HOOD', 'GIS', 'DUK', 'PFE', 'TSLA', 'MU', 'COIN'
         ]
 
         backup_tickers = {
