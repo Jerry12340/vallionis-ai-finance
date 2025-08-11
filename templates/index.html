@@ -201,31 +201,30 @@
     <!-- Subscription CTA for Non-Premium Users -->
     {% if not is_premium_user %}
     <div class="upgrade-cta fade-in-up">
-        <div class="cta-card">
-            <div class="cta-header">
-                <i class="fas fa-rocket"></i>
-                <h3>Unlock Premium Features</h3>
-                <p>Get more personalized recommendations with advanced filtering options</p>
+        <div class="cta-card" style="padding: 2.5rem; border-radius: 8px; box-shadow: none;">
+            <div class="cta-header" style="padding-bottom: 1.75rem; padding-left: 1.5rem;">
+                <i class="fas fa-rocket" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <h3 style="margin-top: 0.75rem; margin-bottom: 0.5rem;">Unlock Premium Features</h3>
+                <p style="margin-bottom: 0; font-size: 1.1rem;">Get more personalized recommendations with advanced filtering options</p>
             </div>
 
-            <div class="premium-features">
-                <h4>Premium Features</h4>
-                <ul>
-                    <li><i class="fas fa-check"></i> Sector-specific recommendations</li>
-                    <li><i class="fas fa-check"></i> Custom risk tolerance settings</li>
-                    <li><i class="fas fa-check"></i> Dividend-focused portfolios</li>
-                    <li><i class="fas fa-check"></i> CSV export functionality</li>
-                    <li><i class="fas fa-check"></i> 3x faster processing</li>
+            <div class="premium-features" style="padding: 1.75rem 0 1.75rem 1.5rem;">
+                <h4 style="margin-top: 0; margin-bottom: 1.25rem;">Premium Features</h4>
+                <ul style="margin-bottom: 2rem; padding-left: 1.5rem; list-style-type: none;">
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> Sector-specific recommendations</li>
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> Custom risk tolerance settings</li>
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> Dividend-focused portfolios</li>
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> CSV export functionality</li>
+                    <li style="padding: 0.5rem 0; font-size: 1.05rem;"><i class="fas fa-check" style="color: #4CAF50; margin-right: 0.75rem;"></i> 3x faster processing</li>
                 </ul>
-            </div>
-
-            <div class="pricing-info">
-                <p>
-                    <strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.monthly_price if currency_config else '4.99' }}/month</strong>
-                    <span>or</span>
-                    <strong>{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.lifetime_price if currency_config else '99.99' }} lifetime</strong>
-                </p>
-                <a href="{{ url_for('subscription') }}" class="btn btn-primary">Upgrade to Premium</a>
+                <div class="pricing-info" style="padding-top: 1.5rem; border-top: 1px solid #eee; padding-left: 1.5rem;">
+                    <p style="margin-bottom: 1.5rem; font-size: 1.15rem;">
+                        <strong style="font-size: 1.25rem;">{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.monthly_price if currency_config else '4.99' }}/month</strong>
+                        <span style="margin: 0 0.5rem;">or</span>
+                        <strong style="font-size: 1.25rem;">{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.lifetime_price if currency_config else '99.99' }} lifetime</strong>
+                    </p>
+                    <a href="{{ url_for('subscription') }}" class="btn btn-primary" style="padding: 0.85rem 2rem; font-size: 1.1rem; border-radius: 6px; margin-left: 1.5rem;">Upgrade to Premium</a>
+                </div>
             </div>
         </div>
     </div>
@@ -263,142 +262,27 @@
 
 {% block scripts %}
 <style>
-/* Upgrade CTA Styling - Matching Dark Theme */
-.upgrade-cta {
-    padding: 40px 0;
-    margin: 40px 0;
-    background-color: transparent; /* Matches page background */
-    border-radius: 10px;
-    border: 1px solid #333; /* Subtle border */
-}
-
-.cta-card {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 30px;
-    background: transparent; /* Matches page background */
-    border-radius: 8px;
-}
-
-.cta-header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #333; /* Dark border */
-}
-
-.cta-header i {
-    font-size: 2.5rem;
-    color: #4a6baf; /* Blue accent */
-    margin-bottom: 15px;
-}
-
-.cta-header h3 {
-    margin: 15px 0 10px;
-    color: #f8f9fa; /* White text */
-    font-size: 1.5rem;
-}
-
-.cta-header p {
-    color: #adb5bd; /* Light gray text */
-    font-size: 1.1rem;
-}
-
-.premium-features {
-    margin: 30px 0;
-    padding: 20px 0;
-    border-bottom: 1px solid #333; /* Dark border */
-}
-
-.premium-features h4 {
-    color: #f8f9fa; /* White text */
-    margin-bottom: 20px;
-    font-size: 1.3rem;
-}
-
-.premium-features ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.premium-features li {
-    padding: 10px 0;
-    font-size: 1.1rem;
-    color: #dee2e6; /* Light gray text */
-}
-
-.premium-features i {
-    color: #4CAF50; /* Green checkmark */
-    margin-right: 10px;
-}
-
-.pricing-info {
-    text-align: center;
-    margin-top: 30px;
-}
-
-.pricing-info p {
-    margin-bottom: 25px;
-    font-size: 1.2rem;
-    color: #adb5bd; /* Light gray text */
-}
-
-.pricing-info strong {
-    font-size: 1.3rem;
-    color: #f8f9fa; /* White text */
-}
-
-.pricing-info span {
-    margin: 0 10px;
-    color: #adb5bd; /* Light gray text */
-}
-
-.btn-primary {
-    background-color: #4a6baf; /* Blue button */
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    font-size: 1.1rem;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-}
-
-.btn-primary:hover {
-    background-color: #3a5a9f; /* Darker blue on hover */
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-/* Remove focus outlines */
+/* Remove blue border/outline around upgrade CTA button and links */
+.upgrade-cta .btn,
+.upgrade-cta a,
 .upgrade-cta .btn:focus,
-.upgrade-cta a:focus {
-    outline: none;
-    box-shadow: none;
+.upgrade-cta a:focus,
+.upgrade-cta .btn:active,
+.upgrade-cta a:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 
-/* Ensure all text in card is visible */
-.cta-card,
-.cta-card * {
-    color: #f8f9fa; /* White text by default */
-}
-
-/* Specific exceptions */
-.cta-card i {
-    color: #4a6baf !important; /* Blue icons */
-}
-
-.cta-card .btn-primary {
-    color: white !important; /* White button text */
-}
-
-.cta-card .premium-features i {
-    color: #4CAF50 !important; /* Green checkmarks */
+/* Also remove border and outline from the cta card itself */
+.cta-card {
+    border: none !important;
+    outline: none !important;
 }
 </style>
 
 <script>
-// Show/hide premium fields on toggle
+// Show/hide premium fields on toggle (example behavior)
 document.addEventListener('DOMContentLoaded', function() {
     const premiumToggle = document.getElementById('premiumToggle');
     const premiumFields = document.getElementById('premiumFields');
