@@ -263,28 +263,29 @@
 
 {% block scripts %}
 <style>
-/* Upgrade CTA Styling with Added Spacing */
+/* Upgrade CTA Styling - Dark Theme Version */
 .upgrade-cta {
     padding: 40px 0;
     margin: 40px 0;
-    background-color: #fff9e6; /* Light yellow background */
+    background-color: #1e1e1e; /* Dark background */
     border-radius: 10px;
+    border: 1px solid #333; /* Subtle border */
 }
 
 .cta-card {
     max-width: 800px;
     margin: 0 auto;
     padding: 30px;
-    background: black;
+    background: #252525; /* Slightly lighter dark background */
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .cta-header {
     text-align: center;
     margin-bottom: 30px;
     padding-bottom: 20px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #333; /* Darker border */
 }
 
 .cta-header i {
@@ -295,22 +296,22 @@
 
 .cta-header h3 {
     margin: 15px 0 10px;
-    color: #2c3e50;
+    color: #f8f9fa; /* Light text */
 }
 
 .cta-header p {
-    color: #7f8c8d;
+    color: #adb5bd; /* Lighter gray text */
     font-size: 1.1rem;
 }
 
 .premium-features {
     margin: 30px 0;
     padding: 20px 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #333; /* Darker border */
 }
 
 .premium-features h4 {
-    color: #2c3e50;
+    color: #f8f9fa; /* Light text */
     margin-bottom: 20px;
     font-size: 1.3rem;
 }
@@ -324,7 +325,7 @@
 .premium-features li {
     padding: 10px 0;
     font-size: 1.1rem;
-    color: #34495e;
+    color: #dee2e6; /* Light gray text */
 }
 
 .premium-features i {
@@ -340,20 +341,22 @@
 .pricing-info p {
     margin-bottom: 25px;
     font-size: 1.2rem;
+    color: #adb5bd; /* Lighter gray text */
 }
 
 .pricing-info strong {
     font-size: 1.3rem;
-    color: #2c3e50;
+    color: #f8f9fa; /* Light text */
 }
 
 .pricing-info span {
     margin: 0 10px;
-    color: #7f8c8d;
+    color: #adb5bd; /* Lighter gray text */
 }
 
 .btn-primary {
     background-color: #4a6baf;
+    color: white;
     border: none;
     padding: 12px 30px;
     font-size: 1.1rem;
@@ -364,7 +367,7 @@
 .btn-primary:hover {
     background-color: #3a5a9f;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 /* Remove focus outlines */
@@ -372,6 +375,20 @@
 .upgrade-cta a:focus {
     outline: none;
     box-shadow: none;
+}
+
+/* Ensure all text in card is visible */
+.cta-card * {
+    color: #f8f9fa;
+}
+
+/* Specific exceptions for icons and buttons */
+.cta-card i {
+    color: #4a6baf !important;
+}
+
+.cta-card .btn-primary {
+    color: white !important;
 }
 </style>
 
