@@ -74,6 +74,10 @@
                 {% endif %}
             </div>
 
+            <div class="text-end mb-2" style="padding: 0 0.5rem;">
+                <a href="{{ url_for('forgot_password') }}" class="text-accent" style="font-size: 0.9rem;">Forgot Password?</a>
+            </div>
+
             <div class="form-check mb-3" style="padding: 0 0.5rem;">
                 {{ form.remember(class="form-check-input", style="background-color: var(--bg-color); border-color: var(--border-color);") }}
                 {{ form.remember.label(class="form-check-label") }}

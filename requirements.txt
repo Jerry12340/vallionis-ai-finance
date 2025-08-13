@@ -20,6 +20,7 @@ torch==2.7.0
 torchvision==0.22.0
 torchaudio==2.7.0
 flask-migrate==4.1.0
+flask-mail>=0.9.1
 authlib==1.6.0
 waitress==3.0.2
 psycopg2-binary==2.9.10

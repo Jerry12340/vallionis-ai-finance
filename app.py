@@ -41,6 +41,11 @@ from sqlalchemy.exc import OperationalError
 from psycopg2 import OperationalError as Psycopg2OpError
 from flask import send_file
 import requests
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -247,6 +252,20 @@ def get_one_hot_encoder():
     return OneHotEncoder(**ohe_kwargs)
 
 
+# Email configuration
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', os.getenv('MAIL_USERNAME'))
+
+# Initialize Flask-Mail
+mail = Mail(app)
+
+# Token serializer for password reset
+token_serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
 # Security configurations
 app.config.update(
     SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV') == 'production',
@@ -347,6 +366,8 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
+    reset_token = db.Column(db.String(100), nullable=True)
+    reset_token_expiry = db.Column(db.DateTime, nullable=True)
     premium = db.Column(db.Boolean, default=False)
     subscription_expires = db.Column(db.DateTime)
     stripe_customer_id = db.Column(db.String(50))
@@ -418,6 +439,32 @@ class User(db.Model, UserMixin):
             db.session.rollback()
             logger.error(f"Error updating preferences for user {self.id}: {str(e)}")
             return False
+    
+    def generate_reset_token(self):
+        """Generate a password reset token for the user"""
+        token = token_serializer.dumps(self.email, salt='password-reset')
+        self.reset_token = token
+        self.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
+        db.session.commit()
+        return token
+    
+    @staticmethod
+    def verify_reset_token(token, max_age=3600):  # 1 hour in seconds
+        """Verify a password reset token and return the user"""
+        try:
+            email = token_serializer.loads(token, salt='password-reset', max_age=max_age)
+            user = User.query.filter_by(email=email).first()
+            if user and user.reset_token == token and user.reset_token_expiry and user.reset_token_expiry > datetime.utcnow():
+                return user
+        except (SignatureExpired, BadTimeSignature):
+            pass
+        return None
+    
+    def clear_reset_token(self):
+        """Clear the password reset token"""
+        self.reset_token = None
+        self.reset_token_expiry = None
+        db.session.commit()
 
 
 class LoginForm(FlaskForm):
@@ -550,6 +597,29 @@ class RegistrationForm(FlaskForm):
     def validate_email(self, field):
         if User.query.filter_by(email=field.data).first():
             raise ValidationError('Email already registered')
+
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Send Reset Link')
+
+    def validate_email(self, field):
+        user = User.query.filter_by(email=field.data).first()
+        if not user:
+            raise ValidationError('No account found with that email address.')
+
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[DataRequired()])
+    confirm_password = PasswordField(
+        'Confirm New Password',
+        validators=[DataRequired(), EqualTo('password')]
+    )
+    submit = SubmitField('Reset Password')
+
+    def validate_password(self, field):
+        if len(field.data) < 8:
+            raise ValidationError('Password must be at least 8 characters long')
 
 
 # Login manager
@@ -1245,6 +1315,111 @@ def process_request(
             'allocation': allocation_recommendations.get(investing_style, {}),
             'investing_style': investing_style
         }
+
+
+# ──── Email Helper Functions ─────────────────────────────────────────────
+def send_password_reset_email(user, token):
+    """Send password reset email to user"""
+    try:
+        reset_url = url_for('reset_password', token=token, _external=True)
+        
+        # Create email content
+        subject = "Password Reset Request - Vallionis AI Finance"
+        
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2c3e50;">Password Reset Request</h2>
+                <p>Hello,</p>
+                <p>You have requested to reset your password for your Vallionis AI Finance account.</p>
+                <p>Click the button below to reset your password:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_url}" 
+                       style="background-color: #3498db; color: white; padding: 12px 30px; 
+                              text-decoration: none; border-radius: 5px; display: inline-block;">
+                        Reset Password
+                    </a>
+                </div>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; color: #3498db;">{reset_url}</p>
+                <p><strong>This link will expire in 1 hour.</strong></p>
+                <p>If you did not request this password reset, please ignore this email.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="font-size: 12px; color: #666;">
+                    This is an automated message from Vallionis AI Finance. Please do not reply to this email.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_body = f"""
+        Password Reset Request
+        
+        Hello,
+        
+        You have requested to reset your password for your Vallionis AI Finance account.
+        
+        Click this link to reset your password: {reset_url}
+        
+        This link will expire in 1 hour.
+        
+        If you did not request this password reset, please ignore this email.
+        
+        ---
+        This is an automated message from Vallionis AI Finance.
+        """
+        
+        # Try Flask-Mail first, fallback to SMTP
+        if app.config.get('MAIL_USERNAME'):
+            try:
+                msg = Message(
+                    subject=subject,
+                    recipients=[user.email],
+                    html=html_body,
+                    body=text_body
+                )
+                mail.send(msg)
+                logger.info(f"Password reset email sent to {user.email} via Flask-Mail")
+                return True
+            except Exception as e:
+                logger.warning(f"Flask-Mail failed for {user.email}: {e}")
+        
+        # Fallback to direct SMTP
+        try:
+            smtp_server = app.config.get('MAIL_SERVER', 'smtp.gmail.com')
+            smtp_port = app.config.get('MAIL_PORT', 587)
+            smtp_username = app.config.get('MAIL_USERNAME')
+            smtp_password = app.config.get('MAIL_PASSWORD')
+            
+            if not smtp_username or not smtp_password:
+                logger.error("Email credentials not configured")
+                return False
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = smtp_username
+            msg['To'] = user.email
+            
+            msg.attach(MIMEText(text_body, 'plain'))
+            msg.attach(MIMEText(html_body, 'html'))
+            
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_username, smtp_password)
+                server.send_message(msg)
+            
+            logger.info(f"Password reset email sent to {user.email} via SMTP")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {user.email}: {e}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error in send_password_reset_email: {e}")
+        return False
 
 
 # ──── Routes ─────────────────────────────────────────────────────────────
@@ -1977,6 +2152,61 @@ def register():
             flash('Registration failed. Please try again.', 'danger')
 
     return render_template('register.html', form=form)
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = ForgotPasswordForm()
+    
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user:
+            try:
+                token = user.generate_reset_token()
+                if send_password_reset_email(user, token):
+                    flash('A password reset link has been sent to your email address.', 'info')
+                else:
+                    flash('Failed to send reset email. Please try again or contact support.', 'danger')
+            except Exception as e:
+                logger.error(f"Error generating reset token for {user.email}: {e}")
+                flash('An error occurred. Please try again.', 'danger')
+        else:
+            # Still show success message for security (don't reveal if email exists)
+            flash('If an account with that email exists, a password reset link has been sent.', 'info')
+        
+        return redirect(url_for('login'))
+    
+    return render_template('forgot_password.html', form=form)
+
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    user = User.verify_reset_token(token)
+    if not user:
+        flash('Invalid or expired reset link.', 'danger')
+        return redirect(url_for('forgot_password'))
+    
+    form = ResetPasswordForm()
+    
+    if form.validate_on_submit():
+        try:
+            hashed_password = generate_password_hash(form.password.data)
+            user.password = hashed_password
+            user.clear_reset_token()
+            
+            flash('Your password has been reset successfully. You can now log in.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            logger.error(f"Error resetting password for user {user.id}: {e}")
+            flash('An error occurred while resetting your password. Please try again.', 'danger')
+    
+    return render_template('reset_password.html', form=form)
 
 
 @app.route('/cancel-subscription', methods=['POST'])
