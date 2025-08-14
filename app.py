@@ -46,6 +46,7 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignat
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import socket
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -266,27 +267,7 @@ mail = Mail(app)
 # Token serializer for password reset
 token_serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
-# Security configurations
-app.config.update(
-    SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV') == 'production',
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
-    PREFERRED_URL_SCHEME='https' if os.getenv('FLASK_ENV') == 'production' else 'http',
-    FLASK_ENV=os.getenv('FLASK_ENV', 'development'),
-    DEBUG=os.getenv('DEBUG', 'False').lower() == 'true'
-)
 
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG if app.config['DEBUG'] else logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('app.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
 
 # Security configurations
 app.config.update(
@@ -299,8 +280,7 @@ app.config.update(
     DEBUG=os.getenv('DEBUG', 'False').lower() == 'true'
 )
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 
 # Configure logging
 logging.basicConfig(
@@ -1423,6 +1403,35 @@ def send_password_reset_email(user, token):
 
 
 # ──── Routes ─────────────────────────────────────────────────────────────
+
+@app.route('/health-check')
+def health_check():
+    # Check database connection
+    try:
+        db.engine.connect()
+        db_status = 'ok'
+    except Exception as e:
+        db_status = f'failed: {e}'
+
+    # Check DNS resolution for mail server
+    try:
+        addr = socket.gethostbyname('smtp.gmail.com')
+        dns_status = f'ok - resolved to {addr}'
+    except Exception as e:
+        dns_status = f'failed: {e}'
+
+    # Check SMTP port connectivity
+    try:
+        with socket.create_connection(('smtp.gmail.com', 587), timeout=5):
+            smtp_status = 'ok'
+    except Exception as e:
+        smtp_status = f'failed: {e}'
+
+    return jsonify({
+        'database': db_status,
+        'dns_resolution': dns_status,
+        'smtp_connection': smtp_status
+    })
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
