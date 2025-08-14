@@ -1352,19 +1352,18 @@ def send_password_reset_email(user, token):
         """
         
         # Try Flask-Mail first, fallback to SMTP
-        if app.config.get('MAIL_USERNAME'):
-            try:
-                msg = Message(
-                    subject=subject,
-                    recipients=[user.email],
-                    html=html_body,
-                    body=text_body
-                )
-                mail.send(msg)
-                logger.info(f"Password reset email sent to {user.email} via Flask-Mail")
-                return True
-            except Exception as e:
-                logger.warning(f"Flask-Mail failed for {user.email}: {e}")
+        try:
+            msg = Message(
+                subject=subject,
+                recipients=[user.email],
+                html=html_body,
+                body=text_body
+            )
+            mail.send(msg)
+            logger.info(f"Password reset email sent to {user.email} via Flask-Mail")
+            return True
+        except Exception as e:
+            logger.warning(f"Flask-Mail failed for {user.email}: {e}")
         
         # Fallback to direct SMTP
         try:
