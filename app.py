@@ -1404,8 +1404,8 @@ def send_password_reset_email(user, token):
 
 # ──── Routes ─────────────────────────────────────────────────────────────
 
-@app.route('/health-check')
-def health_check():
+@app.route('/connectivity-check')
+def connectivity_check():
     # Check database connection
     try:
         db.engine.connect()
