@@ -1984,7 +1984,7 @@ def account():
 @login_required
 def ai_coach():
     """Renders the AI Finance Coach page"""
-    return render_template('ai_coach.html', title="AI Finance Coach")
+    return render_template('ai_coach.html', title="AI Finance Coach", user=current_user)
 
 
 @app.route('/fix-customer-id', methods=['POST'])
