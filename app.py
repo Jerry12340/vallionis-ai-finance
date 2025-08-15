@@ -10,6 +10,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import os
+import requests
 from dotenv import load_dotenv
 import warnings
 from sklearn.impute import SimpleImputer
@@ -2007,9 +2008,20 @@ def ai_chat():
 
     user_message = data.get('message')
 
-    # Placeholder: Echo the user's message back.
-    # In a real implementation, this would call the AI service.
-    ai_response = f"You said: '{user_message}'. (This is a placeholder response.)"
+    # URL of your self-hosted AI service (running from ai_coach_api.py)
+    AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://127.0.0.1:8000/chat')
+
+    try:
+        # Forward the message to the AI service
+        response = requests.post(AI_SERVICE_URL, json={'message': user_message, 'user_id': current_user.id})
+        response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+        
+        ai_data = response.json()
+        ai_response = ai_data.get('response', 'Sorry, I could not process your request.')
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Could not connect to AI service: {e}")
+        ai_response = "Sorry, the AI Coach is currently unavailable. Please try again later."
 
     return jsonify({'response': ai_response})
 
