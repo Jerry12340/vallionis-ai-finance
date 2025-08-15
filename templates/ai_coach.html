@@ -316,7 +316,8 @@ async function sendMessage() {
     } catch (error) {
         console.error('Chat error:', error);
         typingDiv.remove();
-        addMessageToChat('Connection error. Please check your internet connection and try again.', 'ai');
+        const errorMessage = `Connection error: ${error.message}. Please check the browser console for more details.`;
+        addMessageToChat(errorMessage, 'ai');
     }
 }
 

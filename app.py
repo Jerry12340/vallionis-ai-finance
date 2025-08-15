@@ -1988,6 +1988,7 @@ def ai_coach():
 
 
 @app.route('/api/ai/health', methods=['GET'])
+@csrf.exempt
 def ai_health_check():
     """Provides a health check for the AI service."""
     # In a real-world scenario, this would check the connection to the actual AI model.
@@ -1997,6 +1998,7 @@ def ai_health_check():
 
 @app.route('/api/ai/chat', methods=['POST'])
 @login_required
+@csrf.exempt
 def ai_chat():
     """Handles chat messages from the AI Coach interface."""
     data = request.get_json()
