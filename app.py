@@ -1995,6 +1995,23 @@ def ai_health_check():
     return jsonify({'status': 'healthy'})
 
 
+@app.route('/api/ai/chat', methods=['POST'])
+@login_required
+def ai_chat():
+    """Handles chat messages from the AI Coach interface."""
+    data = request.get_json()
+    if not data or 'message' not in data:
+        return jsonify({'error': 'Invalid request. Message not provided.'}), 400
+
+    user_message = data.get('message')
+
+    # Placeholder: Echo the user's message back.
+    # In a real implementation, this would call the AI service.
+    ai_response = f"You said: '{user_message}'. (This is a placeholder response.)"
+
+    return jsonify({'response': ai_response})
+
+
 @app.route('/fix-customer-id', methods=['POST'])
 @login_required
 def fix_customer_id():
