@@ -1980,6 +1980,13 @@ def account():
     return render_template('account.html', change_password_form=form)
 
 
+@app.route('/ai-coach')
+@login_required
+def ai_coach():
+    """Renders the AI Finance Coach page"""
+    return render_template('ai_coach.html', title="AI Finance Coach")
+
+
 @app.route('/fix-customer-id', methods=['POST'])
 @login_required
 def fix_customer_id():
