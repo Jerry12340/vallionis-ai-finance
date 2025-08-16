@@ -2009,7 +2009,7 @@ def ai_chat():
     user_message = data.get('message')
 
     # URL of your self-hosted AI service (running from ai_coach_api.py)
-    AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://127.0.0.1:8000/chat')
+    AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://localhost:8000/chat')
 
     try:
         # Forward the message to the AI service
