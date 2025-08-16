@@ -10,7 +10,6 @@ import asyncio
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
-
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -20,6 +19,8 @@ import psycopg2
 from pgvector.psycopg2 import register_vector
 import numpy as np
 from sentence_transformers import SentenceTransformer
+from fastapi import FastAPI
+import uvicorn
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -57,8 +58,9 @@ DB_CONFIG = {
 
 # Initialize embedding model
 try:
+    logger.info(f"Loading embedding model: {EMBEDDING_MODEL}...")
     embedding_model = SentenceTransformer(EMBEDDING_MODEL)
-    logger.info(f"Loaded embedding model: {EMBEDDING_MODEL}")
+    logger.info("Embedding model loaded successfully.")
 except Exception as e:
     logger.error(f"Failed to load embedding model: {e}")
     embedding_model = None
@@ -421,5 +423,6 @@ async def generate_learning_path(query: str, profile: Dict) -> Dict:
     return {"type": "learning_path", "modules": [], "estimated_time": ""}
 
 if __name__ == "__main__":
+    logger.info("Starting Uvicorn server...")
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
