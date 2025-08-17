@@ -43,8 +43,9 @@ app.add_middleware(
 )
 
 # Configuration
-OLLAMA_BASE_URL = "http://localhost:11434"
-DEFAULT_MODEL = "llama3.1:8b-instruct-q4_0"
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+# Allow overriding the model via env var OLLAMA_MODEL; default to a commonly available instruct model
+DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "mistral:instruct")
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Lightweight sentence transformer
 
 # Database configuration
@@ -110,27 +111,34 @@ def get_embedding(text: str) -> List[float]:
 async def health_check():
     """Health check endpoint"""
     try:
-        # Test Ollama connection
-        async with httpx.AsyncClient() as client:
-            ollama_response = await client.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5.0)
-            ollama_healthy = ollama_response.status_code == 200
-        
-        # Test database connection
+        # Test Ollama connection (non-fatal)
+        ollama_healthy = False
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5.0)
+                ollama_healthy = (resp.status_code == 200)
+        except Exception as e:
+            logger.warning(f"Ollama health check failed: {e}")
+
+        # Test database connection (non-fatal)
         try:
             conn = get_db_connection()
             conn.close()
             db_healthy = True
-        except:
+        except Exception as e:
+            logger.warning(f"Database health check failed: {e}")
             db_healthy = False
-        
+
+        overall = "healthy" if (ollama_healthy and db_healthy) else "degraded"
         return {
-            "status": "healthy" if ollama_healthy and db_healthy else "degraded",
+            "status": overall,
             "ollama": "up" if ollama_healthy else "down",
             "database": "up" if db_healthy else "down",
             "embedding_model": "loaded" if embedding_model else "not_loaded",
             "timestamp": datetime.utcnow().isoformat()
         }
     except Exception as e:
+        logger.error(f"Health endpoint error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat", response_model=ChatResponse)
