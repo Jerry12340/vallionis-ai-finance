@@ -47,6 +47,7 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 # Allow overriding the model via env var OLLAMA_MODEL; default to a commonly available instruct model
 DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "mistral:instruct")
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Lightweight sentence transformer
+ENABLE_DB = os.getenv("ENABLE_DB", "false").lower() == "true"  # Disable DB by default
 
 # Database configuration
 DB_CONFIG = {
@@ -121,19 +122,21 @@ async def health_check():
             logger.warning(f"Ollama health check failed: {e}")
 
         # Test database connection (non-fatal)
-        try:
-            conn = get_db_connection()
-            conn.close()
-            db_healthy = True
-        except Exception as e:
-            logger.warning(f"Database health check failed: {e}")
-            db_healthy = False
+        db_healthy = None
+        if ENABLE_DB:
+            try:
+                conn = get_db_connection()
+                conn.close()
+                db_healthy = True
+            except Exception as e:
+                logger.warning(f"Database health check failed: {e}")
+                db_healthy = False
 
-        overall = "healthy" if (ollama_healthy and db_healthy) else "degraded"
+        overall = "healthy" if (ollama_healthy and (db_healthy is True or db_healthy is None)) else "degraded"
         return {
             "status": overall,
             "ollama": "up" if ollama_healthy else "down",
-            "database": "up" if db_healthy else "down",
+            "database": ("up" if db_healthy else ("disabled" if db_healthy is None else "down")),
             "embedding_model": "loaded" if embedding_model else "not_loaded",
             "timestamp": datetime.utcnow().isoformat()
         }
@@ -318,6 +321,9 @@ async def coach(request: CoachRequest):
 
 async def retrieve_relevant_documents(query: str, limit: int = 5, document_types: List[str] = None) -> List[Dict]:
     """Retrieve relevant documents using vector similarity search"""
+    if not ENABLE_DB:
+        # Database/RAG disabled; return empty results gracefully
+        return []
     try:
         query_embedding = get_embedding(query)
         
@@ -368,6 +374,8 @@ async def retrieve_relevant_documents(query: str, limit: int = 5, document_types
 
 async def log_user_query(query: str, response: str, model: str, response_time: int):
     """Log user interactions for analytics"""
+    if not ENABLE_DB:
+        return
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -386,6 +394,8 @@ async def log_user_query(query: str, response: str, model: str, response_time: i
 
 async def get_user_profile(user_id: str) -> Dict:
     """Get user profile for personalized coaching"""
+    if not ENABLE_DB:
+        return {}
     try:
         conn = get_db_connection()
         cur = conn.cursor()
