@@ -468,6 +468,13 @@
                             <i class="fas fa-crown"></i>
                             <span class="nav-text">Premium</span>
                         </a>
+
+                        <!-- Theme toggle moved inside nav-links -->
+                        <div class="theme-toggle-nav" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">
+                            <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
+                        </div>
+
+                        <!-- Logout button with proper spacing -->
                         <form action="{{ url_for('logout') }}" method="post" class="logout-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-logout">
@@ -475,11 +482,6 @@
                                 <span class="nav-text">Logout</span>
                             </button>
                         </form>
-
-                        <!-- 👇 Theme toggle now inside nav -->
-                        <div class="theme-toggle" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">
-                            <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
-                        </div>
                     {% else %}
                         <a href="{{ url_for('login') }}">
                             <i class="fas fa-sign-in-alt"></i>
