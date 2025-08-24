@@ -11,10 +11,10 @@
     <meta name="revisit-after" content="7 days">
     <meta name="distribution" content="global">
     <meta name="rating" content="general">
-    
+
     <!-- Canonical URL -->
     <link rel="canonical" href="{{ request.url }}">
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.url }}">
@@ -37,28 +37,28 @@
     <meta name="google-site-verification" content="5_JqfNYlF-YmL1jD96Lk839p3UAUW0j1bd0wd0kOnCc" />
 
     <title>{% block title %}Vallionis AI Finance - Smart Stock Recommendations{% endblock %}</title>
-    
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
-    
+
     <!-- Preload critical resources -->
     <link rel="preload" href="{{ url_for('static', filename='styles.css') }}" as="style">
     <link rel="dns-prefetch" href="//fonts.googleapis.com">
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
-    
+
     <!-- Structured Data -->
     <script type="application/ld+json">
     {
@@ -440,11 +440,6 @@
 <body>
     <!-- Skip to main content link for accessibility -->
     <a href="#main-content" class="skip-link sr-only">Skip to main content</a>
-
-    <!-- Theme Toggle -->
-    <div class="theme-toggle" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">
-        <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
-    </div>
 
     <!-- Header with consistent padding -->
     <header class="header" role="banner">
