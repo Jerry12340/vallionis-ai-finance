@@ -1616,3 +1616,21 @@ img {
     cursor: pointer;
     font-size: 1.2rem; /* size of ☀️ / 🌙 */
 }
+.theme-toggle {
+    position: static; /* remove fixed positioning */
+    background: none; /* make it look like an icon button */
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-primary);
+}
