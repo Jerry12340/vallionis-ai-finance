@@ -1595,3 +1595,24 @@ img {
 .text-warning {
   color: var(--warning-color) !important;
 }
+.nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* spacing between links/buttons/toggle */
+}
+
+.nav-links form {
+    display: inline; /* make sure form doesn’t break flex layout */
+}
+
+.theme-toggle {
+    cursor: pointer;
+    font-size: 1.2rem; /* size of ☀️ / 🌙 */
+}
