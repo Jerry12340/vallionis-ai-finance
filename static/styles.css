@@ -1595,3 +1595,105 @@ img {
 .text-warning {
   color: var(--warning-color) !important;
 }
+.nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* spacing between links/buttons/toggle */
+}
+
+.nav-links form {
+    display: inline; /* make sure form doesn’t break flex layout */
+}
+
+.theme-toggle {
+    cursor: pointer;
+    font-size: 1.2rem; /* size of ☀️ / 🌙 */
+}
+.theme-toggle {
+    position: static; /* remove fixed positioning */
+    background: none; /* make it look like an icon button */
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-primary);
+}
+.theme-toggle-nav {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px var(--color-card-shadow);
+    margin-left: var(--spacing-sm);
+}
+
+.theme-toggle-nav:hover {
+    background: var(--color-primary);
+    color: white;
+}
+
+/* Remove the fixed positioned theme toggle */
+.theme-toggle {
+    display: none;
+}
+
+/* Ensure proper spacing for logout form */
+.logout-form {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.btn-logout {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.btn-logout:hover {
+    background-color: var(--color-bg-secondary);
+}
+
+/* Adjust nav-links spacing */
+.nav-links {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .theme-toggle-nav {
+        width: 36px;
+        height: 36px;
+        margin-left: 0;
+    }
+
+    .btn-logout {
+        padding: 6px 8px;
+    }
+}

@@ -11,10 +11,10 @@
     <meta name="revisit-after" content="7 days">
     <meta name="distribution" content="global">
     <meta name="rating" content="general">
-    
+
     <!-- Canonical URL -->
     <link rel="canonical" href="{{ request.url }}">
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.url }}">
@@ -37,28 +37,28 @@
     <meta name="google-site-verification" content="5_JqfNYlF-YmL1jD96Lk839p3UAUW0j1bd0wd0kOnCc" />
 
     <title>{% block title %}Vallionis AI Finance - Smart Stock Recommendations{% endblock %}</title>
-    
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
-    
+
     <!-- Preload critical resources -->
     <link rel="preload" href="{{ url_for('static', filename='styles.css') }}" as="style">
     <link rel="dns-prefetch" href="//fonts.googleapis.com">
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
-    
+
     <!-- Structured Data -->
     <script type="application/ld+json">
     {
@@ -441,11 +441,6 @@
     <!-- Skip to main content link for accessibility -->
     <a href="#main-content" class="skip-link sr-only">Skip to main content</a>
 
-    <!-- Theme Toggle -->
-    <div class="theme-toggle" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">
-        <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
-    </div>
-
     <!-- Header with consistent padding -->
     <header class="header" role="banner">
         <div class="header-content">
@@ -457,36 +452,43 @@
                 </a>
                 <div class="nav-links">
                     {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('index') }}" title="Dashboard" aria-label="Go to dashboard">
-                            <i class="fas fa-home" aria-hidden="true"></i>
+                        <a href="{{ url_for('index') }}">
+                            <i class="fas fa-home"></i>
                             <span class="nav-text">Dashboard</span>
                         </a>
-                        <a href="{{ url_for('ai_coach') }}" title="AI Finance Coach" aria-label="Go to AI Finance Coach">
-                            <i class="fas fa-robot" aria-hidden="true"></i>
+                        <a href="{{ url_for('ai_coach') }}">
+                            <i class="fas fa-robot"></i>
                             <span class="nav-text">AI Coach</span>
                         </a>
-                        <a href="{{ url_for('account') }}" title="Account Settings" aria-label="Account settings">
-                            <i class="fas fa-user" aria-hidden="true"></i>
+                        <a href="{{ url_for('account') }}">
+                            <i class="fas fa-user"></i>
                             <span class="nav-text">Account</span>
                         </a>
-                        <a href="{{ url_for('subscription') }}" title="Subscription" aria-label="Manage subscription">
-                            <i class="fas fa-crown" aria-hidden="true"></i>
+                        <a href="{{ url_for('subscription') }}">
+                            <i class="fas fa-crown"></i>
                             <span class="nav-text">Premium</span>
                         </a>
+
+                        <!-- Theme toggle moved inside nav-links -->
+                        <div class="theme-toggle-nav" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">
+                            <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
+                        </div>
+
+                        <!-- Logout button with proper spacing -->
                         <form action="{{ url_for('logout') }}" method="post" class="logout-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-logout" title="Logout" aria-label="Logout">
-                                <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                            <button type="submit" class="btn btn-logout">
+                                <i class="fas fa-sign-out-alt"></i>
                                 <span class="nav-text">Logout</span>
                             </button>
                         </form>
                     {% else %}
-                        <a href="{{ url_for('login') }}" title="Login" aria-label="Login to your account">
-                            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                        <a href="{{ url_for('login') }}">
+                            <i class="fas fa-sign-in-alt"></i>
                             <span class="nav-text">Login</span>
                         </a>
-                        <a href="{{ url_for('register') }}" title="Register" aria-label="Create new account">
-                            <i class="fas fa-user-plus" aria-hidden="true"></i>
+                        <a href="{{ url_for('register') }}">
+                            <i class="fas fa-user-plus"></i>
                             <span class="nav-text">Register</span>
                         </a>
                     {% endif %}
