@@ -1,430 +1,133 @@
 {% extends "base.html" %}
 
-{% block title %}AI Finance Coach - Vallionis{% endblock %}
+{% block title %}AI Coach - Vallionis AI Finance{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <!-- AI Coach Header -->
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-robot fa-2x me-3"></i>
-                        <div>
-                            <h4 class="mb-0">AI Finance Coach</h4>
-                            <small>Powered by self-hosted AI • Zero tracking • Your data stays private</small>
-                        </div>
-                        <div class="ms-auto">
-                            <span id="connection-status" class="badge bg-success">
-                                <i class="fas fa-circle"></i> Connected
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="chat-container">
+    <h2>💬 AI Finance Coach</h2>
+    <div id="chat-box" class="chat-box"></div>
 
-            <!-- Quick Actions -->
-            <div class="row mb-4">
-                <div class="col-md-4 mb-3 mb-md-0">
-                    <div class="card h-100 coaching-card" onclick="startCoaching('risk_assessment')">
-                        <div class="card-body text-center">
-                            <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
-                            <h5>Risk Assessment</h5>
-                            <p class="text-muted">Evaluate your risk tolerance and investment profile</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3 mb-md-0">
-                    <div class="card h-100 coaching-card" onclick="startCoaching('portfolio_review')">
-                        <div class="card-body text-center">
-                            <i class="fas fa-briefcase fa-3x text-success mb-3"></i>
-                            <h5>Portfolio Review</h5>
-                            <p class="text-muted">Get personalized portfolio analysis and recommendations</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3 mb-md-0">
-                    <div class="card h-100 coaching-card" onclick="startCoaching('learning_path')">
-                        <div class="card-body text-center">
-                            <i class="fas fa-graduation-cap fa-3x text-info mb-3"></i>
-                            <h5>Learning Path</h5>
-                            <p class="text-muted">Personalized financial education roadmap</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Chat Interface -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div id="chat-container" class="chat-container mb-3">
-                        <div class="chat-message ai-message">
-                            <div class="message-avatar">
-                                <i class="fas fa-robot"></i>
-                            </div>
-                            <div class="message-content">
-                                <strong>Vallionis AI Coach</strong>
-                                            <p>Hello {{ user.email }}! I'm your personal AI finance coach. I can help you with:</p>
-                                <ul class="mb-0">
-                                    <li>Investment strategies and portfolio analysis</li>
-                                    <li>Risk assessment and financial planning</li>
-                                    <li>Market insights and economic education</li>
-                                    <li>Personalized financial advice</li>
-                                </ul>
-                                <p class="mt-2 mb-0"><strong>How can I help you today?</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="input-group">
-                        <input type="text" id="chat-input" class="form-control" 
-                               placeholder="Ask me anything about finance, investing, or money management..." 
-                               onkeypress="handleKeyPress(event)"
-                               disabled>
-                        <button class="btn btn-primary" id="send-button" onclick="sendMessage()" disabled>
-                            <i class="fas fa-paper-plane"></i> Send
-                        </button>
-                    </div>
-                    
-                    <div class="mt-2">
-                        <small class="text-muted">
-                            <i class="fas fa-shield-alt"></i> 
-                            Your conversations are private and secure. Data is processed on our self-hosted infrastructure.
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <form id="chat-form">
+        <input type="text" id="user-input" placeholder="Ask me anything about investing..." autocomplete="off" required>
+        <button type="submit">Send</button>
+    </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const chatBox = document.getElementById("chat-box");
+    const chatForm = document.getElementById("chat-form");
+    const userInput = document.getElementById("user-input");
+
+    // Helper to append messages
+    function addMessage(sender, text) {
+        const msg = document.createElement("div");
+        msg.classList.add("message", sender);
+        msg.innerHTML = `<strong>${sender === "user" ? "You" : "AI"}:</strong> ${text}`;
+        chatBox.appendChild(msg);
+        chatBox.scrollTop = chatBox.scrollHeight; // auto scroll
+    }
+
+    chatForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        // Show user message
+        addMessage("user", message);
+        userInput.value = "";
+
+        // Show loading message
+        const loading = document.createElement("div");
+        loading.classList.add("message", "ai");
+        loading.textContent = "AI is thinking...";
+        chatBox.appendChild(loading);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            const response = await fetch("/api/ai/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await response.json();
+            chatBox.removeChild(loading); // remove loading text
+
+            if (data.reply) {
+                addMessage("ai", data.reply);
+            } else {
+                addMessage("ai", "⚠️ Sorry, something went wrong.");
+            }
+        } catch (error) {
+            console.error(error);
+            chatBox.removeChild(loading);
+            addMessage("ai", "⚠️ Error contacting AI.");
+        }
+    });
+</script>
 
 <style>
-.chat-container {
-    height: 500px;
-    overflow-y: auto;
-    border: 1px solid #e9ecef;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    background-color: #f8f9fa;
-    scroll-behavior: smooth;
-}
+    .chat-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+        background: var(--color-card-bg);
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        box-shadow: 0 4px 10px var(--color-card-shadow);
+    }
 
-.chat-message {
-    display: flex;
-    margin-bottom: 1.5rem;
-    animation: fadeIn 0.3s ease-in;
-}
+    .chat-box {
+        height: 400px;
+        overflow-y: auto;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 1rem;
+        background: var(--color-bg-secondary);
+        margin-bottom: 1rem;
+    }
 
-.chat-message.user-message {
-    flex-direction: row-reverse;
-}
+    .message {
+        margin-bottom: 0.75rem;
+        line-height: 1.4;
+    }
 
-.message-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 0.75rem;
-    flex-shrink: 0;
-}
+    .message.user {
+        text-align: right;
+        color: var(--color-primary);
+    }
 
-.user-message .message-avatar {
-    background-color: #007bff;
-    color: white;
-}
+    .message.ai {
+        text-align: left;
+        color: var(--color-text);
+    }
 
-.ai-message .message-avatar {
-    background-color: #28a745;
-    color: white;
-}
+    #chat-form {
+        display: flex;
+        gap: 0.5rem;
+    }
 
-.message-content {
-    flex: 1;
-    max-width: 70%;
-}
+    #user-input {
+        flex: 1;
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--color-border);
+    }
 
-.user-message .message-content {
-    background-color: #007bff;
-    color: white;
-    padding: 0.75rem 1rem;
-    border-radius: 1rem 1rem 0.25rem 1rem;
-}
+    #chat-form button {
+        padding: 0.75rem 1.25rem;
+        background: var(--color-primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+    }
 
-.ai-message .message-content {
-    background-color: white;
-    border: 1px solid #e9ecef;
-    padding: 0.75rem 1rem;
-    border-radius: 1rem 1rem 1rem 0.25rem;
-}
-
-.coaching-card {
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.coaching-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.typing-indicator {
-    display: flex;
-    align-items: center;
-    font-style: italic;
-    color: #6c757d;
-}
-
-.typing-indicator::after {
-    content: '';
-    display: inline-block;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: #6c757d;
-    margin-left: 4px;
-    animation: typing 1.4s infinite;
-}
-
-@keyframes typing {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-10px); }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.sources-list {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid #e9ecef;
-}
-
-.source-item {
-    display: inline-block;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    margin: 0.25rem 0.25rem 0 0;
-    font-size: 0.875rem;
-}
-
-#connection-status.offline {
-    background-color: #dc3545 !important;
-}
+    #chat-form button:hover {
+        background: var(--color-primary-hover);
+    }
 </style>
-
-<script>
-let isConnected = false;
-let currentCoachingType = null;
-
-// Initialize the chat interface
-document.addEventListener('DOMContentLoaded', function() {
-    checkAIHealth();
-    setInterval(checkAIHealth, 30000); // Check every 30 seconds
-});
-
-async function checkAIHealth() {
-    try {
-        const response = await fetch('/api/ai/health');
-        const data = await response.json();
-        
-        const statusElement = document.getElementById('connection-status');
-        const chatInput = document.getElementById('chat-input');
-        const sendButton = document.getElementById('send-button');
-        
-        if (data.status === 'healthy') {
-            statusElement.className = 'badge bg-success';
-            statusElement.innerHTML = '<i class="fas fa-circle"></i> Connected';
-            chatInput.disabled = false;
-            sendButton.disabled = false;
-            isConnected = true;
-        } else {
-            statusElement.className = 'badge bg-danger';
-            statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Offline';
-            chatInput.disabled = true;
-            sendButton.disabled = true;
-            isConnected = false;
-        }
-    } catch (error) {
-        console.error('Health check failed:', error);
-        document.getElementById('connection-status').className = 'badge bg-warning';
-        document.getElementById('connection-status').innerHTML = '<i class="fas fa-question-circle"></i> Unknown';
-    }
-}
-
-async function sendMessage() {
-    if (!isConnected) {
-        alert('AI Coach is currently offline. Please try again later.');
-        return;
-    }
-
-    const input = document.getElementById('chat-input');
-    const message = input.value.trim();
-    
-    if (!message) return;
-    
-    // Add user message to chat
-    addMessageToChat(message, 'user');
-    input.value = '';
-    
-    // Show typing indicator
-    const typingDiv = addTypingIndicator();
-    
-    try {
-        const requestData = {
-            message: message,
-            timestamp: new Date().toISOString()
-        };
-
-        // If we're in a coaching session, use the coaching endpoint
-        const endpoint = currentCoachingType ? '/api/ai/coach' : '/api/ai/chat';
-        if (currentCoachingType) {
-            requestData.coaching_type = currentCoachingType;
-            requestData.query = message;
-        }
-
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestData)
-        });
-        
-        const data = await response.json();
-        
-        // Remove typing indicator
-        typingDiv.remove();
-        
-        if (response.ok && data.response) {
-            addMessageToChat(data.response, 'ai');
-            
-            // Show sources if available
-            if (data.sources && data.sources.length > 0) {
-                addSourcesToLastMessage(data.sources);
-            }
-        } else {
-            addMessageToChat(data.error || 'Sorry, I encountered an error. Please try again.', 'ai');
-        }
-        
-    } catch (error) {
-        console.error('Chat error:', error);
-        typingDiv.remove();
-        const errorMessage = `Connection error: ${error.message}. Please check the browser console for more details.`;
-        addMessageToChat(errorMessage, 'ai');
-    }
-}
-
-function addMessageToChat(message, type) {
-    const container = document.getElementById('chat-container');
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `chat-message ${type}-message`;
-    
-    const avatar = document.createElement('div');
-    avatar.className = 'message-avatar';
-    avatar.innerHTML = type === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
-    
-    const content = document.createElement('div');
-    content.className = 'message-content';
-    
-    if (type === 'user') {
-        content.innerHTML = message;
-    } else {
-        content.innerHTML = `<strong>Vallionis AI:</strong><p class="mb-0">${message}</p>`;
-    }
-    
-    messageDiv.appendChild(avatar);
-    messageDiv.appendChild(content);
-    container.appendChild(messageDiv);
-    container.scrollTop = container.scrollHeight;
-    
-    return messageDiv;
-}
-
-function addTypingIndicator() {
-    const container = document.getElementById('chat-container');
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'chat-message ai-message';
-    
-    const avatar = document.createElement('div');
-    avatar.className = 'message-avatar';
-    avatar.innerHTML = '<i class="fas fa-robot"></i>';
-    
-    const content = document.createElement('div');
-    content.className = 'message-content typing-indicator';
-    content.innerHTML = 'AI is thinking...';
-    
-    messageDiv.appendChild(avatar);
-    messageDiv.appendChild(content);
-    container.appendChild(messageDiv);
-    container.scrollTop = container.scrollHeight;
-    
-    return messageDiv;
-}
-
-function addSourcesToLastMessage(sources) {
-    const messages = document.querySelectorAll('.ai-message .message-content');
-    const lastMessage = messages[messages.length - 1];
-    
-    if (lastMessage) {
-        const sourcesDiv = document.createElement('div');
-        sourcesDiv.className = 'sources-list';
-        sourcesDiv.innerHTML = '<small><strong>Sources:</strong></small><br>';
-        
-        sources.forEach(source => {
-            const sourceSpan = document.createElement('span');
-            sourceSpan.className = 'source-item';
-            sourceSpan.textContent = source.title;
-            sourceSpan.title = `Type: ${source.type}, Relevance: ${(source.relevance_score * 100).toFixed(1)}%`;
-            sourcesDiv.appendChild(sourceSpan);
-        });
-        
-        lastMessage.appendChild(sourcesDiv);
-    }
-}
-
-function startCoaching(type) {
-    currentCoachingType = type;
-    
-    const typeNames = {
-        'risk_assessment': 'Risk Assessment',
-        'portfolio_review': 'Portfolio Review', 
-        'learning_path': 'Learning Path'
-    };
-    
-    const prompts = {
-        'risk_assessment': "I'd like to assess my risk tolerance and investment profile. Can you help me understand what questions I should consider?",
-        'portfolio_review': "I'd like to review my investment portfolio. What information should I provide for a comprehensive analysis?",
-        'learning_path': "I want to improve my financial knowledge. Can you create a personalized learning path for me?"
-    };
-    
-    // Add a message indicating coaching session started
-    addMessageToChat(`Starting ${typeNames[type]} session...`, 'ai');
-    
-    // Auto-send the coaching prompt
-    setTimeout(() => {
-        document.getElementById('chat-input').value = prompts[type];
-        sendMessage();
-    }, 1000);
-}
-
-function handleKeyPress(event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-    }
-}
-
-// Reset coaching session
-function resetCoaching() {
-    currentCoachingType = null;
-    addMessageToChat('Coaching session ended. Feel free to ask me anything!', 'ai');
-}
-</script>
 {% endblock %}

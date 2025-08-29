@@ -2008,13 +2008,22 @@ def chat():
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
 
+    # Initialize conversation history if not already in session
+    if "conversation" not in session:
+        session["conversation"] = [
+            {"role": "system", "content": "You are a helpful AI finance coach. Answer clearly and simply about investing, stocks, and finance."}
+        ]
+
+    # Add the user's message
+    session["conversation"].append({"role": "user", "content": user_message})
+
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
     payload = {
         "model": "deepseek-v3.1",
-        "messages": [{"role": "user", "content": user_message}]
+        "messages": session["conversation"]
     }
 
     try:
@@ -2022,9 +2031,13 @@ def chat():
         response.raise_for_status()
         data = response.json()
         bot_reply = data["choices"][0]["message"]["content"]
+
+        # Add the AI's reply to history
+        session["conversation"].append({"role": "assistant", "content": bot_reply})
+
         return jsonify({"reply": bot_reply})
     except Exception as e:
-        print(e)
+        print("Chat error:", e)
         return jsonify({"error": "Failed to get response"}), 500
 
 
