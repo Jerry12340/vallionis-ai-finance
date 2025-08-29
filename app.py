@@ -128,6 +128,13 @@ logger = logging.getLogger(__name__)
 API_KEY = os.environ.get('API_KEY_LLM')
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json",
+    "HTTP-Referer": "https://vallionis-ai-finance.onrender.com",  # your site URL
+    "X-Title": "Vallionis AI"
+}
+
 # Initialize OAuth after db
 oauth = OAuth(app)
 redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
