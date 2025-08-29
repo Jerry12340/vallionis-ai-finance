@@ -112,37 +112,39 @@ def get_embedding(text: str) -> List[float]:
 async def health_check():
     """Health check endpoint"""
     try:
-        # Test Ollama connection (non-fatal)
-        ollama_healthy = False
+        # Check if embedding model is loaded
+        embedding_ready = embedding_model is not None
+        
+        # Test Ollama connection
+        ollama_ready = False
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5.0)
-                ollama_healthy = (resp.status_code == 200)
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
+                ollama_ready = response.status_code == 200
         except Exception as e:
-            logger.warning(f"Ollama health check failed: {e}")
-
-        # Test database connection (non-fatal)
-        db_healthy = None
-        if ENABLE_DB:
-            try:
-                conn = get_db_connection()
-                conn.close()
-                db_healthy = True
-            except Exception as e:
-                logger.warning(f"Database health check failed: {e}")
-                db_healthy = False
-
-        overall = "healthy" if (ollama_healthy and (db_healthy is True or db_healthy is None)) else "degraded"
+            logger.warning(f"Ollama not available: {e}")
+        
+        status = "healthy" if embedding_ready else "error"
+        if not ollama_ready and embedding_ready:
+            status = "warning"
+        
         return {
-            "status": overall,
-            "ollama": "up" if ollama_healthy else "down",
-            "database": ("up" if db_healthy else ("disabled" if db_healthy is None else "down")),
-            "embedding_model": "loaded" if embedding_model else "not_loaded",
-            "timestamp": datetime.utcnow().isoformat()
+            "status": status, 
+            "message": "AI Coach API is running",
+            "embedding_ready": embedding_ready,
+            "ollama_ready": ollama_ready,
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.0.0"
         }
+        
     except Exception as e:
         logger.error(f"Health endpoint error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "status": "error",
+            "message": str(e),
+            "embedding_ready": False,
+            "ollama_ready": False
+        }
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -443,4 +445,4 @@ async def generate_learning_path(query: str, profile: Dict) -> Dict:
 if __name__ == "__main__":
     logger.info("Starting Uvicorn server...")
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="info")

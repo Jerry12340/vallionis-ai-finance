@@ -125,6 +125,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+API_KEY = os.environ.get('API_KEY_LLM')
+API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
 # Initialize OAuth after db
 oauth = OAuth(app)
 redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
@@ -2000,30 +2003,29 @@ def ai_health_check():
 @app.route('/api/ai/chat', methods=['POST'])
 @login_required
 @csrf.exempt
-def ai_chat():
-    """Handles chat messages from the AI Coach interface."""
-    data = request.get_json()
-    if not data or 'message' not in data:
-        return jsonify({'error': 'Invalid request. Message not provided.'}), 400
+def chat():
+    user_message = request.json.get("message")
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
 
-    user_message = data.get('message')
-
-    # URL of your self-hosted AI service (running from ai_coach_api.py)
-    AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://127.0.0.1:8001/chat')
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "deepseek-v3.1",
+        "messages": [{"role": "user", "content": user_message}]
+    }
 
     try:
-        # Forward the message to the AI service
-        response = requests.post(AI_SERVICE_URL, json={'message': user_message, 'user_id': current_user.id})
-        response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
-        
-        ai_data = response.json()
-        ai_response = ai_data.get('response', 'Sorry, I could not process your request.')
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Could not connect to AI service: {e}")
-        ai_response = "Sorry, the AI Coach is currently unavailable. Please try again later."
-
-    return jsonify({'response': ai_response})
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        bot_reply = data["choices"][0]["message"]["content"]
+        return jsonify({"reply": bot_reply})
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "Failed to get response"}), 500
 
 
 @app.route('/fix-customer-id', methods=['POST'])

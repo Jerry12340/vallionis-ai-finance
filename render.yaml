@@ -3,6 +3,22 @@ services:
     name: vallionis-ai-finance
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn --timeout 1000 app:app"
+    startCommand: "gunicorn --timeout 1000 wsgi:app"
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: AI_SERVICE_URL
+        value: http://152.67.158.53/api/chat
+      - key: AI_HEALTH_URL
+        value: http://152.67.158.53/api/health
+      - key: AI_COACH_TIMEOUT
+        value: 60
+      - key: AI_COACH_ENABLED
+        value: true
     build:
       pythonVersion: 3.12.3
+
+databases:
+  - name: vallionis-db
+    databaseName: vallionis_db
+    user: vallionis_user
