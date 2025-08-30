@@ -2026,10 +2026,13 @@ def chat():
 
     headers = {
         "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://vallionis-ai-finance.onrender.com",
+        "X-Title": "Vallionis AI"
     }
     payload = {
-        "model": "deepseek-v3.1",
+        # Use a valid OpenRouter model identifier. "openrouter/auto" lets OpenRouter choose an available model.
+        "model": "openrouter/auto",
         "messages": session["conversation"]
     }
 
@@ -2043,6 +2046,15 @@ def chat():
         session["conversation"].append({"role": "assistant", "content": bot_reply})
 
         return jsonify({"reply": bot_reply})
+    except requests.exceptions.HTTPError as e:
+        # Surface the response body to help diagnose issues like 400 Bad Request
+        err_text = getattr(e.response, "text", "") if hasattr(e, "response") else ""
+        print("Chat error HTTP:", e, "\nResponse:", err_text)
+        try:
+            err_json = e.response.json() if hasattr(e, "response") and e.response is not None else {}
+        except Exception:
+            err_json = {"message": err_text}
+        return jsonify({"error": "Upstream error", "status": e.response.status_code if hasattr(e, "response") and e.response is not None else 500, "details": err_json}), 502
     except Exception as e:
         print("Chat error:", e)
         return jsonify({"error": "Failed to get response"}), 500
