@@ -135,6 +135,10 @@ headers = {
     "X-Title": "Vallionis AI"
 }
 
+# In-memory conversation store (per-process). Keeps short history to provide context without cookie bloat.
+# NOTE: This resets on server restart and is not shared across multiple processes.
+conversation_store = {}
+
 # Initialize OAuth after db
 oauth = OAuth(app)
 redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
@@ -2015,9 +2019,24 @@ def chat():
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
 
-    # Build a compact message list to avoid oversized cookie sessions
-    conversation = [
-        {"role": "system", "content": "You are a helpful AI finance coach. Answer clearly and simply about investing, stocks, and finance."},
+    # --- Conversation context (in-memory, per-user) ---
+    user_key = str(current_user.id)
+    history = conversation_store.get(user_key, [])  # list of {role, content}
+    # Keep only the last N turns to control token usage
+    try:
+        max_turns = int(os.getenv("OPENROUTER_HISTORY_TURNS", "6"))
+    except ValueError:
+        max_turns = 6
+    history = history[-max_turns:]
+
+    system_prompt = (
+        "You are a helpful AI finance coach. Answer clearly and simply about investing, stocks, and finance. "
+        "Respond in plain text only (no Markdown, no **, no ###). "
+        "Use the prior messages in this conversation for context and avoid repeating explanations already provided unless the user asks."
+    )
+
+    # Build messages: system + short history + current user
+    conversation = [{"role": "system", "content": system_prompt}] + history + [
         {"role": "user", "content": user_message}
     ]
 
@@ -2048,6 +2067,11 @@ def chat():
         response.raise_for_status()
         data = response.json()
         bot_reply = data["choices"][0]["message"]["content"]
+
+        # Update history with the latest turn and save back
+        history.append({"role": "user", "content": user_message})
+        history.append({"role": "assistant", "content": bot_reply})
+        conversation_store[user_key] = history[-max_turns:]
 
         return jsonify({"reply": bot_reply})
     except requests.exceptions.Timeout:
