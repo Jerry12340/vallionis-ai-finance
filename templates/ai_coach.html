@@ -9,7 +9,7 @@
 
     <form id="chat-form">
         <input type="text" id="user-input" placeholder="Ask me anything about investing..." autocomplete="off" required>
-        <button type="submit">Send</button>
+        <button id="send-btn" type="submit">Send</button>
     </form>
 </div>
 {% endblock %}
@@ -19,6 +19,7 @@
     const chatBox = document.getElementById("chat-box");
     const chatForm = document.getElementById("chat-form");
     const userInput = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
 
     // Helper to append messages
     function addMessage(sender, text) {
@@ -45,15 +46,29 @@
         chatBox.appendChild(loading);
         chatBox.scrollTop = chatBox.scrollHeight;
 
+        // Disable input while processing
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+        const originalBtnText = sendBtn.textContent;
+        sendBtn.textContent = "Processing...";
+
+        // AbortController for timeout
+        const controller = new AbortController();
+        const timeoutMs = 45000; // 45s safety timeout
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
         try {
             const response = await fetch("/api/ai/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message })
+                body: JSON.stringify({ message }),
+                signal: controller.signal
             });
 
             const data = await response.json();
-            chatBox.removeChild(loading); // remove loading text
+            if (loading && loading.parentNode) {
+                chatBox.removeChild(loading); // remove loading text
+            }
 
             if (data.reply) {
                 addMessage("ai", data.reply);
@@ -62,8 +77,20 @@
             }
         } catch (error) {
             console.error(error);
-            chatBox.removeChild(loading);
-            addMessage("ai", "⚠️ Error contacting AI.");
+            if (loading && loading.parentNode) {
+                chatBox.removeChild(loading);
+            }
+            if (error.name === 'AbortError') {
+                addMessage("ai", "⚠️ The request timed out. Please try again.");
+            } else {
+                addMessage("ai", "⚠️ Error contacting AI.");
+            }
+        } finally {
+            clearTimeout(timeoutId);
+            userInput.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = originalBtnText;
+            userInput.focus();
         }
     });
 </script>

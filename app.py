@@ -2015,22 +2015,11 @@ def chat():
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
 
-    # Initialize conversation history if not already in session
-    if "conversation" not in session:
-        session["conversation"] = [
-            {"role": "system", "content": "You are a helpful AI finance coach. Answer clearly and simply about investing, stocks, and finance."}
-        ]
-
-    # Add the user's message
-    session["conversation"].append({"role": "user", "content": user_message})
-
-    # Trim conversation to keep token usage low (keep system + last 20 messages)
-    try:
-        conv = session.get("conversation", [])
-        if len(conv) > 21:
-            session["conversation"] = [conv[0]] + conv[-20:]
-    except Exception:
-        pass
+    # Build a compact message list to avoid oversized cookie sessions
+    conversation = [
+        {"role": "system", "content": "You are a helpful AI finance coach. Answer clearly and simply about investing, stocks, and finance."},
+        {"role": "user", "content": user_message}
+    ]
 
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -2048,20 +2037,21 @@ def chat():
     payload = {
         # Use a valid OpenRouter model identifier. "openrouter/auto" lets OpenRouter choose an available model.
         "model": model_id,
-        "messages": session["conversation"],
+        "messages": conversation,
         "max_tokens": max_tokens
     }
 
     try:
-        response = requests.post(API_URL, headers=headers, json=payload)
+        # Add a server-side timeout to avoid hanging requests
+        req_timeout = int(os.getenv("OPENROUTER_TIMEOUT_SECONDS", "45"))
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=req_timeout)
         response.raise_for_status()
         data = response.json()
         bot_reply = data["choices"][0]["message"]["content"]
 
-        # Add the AI's reply to history
-        session["conversation"].append({"role": "assistant", "content": bot_reply})
-
         return jsonify({"reply": bot_reply})
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Upstream timeout"}), 504
     except requests.exceptions.HTTPError as e:
         # Surface the response body to help diagnose issues like 400 Bad Request
         err_text = getattr(e.response, "text", "") if hasattr(e, "response") else ""
