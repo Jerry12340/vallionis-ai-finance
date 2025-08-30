@@ -2024,16 +2024,32 @@ def chat():
     # Add the user's message
     session["conversation"].append({"role": "user", "content": user_message})
 
+    # Trim conversation to keep token usage low (keep system + last 20 messages)
+    try:
+        conv = session.get("conversation", [])
+        if len(conv) > 21:
+            session["conversation"] = [conv[0]] + conv[-20:]
+    except Exception:
+        pass
+
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://vallionis-ai-finance.onrender.com",
         "X-Title": "Vallionis AI"
     }
+    # Allow env overrides
+    model_id = os.getenv("OPENROUTER_MODEL", "openrouter/auto")
+    try:
+        max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "512"))
+    except ValueError:
+        max_tokens = 512
+
     payload = {
         # Use a valid OpenRouter model identifier. "openrouter/auto" lets OpenRouter choose an available model.
-        "model": "openrouter/auto",
-        "messages": session["conversation"]
+        "model": model_id,
+        "messages": session["conversation"],
+        "max_tokens": max_tokens
     }
 
     try:
