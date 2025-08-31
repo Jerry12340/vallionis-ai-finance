@@ -54,7 +54,7 @@
 
         // AbortController for timeout
         const controller = new AbortController();
-        const timeoutMs = 45000; // 45s safety timeout
+        const timeoutMs = 30000; // 30s safety timeout
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
@@ -64,6 +64,20 @@
                 body: JSON.stringify({ message }),
                 signal: controller.signal
             });
+
+            // Handle non-OK responses explicitly
+            if (!response.ok) {
+                let errText = "Service error.";
+                try {
+                    const errJson = await response.json();
+                    errText = errJson?.error || JSON.stringify(errJson);
+                } catch (_) {}
+                if (loading && loading.parentNode) {
+                    chatBox.removeChild(loading);
+                }
+                addMessage("ai", `⚠️ ${errText}`);
+                return;
+            }
 
             const data = await response.json();
             if (loading && loading.parentNode) {
