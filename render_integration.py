@@ -11,7 +11,7 @@ import logging
 
 # Configuration - Add these to your Render environment variables
 AI_COACH_API_URL = os.getenv('AI_COACH_API_URL', 'https://your-oci-domain.com/api')
-AI_COACH_TIMEOUT = int(os.getenv('AI_COACH_TIMEOUT', '60'))
+AI_COACH_TIMEOUT = int(os.getenv('AI_COACH_TIMEOUT', '180'))
 AI_COACH_ENABLED = os.getenv('AI_COACH_ENABLED', 'true').lower() == 'true'
 
 logger = logging.getLogger(__name__)

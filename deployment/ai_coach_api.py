@@ -185,7 +185,7 @@ Remember: You are not a licensed financial advisor. Always recommend consulting 
         full_prompt = f"{system_prompt}\n\nUser question: {request.message}{context_text}\n\nProvide a helpful, personalized response:"
         
         # Call Ollama API
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:
             ollama_request = {
                 "model": request.model,
                 "prompt": full_prompt,
@@ -193,7 +193,7 @@ Remember: You are not a licensed financial advisor. Always recommend consulting 
                 "options": {
                     "temperature": 0.7,
                     "top_p": 0.9,
-                    "max_tokens": 10000000
+                    "num_predict": 2048
                 }
             }
             
@@ -241,12 +241,12 @@ async def chat_stream(request: ChatRequest):
         full_prompt = f"{system_prompt}\n\nUser question: {request.message}{context_text}\n\nResponse:"
         
         async def generate_stream():
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            async with httpx.AsyncClient(timeout=300.0) as client:
                 ollama_request = {
                     "model": request.model,
                     "prompt": full_prompt,
                     "stream": True,
-                    "options": {"temperature": 0.7}
+                    "options": {"temperature": 0.7, "num_predict": 4096}
                 }
                 
                 async with client.stream(
