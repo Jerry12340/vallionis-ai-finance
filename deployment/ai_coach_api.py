@@ -193,7 +193,7 @@ Remember: You are not a licensed financial advisor. Always recommend consulting 
                 "options": {
                     "temperature": 0.7,
                     "top_p": 0.9,
-                    "max_tokens": 1000
+                    "max_tokens": 100000
                 }
             }
             

@@ -54,7 +54,7 @@
 
         // AbortController for timeout
         const controller = new AbortController();
-        const timeoutMs = 60000; // 60s safety timeout
+        const timeoutMs = 600000; // 600s safety timeout
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
