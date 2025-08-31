@@ -54,7 +54,7 @@
 
         // AbortController for timeout
         const controller = new AbortController();
-        const timeoutMs = 30000; // 30s safety timeout
+        const timeoutMs = 60000; // 60s safety timeout
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
@@ -84,8 +84,9 @@
                 chatBox.removeChild(loading); // remove loading text
             }
 
-            if (data.reply) {
-                addMessage("ai", data.reply);
+            const reply = data.reply || data.response || data.message;
+            if (reply) {
+                addMessage("ai", reply);
             } else {
                 addMessage("ai", "⚠️ Sorry, something went wrong.");
             }
