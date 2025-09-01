@@ -387,12 +387,9 @@ class User(db.Model, UserMixin):
     )
 
     def get_subscription_status(self):
-        if self.premium:
-            if self.subscription_type == 'lifetime':
+        if self.premium and self.subscription_status in ['trialing', 'active']:
+            if self.subscription_expires and self.subscription_expires > datetime.utcnow():
                 return True
-            elif self.subscription_status in ['trialing', 'active']:
-                if self.subscription_expires and self.subscription_expires > datetime.utcnow():
-                    return True
         return False
 
     def update_preferences(self, investing_style, time_horizon, risk_tolerance=None,
@@ -529,13 +526,10 @@ stripe.api_key = os.getenv('STRIPE_LIVE_SECRET_KEY')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_LIVE_PUBLISHABLE_KEY')
 
 STRIPE_GBP_MONTHLY_PRICE_ID = os.getenv('STRIPE_GBP_MONTHLY_PRICE_ID')
-STRIPE_GBP_LIFETIME_PRICE_ID = os.getenv('STRIPE_GBP_LIFETIME_PRICE_ID')
 
 STRIPE_EUR_MONTHLY_PRICE_ID = os.getenv('STRIPE_EUR_MONTHLY_PRICE_ID')
-STRIPE_EUR_LIFETIME_PRICE_ID = os.getenv('STRIPE_EUR_LIFETIME_PRICE_ID')
 
 STRIPE_USD_MONTHLY_PRICE_ID = os.getenv('STRIPE_USD_MONTHLY_PRICE_ID')
-STRIPE_USD_LIFETIME_PRICE_ID = os.getenv('STRIPE_USD_LIFETIME_PRICE_ID')
 
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_LIVE_WEBHOOK_SECRET')
 
@@ -1536,10 +1530,6 @@ def safe_stripe_call(func, *args, **kwargs):
 @app.route('/subscribe', methods=['GET', 'POST'])
 @login_required
 def subscribe():
-    if current_user.subscription_type == 'lifetime':
-        flash('Cannot switch from lifetime to monthly subscription', 'warning')
-        return redirect(url_for('subscription'))
-
     if request.method == 'POST':
         try:
             # Get user's currency preference (could be from form or session)
@@ -1626,12 +1616,6 @@ def handle_checkout_session(session):
                     timezone.utc
                 )
 
-        elif session['mode'] == 'payment':  # Lifetime purchase
-            user.subscription_type = 'lifetime'
-            user.subscription_status = 'active'
-            user.premium = True
-            user.subscription_expires = datetime(2099, 1, 1, tzinfo=timezone.utc)
-
         if session.get('customer') and not user.stripe_customer_id:
             user.stripe_customer_id = session['customer']
 
@@ -1710,15 +1694,7 @@ def stripe_webhook():
                 if not user:
                     logger.error(f"User not found for ID: {session['client_reference_id']}")
                     return jsonify({"error": "User not found"}), 404
-
-                if session['mode'] == 'payment':  # Lifetime purchase
-                    logger.info("Processing lifetime purchase")
-                    user.premium = True
-                    user.subscription_type = 'lifetime'
-                    user.subscription_status = 'active'
-                    user.subscription_expires = datetime(2099, 1, 1)
-
-                elif session['mode'] == 'subscription':  # Recurring subscription
+                if session['mode'] == 'subscription':  # Recurring subscription
                     logger.info("Processing subscription")
                     subscription_id = session.get('subscription')
                     if subscription_id:
@@ -1823,53 +1799,7 @@ def success():
 @app.route('/purchase-lifetime', methods=['POST'])
 @login_required
 def purchase_lifetime():
-    if current_user.subscription_type == 'lifetime' and current_user.get_subscription_status():
-        flash('You already have lifetime access!', 'info')
-        return redirect(url_for('subscription'))
-
-    try:
-        # Get user's currency preference
-        currency = request.form.get('currency', 'GBP')
-        currency_config = get_currency_config(currency)
-        
-        # Verify the price exists first
-        try:
-            price = stripe.Price.retrieve(currency_config['lifetime_price_id'])
-            logger.info(f"Lifetime price verified: {price.id} - {price.unit_amount / 100} {price.currency}")
-        except stripe.error.InvalidRequestError as e:
-            logger.error(f"Invalid lifetime price: {str(e)}")
-            flash('Lifetime product not properly configured. Please contact support.', 'danger')
-            return redirect(url_for('subscription'))
-
-        # Create checkout session
-        checkout_session = stripe.checkout.Session.create(
-            client_reference_id=current_user.id,
-            customer_email=current_user.email,
-            payment_method_types=['card'],
-            line_items=[{
-                'price': currency_config['lifetime_price_id'],
-                'quantity': 1,
-            }],
-            mode='payment',
-            success_url=url_for('success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=url_for('subscription', _external=True),
-            metadata={
-                'product_type': 'lifetime',
-                'user_id': current_user.id,
-                'currency': currency
-            }
-        )
-        logger.info(f"Created checkout session: {checkout_session.id}")
-        return redirect(checkout_session.url, code=303)
-
-    except stripe.error.StripeError as e:
-        logger.error(f"Stripe error in purchase_lifetime: {str(e)}")
-        flash('Payment processing error. Please try again.', 'danger')
-    except Exception as e:
-        logger.error(f"Unexpected error in purchase_lifetime: {str(e)}")
-        flash('An unexpected error occurred. Please contact support.', 'danger')
-
-    return redirect(url_for('subscription'))
+    abort(404)
 
 
 def check_expired_subscriptions():
@@ -2647,23 +2577,17 @@ CURRENCY_CONFIG = {
     'USD': {
         'symbol': '$',
         'monthly_price': 6.99,
-        'lifetime_price': 129.99,
-        'monthly_price_id': os.getenv('STRIPE_USD_MONTHLY_PRICE_ID'),
-        'lifetime_price_id': os.getenv('STRIPE_USD_LIFETIME_PRICE_ID')
+        'monthly_price_id': os.getenv('STRIPE_USD_MONTHLY_PRICE_ID')
     },
     'EUR': {
         'symbol': '€',
         'monthly_price': 5.99,
-        'lifetime_price': 109.99,
-        'monthly_price_id': os.getenv('STRIPE_EUR_MONTHLY_PRICE_ID'),
-        'lifetime_price_id': os.getenv('STRIPE_EUR_LIFETIME_PRICE_ID')
+        'monthly_price_id': os.getenv('STRIPE_EUR_MONTHLY_PRICE_ID')
     },
     'GBP': {
         'symbol': '£',
         'monthly_price': 4.99,
-        'lifetime_price': 99.99,
-        'monthly_price_id': os.getenv('STRIPE_GBP_MONTHLY_PRICE_ID'),
-        'lifetime_price_id': os.getenv('STRIPE_GBP_LIFETIME_PRICE_ID')
+        'monthly_price_id': os.getenv('STRIPE_GBP_MONTHLY_PRICE_ID')
     }
 }
 

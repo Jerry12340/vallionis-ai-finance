@@ -60,7 +60,7 @@
                             {% endif %}
                         </p>
                         <p>
-                            <strong>Type:</strong> {{ 'Monthly Subscription' if current_user.subscription_type == 'monthly' else 'Lifetime Access' }}
+                            <strong>Type:</strong> {{ 'Monthly Subscription' if current_user.subscription_type == 'monthly' else 'Premium' }}
                         </p>
                     </div>
                     {% if current_user.stripe_customer_id %}

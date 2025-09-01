@@ -17,8 +17,6 @@
                         <p>Full access until {{ current_user.subscription_expires.strftime('%Y-%m-%d') }}</p>
                     {% elif current_user.subscription_type == 'monthly' %}
                         <p>Your monthly subscription is active!</p>
-                    {% elif current_user.subscription_type == 'lifetime' %}
-                        <p>Lifetime access granted!</p>
                     {% endif %}
                 {% endif %}
                 <a href="{{ url_for('index') }}" class="btn btn-primary">

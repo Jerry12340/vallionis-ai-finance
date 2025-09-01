@@ -250,25 +250,6 @@
         margin: 1.25rem 0;
     }
 }
-<style>
-.popular-badge {
-    position: absolute;
-    top: -12px;
-    right: 20px;
-    background: var(--primary-color);
-    color: black;
-    padding: 0.25rem 1rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-[data-theme="dark"] .popular-badge {
-    background: var(--primary-color);
-    color: black;
-    box-shadow: 0 0 0 2px rgba(255,255,255,0.1); /* Adds subtle outline for better visibility */
-    text-shadow: 0 1px 1px rgba(0,0,0,0.3); /* Improves text readability */
-}
 </style>
 {% endblock %}
 
@@ -301,7 +282,7 @@
                     </p>
                     <p>
                         <strong>Plan Type:</strong>
-                        {{ 'Monthly Subscription' if current_user.subscription_type == 'monthly' else 'Lifetime Access' }}
+                        {{ 'Monthly Subscription' if current_user.subscription_type == 'monthly' else 'Premium' }}
                     </p>
                 </div>
                 {% if current_user.subscription_status == 'pending_cancel' %}
@@ -407,10 +388,7 @@
                         <li><i class="fas fa-check-circle"></i> All premium features</li>
                         <li><i class="fas fa-check-circle"></i> 7-day free trial</li>
                     </ul>
-                    {% if current_user.subscription_type == 'lifetime' %}
-                        <button class="btn btn-secondary btn-block" disabled>Not Available</button>
-                        <small class="text-muted">Cannot downgrade from lifetime access</small>
-                    {% elif not current_user.get_subscription_status() or current_user.subscription_type != 'monthly' %}
+                    {% if not current_user.get_subscription_status() or current_user.subscription_type != 'monthly' %}
                         <form action="{{ url_for('subscribe') }}" method="POST" class="subscription-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="currency" id="monthly-currency" value="GBP"/>
@@ -420,30 +398,6 @@
                         </form>
                     {% else %}
                         <button class="btn btn-outline btn-block" disabled>Current Plan</button>
-                    {% endif %}
-                </div>
-
-                <!-- Lifetime Plan -->
-                <div class="pricing-card highlight">
-                    <div class="popular-badge">Best Value</div>
-                    <h3>Lifetime</h3>
-                    <div class="price" id="lifetime-price">
-                        {{ currency_config.symbol }}{{ currency_config.lifetime_price }}
-                    </div>
-                    <ul class="feature-list">
-                        <li><i class="fas fa-check-circle"></i> Permanent access</li>
-                        <li><i class="fas fa-check-circle"></i> All future updates</li>
-                    </ul>
-                    {% if current_user.subscription_type == 'lifetime' %}
-                        <button class="btn btn-outline btn-block" disabled>Current Plan</button>
-                    {% else %}
-                        <form action="{{ url_for('purchase_lifetime') }}" method="POST" class="lifetime-form">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <input type="hidden" name="currency" id="lifetime-currency" value="GBP"/>
-                            <button type="submit" class="btn btn-success btn-block">
-                                {% if current_user.subscription_type == 'monthly' %}Upgrade to Lifetime{% else %}Get Lifetime Access{% endif %}
-                            </button>
-                        </form>
                     {% endif %}
                 </div>
             </div>
@@ -510,36 +464,20 @@
 document.addEventListener('DOMContentLoaded', function() {
     const currencySelect = document.getElementById('currency-select');
     const monthlyPrice = document.getElementById('monthly-price');
-    const lifetimePrice = document.getElementById('lifetime-price');
     const monthlyCurrency = document.getElementById('monthly-currency');
-    const lifetimeCurrency = document.getElementById('lifetime-currency');
 
     // Currency configurations (matching the backend)
     const currencyConfigs = {
-        'USD': {
-            symbol: '$',
-            monthly: 6.99,
-            lifetime: 129.99
-        },
-        'EUR': {
-            symbol: '€',
-            monthly: 5.99,
-            lifetime: 109.99
-        },
-        'GBP': {
-            symbol: '£',
-            monthly: 4.99,
-            lifetime: 99.99
-        }
+        'USD': { symbol: '$', monthly: 6.99 },
+        'EUR': { symbol: '€', monthly: 5.99 },
+        'GBP': { symbol: '£', monthly: 4.99 }
     };
 
     function updatePrices(currency) {
         const config = currencyConfigs[currency];
         if (config) {
             monthlyPrice.innerHTML = `${config.symbol}${config.monthly}<span>/month</span>`;
-            lifetimePrice.innerHTML = `${config.symbol}${config.lifetime}`;
             monthlyCurrency.value = currency;
-            lifetimeCurrency.value = currency;
         }
     }
 

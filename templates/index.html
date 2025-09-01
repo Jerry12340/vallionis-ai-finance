@@ -227,8 +227,6 @@
                 <div class="pricing-info" style="padding-top: 1.5rem; border-top: 1px solid #eee; padding-left: 1.5rem;">
                     <p style="margin-bottom: 1.5rem; font-size: 1.15rem;">
                         <strong style="font-size: 1.25rem;">{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.monthly_price if currency_config else '4.99' }}/month</strong>
-                        <span style="margin: 0 0.5rem;">or</span>
-                        <strong style="font-size: 1.25rem;">{{ currency_config.symbol if currency_config else '£' }}{{ currency_config.lifetime_price if currency_config else '99.99' }} lifetime</strong>
                     </p>
                     <a href="{{ url_for('subscription') }}" class="btn btn-primary" style="padding: 0.85rem 2rem; font-size: 1.1rem; border-radius: 6px; margin-left: 1.5rem;">Upgrade to Premium</a>
                 </div>
