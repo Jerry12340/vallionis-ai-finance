@@ -282,6 +282,25 @@
             display: inline-block;
         }
 
+        /* Theme toggle inside navbar (right edge) */
+        .theme-toggle-nav {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            cursor: pointer;
+            box-shadow: 0 2px 4px var(--color-card-shadow);
+        }
+
+        .theme-toggle-nav:hover {
+            background: var(--color-primary);
+            color: #fff;
+        }
+
         .btn-logout {
             background: none;
             border: none;
@@ -469,11 +488,6 @@
                             <span class="nav-text">Premium</span>
                         </a>
 
-                        <!-- Theme toggle moved inside nav-links -->
-                        <div class="theme-toggle-nav" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">
-                            <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
-                        </div>
-
                         <!-- Logout button with proper spacing -->
                         <form action="{{ url_for('logout') }}" method="post" class="logout-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -492,6 +506,11 @@
                             <span class="nav-text">Register</span>
                         </a>
                     {% endif %}
+
+                    <!-- Theme toggle placed as the last item to align to the far right edge -->
+                    <div class="theme-toggle-nav" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">
+                        <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
+                    </div>
                 </div>
             </nav>
             {% endblock %}
