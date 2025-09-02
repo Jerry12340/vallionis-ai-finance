@@ -1440,7 +1440,7 @@ def connectivity_check():
         'dns_resolution': dns_status,
         'smtp_connection': smtp_status
     })
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def index():
     # Check for maintenance mode
