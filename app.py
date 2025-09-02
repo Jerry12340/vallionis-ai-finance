@@ -2485,6 +2485,13 @@ def contact():
     return render_template('contact.html')
 
 
+# Public Home Page
+@app.route('/home')
+def home():
+    """Public marketing homepage explaining the product with links to Login and Register."""
+    return render_template('home.html')
+
+
 # Initialize scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_customer_ids, 'interval', hours=1)

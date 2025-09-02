@@ -465,7 +465,7 @@
         <div class="header-content">
             {% block navbar %}
             <nav class="nav" role="navigation" aria-label="Main navigation">
-                <a href="/" class="logo" aria-label="Vallionis AI Finance Home">
+                <a href="{% if current_user.is_authenticated %}{{ url_for('index') }}{% else %}{{ url_for('home') }}{% endif %}" class="logo" aria-label="Vallionis AI Finance Home">
                     <i class="fas fa-chart-line" aria-hidden="true"></i>
                     <span>Vallionis AI Finance</span>
                 </a>
