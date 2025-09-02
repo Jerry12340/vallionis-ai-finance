@@ -2486,9 +2486,11 @@ def contact():
 
 
 # Public Home Page
-@app.route('/home')
+@app.route('/')
 def home():
     """Public marketing homepage explaining the product with links to Login and Register."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
     return render_template('home.html')
 
 
