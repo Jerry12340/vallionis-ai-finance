@@ -1,14 +1,16 @@
 {% extends "base.html" %}
-{% block head %}
-  {{ super() }}
+{% block extra_head %}
   <meta name="google-site-verification" content="5_JqfNYlF-YmL1jD96Lk839p3UAUW0j1bd0wd0kOnCc" />
+  <style>
+    /* Hide global header and footer only on the login page */
+    .header, .footer { display: none !important; }
+    /* Let the auth layout use full viewport height without header/footer */
+    .global-wrapper { padding: 0 var(--spacing-lg); }
+    .container { padding: 0; }
+  </style>
 {% endblock %}
 
-{% block navbar %}
-<nav class="nav center">
-    <span class="logo" style="font-size: 2rem; font-weight: 700;">Vallionis finance AI</span>
-</nav>
-{% endblock %}
+{% block navbar %}{% endblock %}
 
 {% block content %}
 <section class="auth-section auth-full">
