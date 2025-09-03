@@ -1457,54 +1457,40 @@ h3 { font-size: 1.5rem; margin-bottom: 1rem; }
   }
 }
 
-/* ===== Print Styles ===== */
-@media print {
-  .theme-toggle,
-  .nav-links,
-  .footer,
-  .upgrade-cta,
-  .features-section {
-    display: none !important;
-  }
-  
-  .hero-section {
-    background: white !important;
-    color: black !important;
-    padding: 1rem 0;
-  }
-  
-  .hero-section h1 {
-    color: black !important;
-  }
-  
-  .form-container {
-    box-shadow: none;
-    border: 1px solid #ccc;
-  }
-  
-  .card {
-    box-shadow: none;
-    border: 1px solid #ccc;
-    break-inside: avoid;
-  }
-  
-  .table {
-    border-collapse: collapse;
-  }
-  
-  .table th,
-  .table td {
-    border: 1px solid #ccc;
-  }
-  
-  body {
-    font-size: 12pt;
-    line-height: 1.4;
-  }
-  
-  h1, h2, h3 {
-    page-break-after: avoid;
-  }
+/* ===== Hero CTA Contrast & How-it-Works Centering ===== */
+.cta-row .btn-contrast {
+  background: #ffffff;
+  color: #1f2937; /* slate-800 */
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.cta-row .btn-contrast:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.cta-row .btn-outline-contrast {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.7);
+}
+
+.cta-row .btn-outline-contrast:hover {
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+}
+
+/* Center the "How it works" cards and constrain width */
+.how-it-works .features-grid {
+  justify-content: center;
+  justify-items: center;
+  place-content: center;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+  gap: 1.25rem;
+}
+
+.how-it-works .feature-card {
+  max-width: 340px;
 }
 
 /* ===== Performance Optimizations ===== */
