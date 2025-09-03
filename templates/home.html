@@ -5,28 +5,35 @@
 {% block meta_description %}Vallionis AI Finance helps you build long‑term wealth with AI‑powered stock recommendations tailored to your risk tolerance, goals, and time horizon.{% endblock %}
 
 {% block content %}
-<section class="home-hero fade-in-up">
+<section class="hero-section fade-in-up">
   <div class="hero-content" style="text-align:center;">
-    <h1 class="title">Invest Smarter with AI</h1>
-    <p class="subtitle">
-      Vallionis AI Finance analyzes thousands of market data points to create a long‑term, diversified stock list aligned to your risk tolerance and goals.
+    <h1>Invest Smarter with AI</h1>
+    <p class="hero-subtitle">
+      Vallionis AI Finance analyzes thousands of market data points to create a
+      long‑term, diversified stock list aligned to your risk tolerance and goals.
     </p>
+
     <div class="cta-row">
-      <a class="btn btn-brand" href="{{ url_for('login') }}">
-        <i class="fas fa-sign-in-alt"></i> Login
+      <a class="btn btn-primary" href="{{ url_for('login') }}">
+        <i class="fas fa-sign-in-alt"></i>
+        Login
       </a>
       <a class="btn btn-ghost" href="{{ url_for('register') }}">
-        <i class="fas fa-user-plus"></i> Create an account
+        <i class="fas fa-user-plus"></i>
+        Create an account
       </a>
     </div>
-    <div style="margin-top: 0.75rem; color: var(--secondary-color); font-size: 0.95rem;">
-      No credit card required to get started.
+    <div class="logo-strip">
+      <div class="logo-chip"><i class="fas fa-shield-alt"></i> Secure</div>
+      <div class="logo-chip"><i class="fas fa-bolt"></i> Fast</div>
+      <div class="logo-chip"><i class="fas fa-leaf"></i> Long‑term</div>
+      <div class="logo-chip"><i class="fas fa-robot"></i> AI‑driven</div>
     </div>
   </div>
-  
 </section>
 
 <section class="features-section fade-in-up">
+  <h2>Why Vallionis</h2>
   <div class="features-grid">
     <div class="feature-card">
       <i class="fas fa-brain"></i>
@@ -51,47 +58,52 @@
   </div>
 </section>
 
-<section class="how-it-works fade-in-up" style="padding: 0 0 2rem;">
-  <div class="container" style="max-width: 1000px;">
-    <h2 style="text-align: center; margin-bottom: 1rem;">How it works</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
-      <div class="step-card card" style="padding: 1.25rem;">
-        <strong>1. Create your account</strong>
+<section class="how-it-works fade-in-up">
+  <div class="container">
+    <h2 style="text-align:center">How it works</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <i class="fas fa-user-plus"></i>
+        <h3>1. Create your account</h3>
         <p>Register quickly with email or sign in if you already have an account.</p>
       </div>
-      <div class="step-card card" style="padding: 1.25rem;">
-        <strong>2. Set preferences</strong>
+      <div class="feature-card">
+        <i class="fas fa-sliders-h"></i>
+        <h3>2. Set preferences</h3>
         <p>Choose investing style, time horizon, and optional premium filters.</p>
       </div>
-      <div class="step-card card" style="padding: 1.25rem;">
-        <strong>3. Generate picks</strong>
+      <div class="feature-card">
+        <i class="fas fa-list"></i>
+        <h3>3. Generate picks</h3>
         <p>Get an AI‑curated list with rationale and export options.</p>
       </div>
     </div>
-    <div style="text-align: center; margin-top: 1.5rem;">
-      <a class="btn btn-brand" href="{{ url_for('register') }}">
-        Get started free
-      </a>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="{{ url_for('register') }}">Get started free</a>
     </div>
   </div>
 </section>
 
-<section class="fade-in-up" style="padding: 0 0 2rem;">
+<section class="fade-in-up" style="margin: 0 auto 2rem; max-width: 900px;">
   <div class="testimonial">
     <div class="quote">
-      “Vallionis AI empowers anyone to make smarter investing decisions by combining cutting-edge AI insights with an intuitive, easy-to-use platform. We provide personalized guidance, real-time analysis, and actionable strategies—helping users maximize returns, minimize risk, and build lasting wealth without the steep learning curve.”
+      <i class="fas fa-quote-left"></i>
+      Designed to help you stay invested with conviction. Build wealth the calm, disciplined way.
     </div>
     <div class="meta">
-      <span class="avatar">VA</span>
-      <span>Vallionis AI — Value Proposition</span>
+      <div class="avatar">VA</div>
+      <span>Vallionis AI Finance</span>
     </div>
   </div>
 </section>
 
 <section class="fade-in-up" style="max-width: 900px; margin: 0 auto 2rem;">
-  <div class="disclaimer-card" style="background-color: rgba(59, 130, 246, 0.1); color: var(--primary-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem;">
-    <i class="fas fa-lightbulb" style="color: var(--brand); margin-right: 0.5rem;"></i>
-    <span>Investing involves risk. Past performance does not guarantee future results.</span>
+  <div class="alert alert-info">
+    <div class="alert-content">
+      <i class="fas fa-lightbulb" aria-hidden="true"></i>
+      <span>Investing involves risk. Past performance does not guarantee future results.</span>
+    </div>
   </div>
-  </section>
+</section>
 {% endblock %}
+
