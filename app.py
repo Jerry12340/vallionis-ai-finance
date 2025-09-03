@@ -11,8 +11,12 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import os
 import requests
-from dotenv import load_dotenv
-import warnings
+import json
+import ollama
+from flask import request, jsonify, render_template, flash
+from functools import wraps
+import logging
+from datetime import datetime, timedelta
 from sklearn.impute import SimpleImputer
 from io import StringIO
 from flask_wtf import FlaskForm, CSRFProtect
@@ -1949,6 +1953,48 @@ def chat():
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
 
+    # --- Tier-based token limits (align with render_integration.py) ---
+    def _estimate_tokens(text: str) -> int:
+        if not text:
+            return 0
+        try:
+            return max(1, int(len(text) / 4))
+        except Exception:
+            return max(1, len(text.split()))
+
+    TOKEN_LIMITS = {
+        'free': {
+            'max_total_tokens': 2000,
+            'max_output_tokens': 600,
+        },
+        'pro': {
+            'max_total_tokens': 8000,
+            'max_output_tokens': 2048,
+        },
+        'default': {
+            'max_total_tokens': 4000,
+            'max_output_tokens': 1024,
+        },
+    }
+
+    def _get_user_tier(user) -> str:
+        try:
+            stype = (getattr(user, 'subscription_type', None) or '').lower()
+            status = (getattr(user, 'subscription_status', None) or '').lower()
+            is_premium = bool(getattr(user, 'premium', False))
+            if stype in {'pro', 'premium'} and status in {'active', 'trialing'}:
+                return 'pro'
+            if is_premium and status in {'active', 'trialing'}:
+                return 'pro'
+        except Exception:
+            pass
+        return 'free'
+
+    def _limits_for_user(user):
+        tier = _get_user_tier(user)
+        limits = {**TOKEN_LIMITS['default'], **TOKEN_LIMITS.get(tier, {})}
+        return limits, tier
+
     # --- Conversation context (in-memory, per-user) ---
     user_key = str(current_user.id)
     history = conversation_store.get(user_key, [])  # list of {role, content}
@@ -1970,14 +2016,34 @@ def chat():
         {"role": "user", "content": user_message}
     ]
 
+    # Determine user's tier and limits
+    limits, tier = _limits_for_user(current_user)
+    max_total = limits['max_total_tokens']
+    max_out_tier = limits['max_output_tokens']
+
+    # Enforce per-message cap with headroom for output
+    input_tokens = _estimate_tokens(str(user_message))
+    if input_tokens + max(256, int(0.5 * max_out_tier)) > max_total:
+        return (
+            jsonify({
+                'error': 'You have used too many tokens for your current plan.',
+                'code': 'TOKEN_LIMIT',
+                'message': 'Try a shorter message or upgrade to Pro for longer conversations.',
+                'tier': tier,
+                'limits': limits,
+            }),
+            413,
+        )
+
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://vallionis-ai-finance.onrender.com",
-        "X-Title": "Vallionis AI"
+        "X-Title": "Vallionis AI Finance Coach",
+        "X-Model": "deepseek-ai/deepseek-chat"
     }
-    # Allow env overrides
-    model_id = os.getenv("OPENROUTER_MODEL", "openrouter/auto")
+    # Use DeepSeek V3.1 model
+    model_id = os.getenv("OPENROUTER_MODEL", "deepseek-ai/deepseek-chat")
     try:
         max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "512"))
     except ValueError:
@@ -1990,31 +2056,80 @@ def chat():
         "max_tokens": max_tokens
     }
 
+    # Track if we're using fallback
+    used_fallback = False
+    
     try:
-        # Add a server-side timeout to avoid hanging requests
-        req_timeout = int(os.getenv("OPENROUTER_TIMEOUT_SECONDS", "45"))
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=req_timeout)
-        response.raise_for_status()
-        data = response.json()
-        bot_reply = data["choices"][0]["message"]["content"]
+        # Try OpenRouter first
+        try:
+            # Add a server-side timeout to avoid hanging requests
+            req_timeout = int(os.getenv("OPENROUTER_TIMEOUT_SECONDS", "45"))
+            # Cap max_tokens to tier limit to avoid upstream 402 due to excessive request size
+            try:
+                requested_max_tokens = int(payload.get('max_tokens') or 0)
+            except Exception:
+                requested_max_tokens = 0
+            if requested_max_tokens <= 0:
+                requested_max_tokens = 512
+            payload['max_tokens'] = min(requested_max_tokens, max_out_tier)
 
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=req_timeout)
+            response.raise_for_status()
+            data = response.json()
+            bot_reply = data["choices"][0]["message"]["content"]
+            
+        except requests.exceptions.HTTPError as e:
+            # If we get a 402 (Payment Required), switch to Ollama fallback
+            if hasattr(e, 'response') and e.response.status_code == 402:
+                used_fallback = True
+                flash('⚠️ You have run out of OpenRouter credits. Switching to local AI model. Upgrade to Pro for better performance.', 'warning')
+                
+                # Prepare messages for Ollama
+                ollama_messages = [
+                    {"role": "system", "content": system_prompt}
+                ]
+                # Add conversation history
+                for msg in history[-5:]:  # Limit history to last 5 messages
+                    ollama_messages.append({"role": msg["role"], "content": msg["content"]})
+                # Add current message
+                ollama_messages.append({"role": "user", "content": user_message})
+                
+                # Call Ollama
+                response = ollama.chat(
+                    model='llama3.1:8b-instruct-q4_0',
+                    messages=ollama_messages,
+                    options={
+                        'temperature': 0.7,
+                        'top_p': 0.9,
+                        'num_predict': min(1024, max_out_tier)  # Cap at model's max or user's tier limit
+                    }
+                )
+                bot_reply = response['message']['content']
+            else:
+                raise  # Re-raise if it's not a 402 error
+                
         # Update history with the latest turn and save back
         history.append({"role": "user", "content": user_message})
         history.append({"role": "assistant", "content": bot_reply})
         conversation_store[user_key] = history[-max_turns:]
+        
+        # Add a note if we used the fallback
+        if used_fallback:
+            bot_reply = "⚠️ [Using Local Model] " + bot_reply
 
         return jsonify({"reply": bot_reply})
     except requests.exceptions.Timeout:
         return jsonify({"error": "Upstream timeout"}), 504
-    except requests.exceptions.HTTPError as e:
-        # Surface the response body to help diagnose issues like 400 Bad Request
-        err_text = getattr(e.response, "text", "") if hasattr(e, "response") else ""
-        print("Chat error HTTP:", e, "\nResponse:", err_text)
-        try:
-            err_json = e.response.json() if hasattr(e, "response") and e.response is not None else {}
-        except Exception:
-            err_json = {"message": err_text}
-        return jsonify({"error": "Upstream error", "status": e.response.status_code if hasattr(e, "response") and e.response is not None else 500, "details": err_json}), 502
+    except Exception as e:
+        # Log the error
+        print(f"Chat error: {str(e)}")
+        
+        # If we get here, both OpenRouter and Ollama failed
+        return jsonify({
+            "error": "AI service is currently unavailable",
+            "message": "Please try again later or contact support if the issue persists.",
+            "code": "SERVICE_UNAVAILABLE"
+        }), 503
     except Exception as e:
         print("Chat error:", e)
         return jsonify({"error": "Failed to get response"}), 500
