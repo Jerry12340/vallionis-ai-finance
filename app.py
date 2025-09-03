@@ -2041,7 +2041,7 @@ def chat():
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://vallionis-ai-finance.onrender.com",
+        "Referer": "https://vallionis-ai-finance.onrender.com",
         "X-Title": "Vallionis AI Finance Coach"
     }
     
