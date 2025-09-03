@@ -37,6 +37,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 from datetime import datetime, timezone, timedelta
 from flask_migrate import Migrate
+from services.macro_data_service import MacroDataService
 from wtforms.validators import ValidationError
 from authlib.integrations.flask_client import OAuth
 from authlib.common.security import generate_token
@@ -1935,7 +1936,24 @@ def account():
 @login_required
 def ai_coach():
     """Renders the AI Finance Coach page"""
-    return render_template('ai_coach.html', title="AI Finance Coach", user=current_user)
+    return render_template('ai_coach.html', user=current_user, active_tab='chat')
+
+
+@app.route('/macro-dashboard')
+@login_required
+def macro_dashboard():
+    """Renders the Macro Economic Dashboard"""
+    macro_service = MacroDataService()
+    macro_data = macro_service.get_macro_data()
+    analysis = macro_service.analyze_macro_environment(macro_data)
+    
+    return render_template(
+        'ai_coach.html', 
+        user=current_user,
+        active_tab='macro',
+        macro_data=macro_data,
+        analysis=analysis
+    )
 
 
 @app.route('/api/ai/health', methods=['GET'])
