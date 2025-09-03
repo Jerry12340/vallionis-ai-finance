@@ -8,7 +8,7 @@
     <div id="chat-box" class="chat-box"></div>
 
     <form id="chat-form">
-        <input type="text" id="user-input" placeholder="Ask me anything about investing..." autocomplete="off" required>
+        <textarea id="user-input" placeholder="Ask me anything about investing..." rows="1" autocomplete="off" required></textarea>
         <button id="send-btn" type="submit">Send</button>
     </form>
 </div>
@@ -64,6 +64,8 @@
         // Show user message
         addMessage("user", message);
         userInput.value = "";
+        // Reset textarea height after send
+        autoResizeTextarea(userInput, 8);
 
         // Show loading message
         const loading = document.createElement("div");
@@ -144,6 +146,26 @@
             userInput.focus();
         }
     });
+
+    // Auto-grow textarea up to 8 lines, then scroll
+    function autoResizeTextarea(el, maxLines = 8) {
+        const style = window.getComputedStyle(el);
+        const lineHeight = parseFloat(style.lineHeight) || 20; // fallback
+        const borderTop = parseFloat(style.borderTopWidth) || 0;
+        const borderBottom = parseFloat(style.borderBottomWidth) || 0;
+        const paddingTop = parseFloat(style.paddingTop) || 0;
+        const paddingBottom = parseFloat(style.paddingBottom) || 0;
+        const maxHeight = maxLines * lineHeight + paddingTop + paddingBottom + borderTop + borderBottom;
+
+        el.style.height = 'auto';
+        const newHeight = Math.min(el.scrollHeight, maxHeight);
+        el.style.height = newHeight + 'px';
+        el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    }
+
+    // Initialize and bind
+    autoResizeTextarea(userInput, 8);
+    userInput.addEventListener('input', () => autoResizeTextarea(userInput, 8));
 </script>
 
 <style>
