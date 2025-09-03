@@ -146,6 +146,9 @@ headers = {
 # NOTE: This resets on server restart and is not shared across multiple processes.
 conversation_store = {}
 
+# Initialize services
+macro_service = MacroDataService()
+
 # Initialize OAuth after db
 oauth = OAuth(app)
 redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
