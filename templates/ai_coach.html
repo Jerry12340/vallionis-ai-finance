@@ -70,6 +70,16 @@
                 let errText = "Service error.";
                 try {
                     const errJson = await response.json();
+                    // Friendly handling for token limit
+                    if (response.status === 413 && errJson?.code === 'TOKEN_LIMIT') {
+                        if (loading && loading.parentNode) {
+                            chatBox.removeChild(loading);
+                        }
+                        const msg = errJson.message || 'You have used too many tokens for your current plan.';
+                        const tier = errJson.tier ? ` (plan: ${errJson.tier})` : '';
+                        addMessage("ai", `⚠️ ${msg}${tier}`);
+                        return;
+                    }
                     errText = errJson?.error || JSON.stringify(errJson);
                 } catch (_) {}
                 if (loading && loading.parentNode) {

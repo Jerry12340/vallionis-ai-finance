@@ -184,6 +184,16 @@ Remember: You are not a licensed financial advisor. Always recommend consulting 
 
         full_prompt = f"{system_prompt}\n\nUser question: {request.message}{context_text}\n\nProvide a helpful, personalized response:"
         
+        # Determine output cap from request context (if provided by upstream)
+        max_out = None
+        try:
+            if isinstance(request.context, dict):
+                mo = request.context.get('max_output_tokens')
+                if isinstance(mo, int) and mo > 0:
+                    max_out = mo
+        except Exception:
+            max_out = None
+
         # Call Ollama API
         async with httpx.AsyncClient(timeout=180.0) as client:
             ollama_request = {
@@ -196,6 +206,13 @@ Remember: You are not a licensed financial advisor. Always recommend consulting 
                     "num_predict": 2048
                 }
             }
+            # Cap output tokens if upstream provided a limit
+            if max_out is not None:
+                try:
+                    current = int(ollama_request["options"]["num_predict"])
+                    ollama_request["options"]["num_predict"] = max(1, min(current, int(max_out)))
+                except Exception:
+                    pass
             
             response = await client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
@@ -240,6 +257,16 @@ async def chat_stream(request: ChatRequest):
         system_prompt = """You are Vallionis, an expert AI financial coach. Provide helpful, personalized financial guidance."""
         full_prompt = f"{system_prompt}\n\nUser question: {request.message}{context_text}\n\nResponse:"
         
+        # Determine output cap for streaming
+        max_out = None
+        try:
+            if isinstance(request.context, dict):
+                mo = request.context.get('max_output_tokens')
+                if isinstance(mo, int) and mo > 0:
+                    max_out = mo
+        except Exception:
+            max_out = None
+
         async def generate_stream():
             async with httpx.AsyncClient(timeout=300.0) as client:
                 ollama_request = {
@@ -248,6 +275,13 @@ async def chat_stream(request: ChatRequest):
                     "stream": True,
                     "options": {"temperature": 0.7, "num_predict": 4096}
                 }
+                # Cap output tokens if provided
+                if max_out is not None:
+                    try:
+                        current = int(ollama_request["options"]["num_predict"])
+                        ollama_request["options"]["num_predict"] = max(1, min(current, int(max_out)))
+                    except Exception:
+                        pass
                 
                 async with client.stream(
                     "POST",
