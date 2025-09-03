@@ -9,6 +9,7 @@
   --error-color: #cc0000;
   --success-color: #00aa00;
   --accent-color: #2c7be5;
+  --brand: #3B82F6; /* default brand if none provided */
   --warning-color: #ffc107;
   
   /* New modern variables */
@@ -929,6 +930,114 @@ h3 { font-size: 1.5rem; margin-bottom: 1rem; }
 /* ===== Navigation Improvements ===== */
 .nav-text {
   display: inline-block;
+}
+
+/* ===== Clean Light Homepage Components ===== */
+.btn-brand {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-brand:hover {
+  filter: brightness(0.95);
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--brand);
+  border: 1px solid var(--border-color);
+}
+
+.btn-ghost:hover {
+  background: #f5f7fb;
+}
+
+.home-hero {
+  background: linear-gradient(180deg, #fafafa 0%, #ffffff 60%);
+  padding: 5rem 0 3rem;
+}
+
+.home-hero .title {
+  font-size: 3rem;
+  margin: 0 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+.home-hero .subtitle {
+  font-size: 1.125rem;
+  color: var(--secondary-color);
+  max-width: 800px;
+  margin: 0 auto 2rem;
+}
+
+.cta-row {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.logo-strip {
+  margin: 2.5rem auto 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  max-width: 800px;
+  color: var(--secondary-color);
+}
+
+.logo-chip {
+  border: 1px dashed var(--border-color);
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.testimonial {
+  max-width: 900px;
+  margin: 0 auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.testimonial .quote {
+  color: var(--primary-color);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.testimonial .meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  color: var(--secondary-color);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9f2ff;
+  color: var(--brand);
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .home-hero { padding: 3.5rem 0 2rem; }
+  .home-hero .title { font-size: 2rem; }
+  .home-hero .subtitle { font-size: 1rem; }
 }
 
 @media (max-width: 768px) {
