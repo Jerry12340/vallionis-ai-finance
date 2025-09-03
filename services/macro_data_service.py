@@ -30,7 +30,13 @@ class MacroDataService:
         """Fetch economic data from FRED API"""
         try:
             end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
+            # For demo key, use a fixed date range that works with the demo data
+            if self.fred_api_key == 'demo':
+                start_date = end_date - timedelta(days=365)  # Limit to 1 year for demo
+                # Adjust end date to avoid future dates which might cause issues
+                end_date = min(end_date, datetime(2023, 1, 1))
+            else:
+                start_date = end_date - timedelta(days=days)
             
             params = {
                 'series_id': series_id,
@@ -40,20 +46,51 @@ class MacroDataService:
                 'observation_end': end_date.strftime('%Y-%m-%d')
             }
             
-            response = requests.get(self.fred_base_url, params=params)
+            response = requests.get(self.fred_base_url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
             
             # Process data into a clean format
-            if 'observations' in data:
+            if 'observations' in data and data['observations']:
                 df = pd.DataFrame(data['observations'])
                 df['date'] = pd.to_datetime(df['date'])
                 df['value'] = pd.to_numeric(df['value'], errors='coerce')
-                return df[['date', 'value']].dropna().to_dict('records')
+                result = df[['date', 'value']].dropna().to_dict('records')
                 
+                # For demo data, ensure we return some data even if empty
+                if not result and self.fred_api_key == 'demo':
+                    # Return sample data for demo purposes
+                    return [{'date': (end_date - timedelta(days=i*30)).strftime('%Y-%m-%d'), 
+                            'value': 100 + i*5} for i in range(12)]
+                return result
+                
+            # If no observations found, return sample data for demo
+            if self.fred_api_key == 'demo':
+                return [{'date': (end_date - timedelta(days=i*30)).strftime('%Y-%m-%d'), 
+                        'value': 100 + i*5} for i in range(12)]
+                        
+            return []
+            
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 400 and 'observation_start' in str(e):
+                # Try with a different date range for demo key
+                if self.fred_api_key == 'demo':
+                    return self._get_demo_data(series_id)
+            logger.error(f"HTTP Error fetching FRED data for {series_id}: {str(e)}")
+            return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
+            
         except Exception as e:
             logger.error(f"Error fetching FRED data for {series_id}: {str(e)}")
-            return None
+            return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
+    
+    def _get_demo_data(self, series_id):
+        """Generate sample data for demo purposes when API calls fail"""
+        end_date = datetime(2023, 1, 1)
+        return [
+            {'date': (end_date - timedelta(days=i*30)).strftime('%Y-%m-%d'), 
+             'value': 100 + i*5}
+            for i in range(12)  # Last year of monthly data
+        ]
 
     def get_macro_data(self):
         """Fetch all macro indicators"""
