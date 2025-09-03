@@ -1939,23 +1939,6 @@ def ai_coach():
     return render_template('ai_coach.html', user=current_user, active_tab='chat')
 
 
-@app.route('/macro-dashboard')
-@login_required
-def macro_dashboard():
-    """Renders the Macro Economic Dashboard"""
-    macro_service = MacroDataService()
-    macro_data = macro_service.get_macro_data()
-    analysis = macro_service.analyze_macro_environment(macro_data)
-    
-    return render_template(
-        'ai_coach.html', 
-        user=current_user,
-        active_tab='macro',
-        macro_data=macro_data,
-        analysis=analysis
-    )
-
-
 @app.route('/api/ai/health', methods=['GET'])
 @csrf.exempt
 def ai_health_check():
