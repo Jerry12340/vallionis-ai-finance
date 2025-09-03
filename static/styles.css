@@ -64,6 +64,45 @@ body {
   padding: 0 15px;
 }
 
+.auth-container {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.auth-full {
+  min-height: calc(100vh - 140px); /* account for nav/footer */
+  display: flex;
+  align-items: center;
+}
+
+.auth-stack {
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.auth-stack .form-group label {
+  display: block;
+  text-align: left;
+}
+
+.auth-stack .form-check {
+  text-align: left;
+}
+
+.auth-stack .btn-block {
+  width: 100%;
+}
+
+.auth-stack .btn-google {
+  width: 100%;
+}
+
+.auth-card {
+  padding: 0;
+  overflow: hidden;
+}
+
 /* ===== Typography ===== */
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;

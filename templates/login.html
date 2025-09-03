@@ -11,14 +11,10 @@
 {% endblock %}
 
 {% block content %}
-<section class="auth-section">
+<section class="auth-section auth-full">
   <div class="auth-container">
-    <div class="card auth-card">
-      <div class="card-header">
-        <h2>Login</h2>
-      </div>
-
-      <div class="card-body">
+    <div class="auth-stack">
+      <h2>Login</h2>
         <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -95,7 +91,6 @@
         <div class="text-center">
             <p>Need an account? <a href="{{ url_for('register') }}" class="text-accent">Register here</a></p>
         </div>
-      </div>
     </div>
   </div>
 </section>
