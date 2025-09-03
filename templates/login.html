@@ -7,6 +7,13 @@
     /* Let the auth layout use full viewport height without header/footer */
     .global-wrapper { padding: 0 var(--spacing-lg); }
     .container { padding: 0; }
+    /* Make login form fields and buttons wider on this page only */
+    .auth-container, .auth-stack {
+      max-width: 960px; /* increase available width */
+    }
+    /* Ensure controls take full width of the expanded container */
+    .auth-stack .form-control { width: 100%; }
+    .auth-stack .btn-google, .auth-stack .btn-block { width: 100%; }
   </style>
 {% endblock %}
 
