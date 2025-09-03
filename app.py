@@ -2037,25 +2037,30 @@ def chat():
             413,
         )
 
+    # Prepare headers for OpenRouter API
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://vallionis-ai-finance.onrender.com",
-        "X-Title": "Vallionis AI Finance Coach",
-        "X-Model": "deepseek-ai/deepseek-chat"
+        "X-Title": "Vallionis AI Finance Coach"
     }
-    # Use DeepSeek V3.1 model
+    
+    # Get model and token limits from environment with defaults
     model_id = os.getenv("OPENROUTER_MODEL", "deepseek-ai/deepseek-chat")
     try:
-        max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "512"))
+        max_tokens = min(int(os.getenv("OPENROUTER_MAX_TOKENS", "512")), max_out_tier)
     except ValueError:
-        max_tokens = 512
+        max_tokens = min(512, max_out_tier)
 
+    # Prepare the request payload according to OpenRouter API spec
     payload = {
-        # Use a valid OpenRouter model identifier. "openrouter/auto" lets OpenRouter choose an available model.
         "model": model_id,
         "messages": conversation,
-        "max_tokens": max_tokens
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "frequency_penalty": 0.5,
+        "presence_penalty": 0.5
     }
 
     # Track if we're using fallback
