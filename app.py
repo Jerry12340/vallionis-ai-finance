@@ -2219,6 +2219,22 @@ def fix_customer_id():
     return redirect(url_for('subscription'))
 
 
+@app.route("/macro-dashboard")
+def macro_dashboard():
+    try:
+        # Fetch macro data
+        macro_data = macro_service.get_macro_data()
+        analysis = macro_service.analyze_macro_environment(macro_data)
+        
+        return render_template(
+            "macro_dashboard.html",
+            macro_data=macro_data,
+            analysis=analysis
+        )
+    except Exception as e:
+        logger.error(f"Error rendering macro dashboard: {e}")
+        return "An error occurred while loading the macro dashboard.", 500
+
 @app.route('/delete-account', methods=['POST'])
 @login_required
 def delete_account():
