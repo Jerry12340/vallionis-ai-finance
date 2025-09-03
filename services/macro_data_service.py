@@ -30,13 +30,7 @@ class MacroDataService:
         """Fetch economic data from FRED API"""
         try:
             end_date = datetime.now()
-            # For demo key, use a fixed date range that works with the demo data
-            if self.fred_api_key == 'demo':
-                start_date = end_date - timedelta(days=365)  # Limit to 1 year for demo
-                # Adjust end date to avoid future dates which might cause issues
-                end_date = min(end_date, datetime(2023, 1, 1))
-            else:
-                start_date = end_date - timedelta(days=days)
+            start_date = end_date - timedelta(days=days)
             
             params = {
                 'series_id': series_id,
@@ -46,7 +40,9 @@ class MacroDataService:
                 'observation_end': end_date.strftime('%Y-%m-%d')
             }
             
-            response = requests.get(self.fred_base_url, params=params, timeout=10)
+            response = requests.get('https://api.stlouisfed.org/fred/series/observations', 
+                                 params=params, 
+                                 timeout=10)
             response.raise_for_status()
             data = response.json()
             
@@ -55,19 +51,21 @@ class MacroDataService:
                 df = pd.DataFrame(data['observations'])
                 df['date'] = pd.to_datetime(df['date'])
                 df['value'] = pd.to_numeric(df['value'], errors='coerce')
-                result = df[['date', 'value']].dropna().to_dict('records')
                 
-                # For demo data, ensure we return some data even if empty
-                if not result and self.fred_api_key == 'demo':
-                    # Return sample data for demo purposes
-                    return [{'date': (end_date - timedelta(days=i*30)).strftime('%Y-%m-%d'), 
-                            'value': 100 + i*5} for i in range(12)]
+                # Filter out any rows with missing values
+                df = df.dropna(subset=['value'])
+                
+                # Convert to list of dicts with proper date formatting
+                result = [
+                    {'date': row['date'].strftime('%Y-%m-%d'), 
+                     'value': float(row['value'])}
+                    for _, row in df.iterrows()
+                ]
+                
+                # Sort by date to ensure chronological order
+                result.sort(key=lambda x: x['date'])
+                
                 return result
-                
-            # If no observations found, return sample data for demo
-            if self.fred_api_key == 'demo':
-                return [{'date': (end_date - timedelta(days=i*30)).strftime('%Y-%m-%d'), 
-                        'value': 100 + i*5} for i in range(12)]
                         
             return []
             
