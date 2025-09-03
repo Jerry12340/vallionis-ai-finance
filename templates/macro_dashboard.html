@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Macro Dashboard - Vallionis AI Finance{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Macroeconomic Dashboard</h1>
+    
+    {% if analysis %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Macro Environment Analysis</h2>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">Overview</h5>
+            <p class="card-text">{{ analysis.overview }}</p>
+            
+            {% if analysis.risks %}
+            <h5 class="mt-4">Key Risks</h5>
+            <ul class="list-group list-group-flush">
+                {% for risk in analysis.risks %}
+                <li class="list-group-item">{{ risk }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            {% if analysis.opportunities %}
+            <h5 class="mt-4">Potential Opportunities</h5>
+            <ul class="list-group list-group-flush">
+                {% for opportunity in analysis.opportunities %}
+                <li class="list-group-item">{{ opportunity }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if macro_data %}
+    <div class="row">
+        {% for indicator, data in macro_data.items() %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{{ data.name }}</h5>
+                    <small class="text-muted">Unit: {{ data.unit }}</small>
+                </div>
+                <div class="card-body">
+                    {% if data.data %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in data.data[-5:]|reverse %}
+                                <tr>
+                                    <td>{{ entry.date }}</td>
+                                    <td>{{ "%.2f"|format(entry.value) if entry.value is number else entry.value }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No data available</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-muted">
+                    <small>Last updated: {{ data.data[-1].date if data.data else 'N/A' }}</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        Unable to load macroeconomic data at this time. Please try again later.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Add any additional JavaScript for charts or interactivity here -->
+<script>
+// You can add Chart.js or other visualization libraries here
+// to create interactive charts from the macro data
+</script>
+{% endblock %}
