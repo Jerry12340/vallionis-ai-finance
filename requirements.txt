@@ -33,3 +33,4 @@ httpx>=0.28.1
 pgvector>=0.4.1
 sentence-transformers==2.2.2
 pydantic==2.5.2
+ollama==0.1.2
