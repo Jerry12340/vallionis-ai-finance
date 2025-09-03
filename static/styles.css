@@ -65,7 +65,7 @@ body {
 }
 
 .auth-container {
-  max-width: 480px;
+  max-width: 680px;
   margin: 0 auto;
 }
 
@@ -76,7 +76,7 @@ body {
 }
 
 .auth-stack {
-  max-width: 520px;
+  max-width: 720px;
   margin: 0 auto;
   text-align: center;
 }
