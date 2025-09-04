@@ -3,11 +3,13 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 import json
-from flask import jsonify, render_template_string
+from flask import jsonify, render_template_string, make_response
 import logging
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+import io
+import csv
 
 logger = logging.getLogger(__name__)
 
@@ -85,101 +87,55 @@ class MacroDataService:
             logger.error(f"Error fetching FRED data for {series_id}: {str(e)}")
             return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
             
-    def get_gdp_comparison_chart(self, days=365*10):
-        """Generate an interactive chart comparing real and nominal GDP"""
+    def get_indicator_chart(self, indicator_key, days=365*10):
+        """Generate an interactive chart for a specific indicator"""
         try:
-            # Get both real and nominal GDP data
-            real_gdp = self.get_fred_data(self.series_ids['gdp'], days)
-            nominal_gdp = self.get_fred_data(self.series_ids['nominal_gdp'], days)
+            series_id = self.series_ids.get(indicator_key)
+            if not series_id:
+                return "<p>Invalid indicator specified.</p>"
+                
+            # Get indicator data
+            data = self.get_fred_data(series_id, days)
+            if not data:
+                return f"<p>No data available for {indicator_key}.</p>"
+                
+            df = pd.DataFrame(data)
+            df['date'] = pd.to_datetime(df['date'])
             
-            # Convert to pandas DataFrames for easier manipulation
-            df_real = pd.DataFrame(real_gdp)
-            df_nominal = pd.DataFrame(nominal_gdp)
+            # Create figure
+            fig = go.Figure()
             
-            # Convert date strings to datetime objects
-            df_real['date'] = pd.to_datetime(df_real['date'])
-            df_nominal['date'] = pd.to_datetime(df_nominal['date'])
+            # Define chart settings based on indicator type
+            chart_config = self._get_chart_config(indicator_key, df)
             
-            # Create figure with secondary y-axis
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            # Add trace based on chart type
+            if chart_config['type'] == 'line':
+                fig.add_trace(
+                    go.Scatter(
+                        x=df['date'],
+                        y=df['value'],
+                        name=chart_config['name'],
+                        line=dict(color=chart_config['color']),
+                        hovertemplate='%{x|%Y-%m-%d}<br>%{y:,.2f}<extra></extra>'
+                    )
+                )
+            elif chart_config['type'] == 'bar':
+                fig.add_trace(
+                    go.Bar(
+                        x=df['date'],
+                        y=df['value'],
+                        name=chart_config['name'],
+                        marker_color=chart_config['color'],
+                        opacity=0.7,
+                        hovertemplate='%{x|%Y-%m-%d}<br>%{y:,.2f}<extra></extra>'
+                    )
+                )
             
-            # Add traces for real and nominal GDP
-            fig.add_trace(
-                go.Scatter(
-                    x=df_real['date'], 
-                    y=df_real['value'],
-                    name="Real GDP (2012 $)",
-                    line=dict(color='#1f77b4')
-                ),
-                secondary_y=False,
-            )
-            
-            fig.add_trace(
-                go.Scatter(
-                    x=df_nominal['date'], 
-                    y=df_nominal['value'],
-                    name="Nominal GDP (Current $)",
-                    line=dict(color='#ff7f0e')
-                ),
-                secondary_y=False,
-            )
-            
-            # Add inflation rate (as the difference between nominal and real GDP growth)
-            # This is a simplified calculation for visualization purposes
-            df_real['real_growth'] = df_real['value'].pct_change() * 100
-            df_nominal['nominal_growth'] = df_nominal['value'].pct_change() * 100
-            df_merged = pd.merge_asof(df_real, df_nominal, on='date')
-            df_merged['inflation'] = df_merged['nominal_growth'] - df_merged['real_growth']
-            
-            # Add inflation as a bar chart on secondary y-axis
-            fig.add_trace(
-                go.Bar(
-                    x=df_merged['date'],
-                    y=df_merged['inflation'],
-                    name="Implied Inflation %",
-                    marker_color='rgba(44, 160, 44, 0.6)',
-                    opacity=0.3,
-                    yaxis='y2'
-                ),
-                secondary_y=True,
-            )
-            
-            # Add figure title and axis labels with updated layout configuration
+            # Update layout
             fig.update_layout(
                 title=dict(
-                    text="GDP Comparison: Real vs Nominal with Implied Inflation",
+                    text=chart_config['title'],
                     font=dict(size=18)
-                ),
-                hovermode="x unified",
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1,
-                    bgcolor='rgba(255,255,255,0.8)'
-                ),
-                yaxis=dict(
-                    title="GDP (Billions of $)",
-                    title_font=dict(color='#1f77b4'),
-                    tickfont=dict(color='#1f77b4'),
-                    gridcolor='rgba(200, 200, 200, 0.3)',
-                    zeroline=True,
-                    zerolinecolor='#666',
-                    zerolinewidth=1
-                ),
-                yaxis2=dict(
-                    title="Inflation %",
-                    title_font=dict(color='#2ca02c'),
-                    tickfont=dict(color='#2ca02c'),
-                    anchor="free",
-                    overlaying="y",
-                    side="right",
-                    position=0.98,
-                    gridcolor='rgba(200, 200, 200, 0.3)',
-                    zeroline=True,
-                    zerolinecolor='#666',
-                    zerolinewidth=1
                 ),
                 xaxis=dict(
                     title="Date",
@@ -187,10 +143,19 @@ class MacroDataService:
                     type="date",
                     gridcolor='rgba(200, 200, 200, 0.3)'
                 ),
+                yaxis=dict(
+                    title=chart_config['yaxis_title'],
+                    title_font=dict(color=chart_config['color']),
+                    tickfont=dict(color=chart_config['color']),
+                    gridcolor='rgba(200, 200, 200, 0.3)',
+                    zeroline=True,
+                    zerolinecolor='#666',
+                    zerolinewidth=1
+                ),
                 plot_bgcolor='white',
                 paper_bgcolor='white',
-                height=600,
-                margin=dict(l=80, r=100, t=80, b=80),
+                height=500,
+                margin=dict(l=80, r=80, t=80, b=80),
                 hoverlabel=dict(
                     bgcolor="white",
                     font_size=12,
@@ -210,12 +175,137 @@ class MacroDataService:
                 )
             )
             
-            # Return the figure as HTML
-            return fig.to_html(full_html=False, include_plotlyjs='cdn')
+            # Add download button
+            fig.update_layout(
+                updatemenus=[
+                    dict(
+                        type="buttons",
+                        direction="left",
+                        buttons=[
+                            dict(
+                                args=[{"visible": [True, False]}],
+                                label="Download CSV",
+                                method="update"
+                            )
+                        ],
+                        pad={"r": 10, "t": 10},
+                        showactive=False,
+                        x=1.05,
+                        xanchor="left",
+                        y=1.1,
+                        yanchor="top"
+                    ),
+                ]
+            )
+            
+            # Add CSV data as a hidden div for download
+            csv_data = df.to_csv(index=False)
+            chart_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+            download_button = f"""
+            <div class="text-end mb-2">
+                <a href="data:text/csv;charset=utf-8,{csv_data}" 
+                   download="{indicator_key}_data.csv" 
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-download me-1"></i> Download CSV
+                </a>
+            </div>
+            """
+            
+            return f"{download_button}{chart_html}"
             
         except Exception as e:
-            logger.error(f"Error generating GDP comparison chart: {str(e)}")
-            return "<p>Error generating chart. Please try again later.</p>"
+            logger.error(f"Error generating {indicator_key} chart: {str(e)}")
+            return f"<p>Error generating {indicator_key} chart. Please try again later.</p>"
+    
+    def _get_chart_config(self, indicator_key, df):
+        """Get configuration for different chart types"""
+        configs = {
+            'gdp': {
+                'type': 'line',
+                'name': 'Real GDP',
+                'title': 'Real Gross Domestic Product',
+                'yaxis_title': 'Billions of 2012 $',
+                'color': '#1f77b4'
+            },
+            'nominal_gdp': {
+                'type': 'line',
+                'name': 'Nominal GDP',
+                'title': 'Nominal Gross Domestic Product',
+                'yaxis_title': 'Billions of Current $',
+                'color': '#ff7f0e'
+            },
+            'inflation': {
+                'type': 'line',
+                'name': 'Inflation (CPI)',
+                'title': 'Consumer Price Index for All Urban Consumers',
+                'yaxis_title': 'Index (1982-84=100)',
+                'color': '#2ca02c'
+            },
+            'unemployment': {
+                'type': 'line',
+                'name': 'Unemployment Rate',
+                'title': 'Unemployment Rate',
+                'yaxis_title': 'Percent',
+                'color': '#d62728'
+            },
+            'fed_funds': {
+                'type': 'line',
+                'name': 'Federal Funds Rate',
+                'title': 'Federal Funds Rate',
+                'yaxis_title': 'Percent',
+                'color': '#9467bd'
+            },
+            'treasury_10y': {
+                'type': 'line',
+                'name': '10-Year Treasury Yield',
+                'title': '10-Year Treasury Constant Maturity Rate',
+                'yaxis_title': 'Percent',
+                'color': '#8c564b'
+            }
+        }
+        
+        return configs.get(indicator_key, {
+            'type': 'line',
+            'name': indicator_key.replace('_', ' ').title(),
+            'title': indicator_key.replace('_', ' ').title(),
+            'yaxis_title': 'Value',
+            'color': '#7f7f7f'
+        })
+    
+    def export_to_csv(self, indicator_key, days=365*10):
+        """Export indicator data as CSV"""
+        try:
+            series_id = self.series_ids.get(indicator_key)
+            if not series_id:
+                return None
+                
+            data = self.get_fred_data(series_id, days)
+            if not data:
+                return None
+                
+            df = pd.DataFrame(data)
+            
+            # Create CSV in memory
+            si = io.StringIO()
+            cw = csv.writer(si)
+            
+            # Write header
+            cw.writerow(['Date', 'Value'])
+            
+            # Write data
+            for row in data:
+                cw.writerow([row['date'], row['value']])
+            
+            # Create response
+            output = make_response(si.getvalue())
+            output.headers["Content-Disposition"] = f"attachment; filename={indicator_key}_data.csv"
+            output.headers["Content-type"] = "text/csv"
+            
+            return output
+            
+        except Exception as e:
+            logger.error(f"Error exporting {indicator_key} to CSV: {str(e)}")
+            return None
     
     def _get_demo_data(self, series_id):
         """Generate realistic sample data for demo purposes when API calls fail"""
