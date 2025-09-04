@@ -10,163 +10,165 @@ from plotly.subplots import make_subplots
 import numpy as np
 import io
 import csv
+import time
 
 logger = logging.getLogger(__name__)
 
+
 class MacroDataService:
     def __init__(self):
-        self.fred_api_key = os.getenv('FRED_API_KEY') or 'demo'  # Using demo key as fallback
+        self.fred_api_key = os.getenv('FRED_API_KEY') or 'demo'
         if self.fred_api_key == 'demo':
             logger.warning("FRED_API_KEY not found; using demo data fallback.")
         else:
             logger.info("FRED_API_KEY detected; live FRED API will be used.")
         self.using_demo_data = (self.fred_api_key == 'demo')
-        self.yahoo_finance_base = 'https://query1.finance.yahoo.com/v8/finance/chart/'
-        self.fred_base_url = 'https://api.stlouisfed.org/fred/series/observations'
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-        
+
         # FRED Series IDs for common economic indicators
         self.series_ids = {
-            'inflation': 'CPIAUCSL',  # CPI for All Urban Consumers
-            'gdp': 'GDPC1',           # Real GDP (2012 chained dollars)
-            'nominal_gdp': 'GDPA',    # Nominal GDP (current dollars)
-            'unemployment': 'UNRATE',  # Unemployment Rate
-            'fed_funds': 'FEDFUNDS',   # Federal Funds Rate
-            'treasury_10y': 'DGS10',   # 10-Year Treasury Yield
-            'treasury_2y': 'DGS2',     # 2-Year Treasury Yield
-            'jolts': 'JTSJOL',         # Job Openings (JOLTS)
-            'jobless_claims': 'ICSA',   # Initial Jobless Claims
+            'inflation': 'CPIAUCSL',
+            'gdp': 'GDPC1',
+            'nominal_gdp': 'GDPA',
+            'unemployment': 'UNRATE',
+            'fed_funds': 'FEDFUNDS',
+            'treasury_10y': 'DGS10',
+            'treasury_2y': 'DGS2',
+            'jolts': 'JTSJOL',
+            'jobless_claims': 'ICSA',
         }
 
-    def get_fred_data(self, series_id, days=365*5):
-        """Fetch economic data from FRED API"""
+    def get_fred_data(self, series_id, days=365 * 5):
+        """Fetch economic data from FRED API with improved error handling"""
+        # If using demo key, return demo data immediately
+        if self.fred_api_key == 'demo':
+            return self._get_demo_data(series_id)
+
         try:
             end_date = datetime.now()
-            # For demo key, get more data to ensure we have recent points
-            if self.fred_api_key == 'demo':
-                days = max(days, 365*10)  # Get at least 10 years of data for demo
-            
             start_date = end_date - timedelta(days=days)
-            
+
             params = {
                 'series_id': series_id,
                 'api_key': self.fred_api_key,
                 'file_type': 'json',
                 'observation_start': start_date.strftime('%Y-%m-%d'),
                 'observation_end': end_date.strftime('%Y-%m-%d'),
-                'sort_order': 'desc',  # Get most recent data first
-                'limit': 2000  # Increase limit for demo key to get more data points
+                'sort_order': 'desc',
+                'limit': 10000
             }
-            
-            response = requests.get('https://api.stlouisfed.org/fred/series/observations', 
-                                 params=params, 
-                                 timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            
-            # Process data into a clean format
-            if 'observations' in data and data['observations']:
-                df = pd.DataFrame(data['observations'])
-                df['date'] = pd.to_datetime(df['date'])
-                df['value'] = pd.to_numeric(df['value'], errors='coerce')
-                
-                # Filter out any rows with missing values
-                df = df.dropna(subset=['value'])
-                
-                # Convert to list of dicts with proper date formatting
-                result = [
-                    {'date': row['date'].strftime('%Y-%m-%d'), 
-                     'value': float(row['value'])}
-                    for _, row in df.iterrows()
-                ]
-                
-                # Sort by date to ensure chronological order
-                result.sort(key=lambda x: x['date'])
-                
-                return result
-                        
+
+            # Add retry mechanism for 500 errors
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    response = requests.get(
+                        'https://api.stlouisfed.org/fred/series/observations',
+                        params=params,
+                        timeout=15,
+                        headers=self.headers
+                    )
+
+                    # Check for rate limiting or server errors
+                    if response.status_code == 429:
+                        wait_time = 2 ** attempt
+                        logger.warning(f"Rate limited. Waiting {wait_time} seconds before retry {attempt + 1}")
+                        time.sleep(wait_time)
+                        continue
+                    elif response.status_code >= 500:
+                        logger.warning(f"Server error {response.status_code}. Retrying in {attempt + 1} seconds")
+                        time.sleep(attempt + 1)
+                        continue
+
+                    response.raise_for_status()
+
+                    data = response.json()
+
+                    if 'observations' in data and data['observations']:
+                        df = pd.DataFrame(data['observations'])
+                        df['date'] = pd.to_datetime(df['date'])
+                        df['value'] = pd.to_numeric(df['value'], errors='coerce')
+                        df = df.dropna(subset=['value'])
+
+                        result = [
+                            {'date': row['date'].strftime('%Y-%m-%d'),
+                             'value': float(row['value'])}
+                            for _, row in df.iterrows()
+                        ]
+
+                        result.sort(key=lambda x: x['date'])
+                        return result
+
+                    return []
+
+                except requests.exceptions.RequestException as e:
+                    if attempt == max_retries - 1:
+                        raise e
+                    logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                    time.sleep(1)
+
             return []
-            
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 400 and 'observation_start' in str(e):
-                # For demo key, try to return the most recent data point we can get
-                if self.fred_api_key == 'demo':
-                    demo_data = self._get_demo_data(series_id)
-                    if demo_data:
-                        # Sort demo data by date to ensure we have the latest
-                        demo_data_sorted = sorted(demo_data, key=lambda x: x['date'], reverse=True)
-                        return demo_data_sorted
-            logger.error(f"HTTP Error fetching FRED data for {series_id}: {str(e)}")
-            return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
-            
+
         except Exception as e:
             logger.error(f"Error fetching FRED data for {series_id}: {str(e)}")
-            return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
-            
-    def get_indicator_series(self, indicator_key, days=365*10):
-        """Return transformed time series for an indicator (e.g., CPI -> YoY inflation%). Supports inflation_yoy and inflation_mom."""
-        # Support synthetic keys for inflation transformations
+            return self._get_demo_data(series_id)
+
+    def get_indicator_series(self, indicator_key, days=365 * 10):
+        """Return transformed time series for an indicator"""
         inflation_variant = None
         base_key = indicator_key
         if indicator_key in ['inflation_yoy', 'inflation_mom']:
             base_key = 'inflation'
             inflation_variant = indicator_key.split('_')[1]
         elif indicator_key == 'yield_curve_2_10':
-            # Calculate 2/10 yield curve (10Y - 2Y)
             return self._get_yield_curve_2_10(days)
 
         series_id = self.series_ids.get(base_key)
         if not series_id:
             return []
+
         data = self.get_fred_data(series_id, days)
         if not data:
             return []
+
         df = pd.DataFrame(data)
         df['date'] = pd.to_datetime(df['date'])
-        # Transformations per indicator
-        if base_key == 'inflation':
-            df = df.sort_values('date')
-            if inflation_variant == 'mom':
-                # Month-over-month % change
-                df['value'] = df['value'].pct_change(1) * 100.0
-                df = df.dropna(subset=['value'])
-            else:
-                # Default to YoY % change
-                df['value'] = df['value'].pct_change(12) * 100.0
-                df = df.dropna(subset=['value'])
-        # Ensure ascending order and standard format
         df = df.sort_values('date')
+
+        if base_key == 'inflation':
+            if inflation_variant == 'mom':
+                df['value'] = df['value'].pct_change(1) * 100.0
+            else:
+                df['value'] = df['value'].pct_change(12) * 100.0
+            df = df.dropna(subset=['value'])
+
         return [
             {'date': row['date'].strftime('%Y-%m-%d'), 'value': float(row['value'])}
             for _, row in df.iterrows()
         ]
 
-    def _get_yield_curve_2_10(self, days=365*10):
+    def _get_yield_curve_2_10(self, days=365 * 10):
         """Calculate 2/10 yield curve (10Y - 2Y spread)"""
         try:
-            # Get both 2Y and 10Y data
             data_2y = self.get_fred_data('DGS2', days)
             data_10y = self.get_fred_data('DGS10', days)
-            
+
             if not data_2y or not data_10y:
                 return []
-            
-            # Convert to DataFrames and merge
+
             df_2y = pd.DataFrame(data_2y)
             df_10y = pd.DataFrame(data_10y)
             df_2y['date'] = pd.to_datetime(df_2y['date'])
             df_10y['date'] = pd.to_datetime(df_10y['date'])
-            
-            # Merge on date
+
             merged = pd.merge(df_2y, df_10y, on='date', suffixes=('_2y', '_10y'))
             merged = merged.sort_values('date')
-            
-            # Calculate spread (10Y - 2Y)
+
             merged['value'] = merged['value_10y'] - merged['value_2y']
             merged = merged.dropna(subset=['value'])
-            
+
             return [
                 {'date': row['date'].strftime('%Y-%m-%d'), 'value': float(row['value'])}
                 for _, row in merged.iterrows()
@@ -175,30 +177,27 @@ class MacroDataService:
             logger.error(f"Error calculating 2/10 yield curve: {str(e)}")
             return []
 
-    def get_indicator_chart(self, indicator_key, days=365*10):
+    def get_indicator_chart(self, indicator_key, days=365 * 10):
         """Generate an interactive chart for a specific indicator"""
         try:
-            series_id = self.series_ids.get('inflation' if indicator_key in ['inflation_yoy','inflation_mom'] else indicator_key)
+            series_id = self.series_ids.get(
+                'inflation' if indicator_key in ['inflation_yoy', 'inflation_mom'] else indicator_key)
             if indicator_key == 'yield_curve_2_10':
-                series_id = 'DGS2'  # Use 2Y as base for chart config
+                series_id = 'DGS2'
             if not series_id:
                 return "<p>Invalid indicator specified.</p>"
-                
-            # Get indicator data (transformed if needed)
+
             data = self.get_indicator_series(indicator_key, days)
             if not data:
                 return f"<p>No data available for {indicator_key}.</p>"
-                
+
             df = pd.DataFrame(data)
             df['date'] = pd.to_datetime(df['date'])
-            
-            # Create figure
+
             fig = go.Figure()
-            
-            # Define chart settings based on indicator type
+
             chart_config = self._get_chart_config(indicator_key, df)
-            
-            # Add trace based on chart type
+
             if chart_config['type'] == 'line':
                 fig.add_trace(
                     go.Scatter(
@@ -220,8 +219,7 @@ class MacroDataService:
                         hovertemplate='%{x|%Y-%m-%d}<br>%{y:,.2f}<extra></extra>'
                     )
                 )
-            
-            # Update layout
+
             fig.update_layout(
                 title=dict(
                     text=chart_config['title'],
@@ -252,8 +250,7 @@ class MacroDataService:
                     font_family="Arial"
                 )
             )
-            
-            # Add range selector buttons
+
             fig.update_xaxes(
                 rangeselector=dict(
                     buttons=list([
@@ -264,15 +261,14 @@ class MacroDataService:
                     ])
                 )
             )
-            
-            # Render chart only; CSV download is handled in the card header
+
             chart_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
             return chart_html
-            
+
         except Exception as e:
             logger.error(f"Error generating {indicator_key} chart: {str(e)}")
             return f"<p>Error generating {indicator_key} chart. Please try again later.</p>"
-    
+
     def _get_chart_config(self, indicator_key, df):
         """Get configuration for different chart types"""
         configs = {
@@ -361,7 +357,7 @@ class MacroDataService:
                 'color': '#ff7f0e'
             }
         }
-        
+
         return configs.get(indicator_key, {
             'type': 'line',
             'name': indicator_key.replace('_', ' ').title(),
@@ -369,46 +365,41 @@ class MacroDataService:
             'yaxis_title': 'Value',
             'color': '#7f7f7f'
         })
-    
-    def export_to_csv(self, indicator_key, days=365*10):
+
+    def export_to_csv(self, indicator_key, days=365 * 10):
         """Export indicator data as CSV"""
         try:
             series_id = self.series_ids.get(indicator_key)
             if not series_id:
                 return None
-                
+
             data = self.get_indicator_series(indicator_key, days)
             if not data:
                 return None
-                
+
             df = pd.DataFrame(data)
-            
-            # Create CSV in memory
+
             si = io.StringIO()
             cw = csv.writer(si)
-            
-            # Write header
+
             cw.writerow(['Date', 'Value'])
-            
-            # Write data
+
             for row in data:
                 cw.writerow([row['date'], row['value']])
-            
-            # Create response
+
             output = make_response(si.getvalue())
             output.headers["Content-Disposition"] = f"attachment; filename={indicator_key}_data.csv"
             output.headers["Content-type"] = "text/csv"
-            
+
             return output
-            
+
         except Exception as e:
             logger.error(f"Error exporting {indicator_key} to CSV: {str(e)}")
             return None
 
-    def export_all_to_csv(self, days=365*10):
-        """Export all supported indicator series (including inflation variants) to one CSV file."""
+    def export_all_to_csv(self, days=365 * 10):
+        """Export all supported indicator series to one CSV file."""
         try:
-            # Define which series to include
             keys = [
                 'nominal_gdp', 'gdp', 'inflation_yoy', 'inflation_mom',
                 'unemployment', 'fed_funds', 'treasury_10y', 'treasury_2y',
@@ -423,12 +414,10 @@ class MacroDataService:
                     frames.append(df)
             if not frames:
                 return None
-            # Merge on date, outer join to include different frequencies
             from functools import reduce
             merged = reduce(lambda left, right: pd.merge(left, right, on='date', how='outer'), frames)
             merged = merged.sort_values('date')
 
-            # Create CSV response
             si = io.StringIO()
             merged.to_csv(si, index=False)
             output = make_response(si.getvalue())
@@ -438,73 +427,65 @@ class MacroDataService:
         except Exception as e:
             logger.error(f"Error exporting all indicators to CSV: {str(e)}")
             return None
-    
+
     def _get_demo_data(self, series_id):
-        """Generate realistic sample data for demo purposes when API calls fail"""
+        """Generate realistic sample data for demo purposes"""
         end_date = datetime.now()
-        
-        # Base values for different indicators (as of November 2024)
+
         base_values = {
-            'CPIAUCSL': 314.0,    # CPI index (1982-84=100)
-            'GDPC1': 22000.0,     # Real GDP (billions of chained 2012 $)
-            'GDPA': 28500.0,      # Nominal GDP (billions current $)
-            'UNRATE': 4.2,        # Unemployment Rate (%)
-            'FEDFUNDS': 5.25,     # Federal Funds Rate (%)
-            'DGS10': 4.0,         # 10-Year Treasury Yield (%)
-            'DGS2': 4.2,          # 2-Year Treasury Yield (%)
-            'JTSJOL': 8500.0,     # Job Openings (thousands)
-            'ICSA': 220.0         # Initial Jobless Claims (thousands)
+            'CPIAUCSL': 314.0,
+            'GDPC1': 22000.0,
+            'GDPA': 28500.0,
+            'UNRATE': 4.2,
+            'FEDFUNDS': 5.25,
+            'DGS10': 4.0,
+            'DGS2': 4.2,
+            'JTSJOL': 8500.0,
+            'ICSA': 220.0
         }
-        
-        # Get the base value for this series, default to 100 if not found
+
         base_value = base_values.get(series_id, 100.0)
-        
-        # Generate realistic looking data with some random variation
+
         import random
         data = []
-        # Generate ~10 years monthly (120 points)
         months = 120
         for i in range(months):
             months_back = (months - 1 - i)
             date = (end_date - timedelta(days=months_back * 30)).strftime('%Y-%m-%d')
-            # Add some realistic variation based on indicator type
-            if series_id == 'CPIAUCSL':  # CPI: trend with elevated 2021 inflation
-                current_dt = end_date - timedelta(days=months_back * 30)
-                # Baseline gentle uptrend
+            if series_id == 'CPIAUCSL':
                 value = base_value * (1 + (i * 0.0020))
-                # Elevated inflation in 2021
+                current_dt = end_date - timedelta(days=months_back * 30)
                 if current_dt.year == 2021:
                     value *= 1.004 + random.uniform(-0.001, 0.001)
                 value += random.uniform(-0.8, 0.8)
-            elif series_id in ['GDPC1', 'GDPA']:  # GDP: slow growth with quarterly variation
+            elif series_id in ['GDPC1', 'GDPA']:
                 quarterly_factor = (1 + ((i % 3) == 0) * 0.002)
                 value = base_value * (1 + (i * 0.001)) * quarterly_factor + random.uniform(-80, 120)
-            elif series_id == 'UNRATE':  # Unemployment: small fluctuations around base
+            elif series_id == 'UNRATE':
                 current_dt = end_date - timedelta(days=months_back * 30)
                 value = base_value + 0.4 * np.sin(i / 6.0) + random.uniform(-0.2, 0.2)
                 if current_dt.year == 2020 and 3 <= current_dt.month <= 6:
-                    # Simulate spike in early pandemic months
                     spike = 10 + 5 * np.exp(-abs(current_dt.month - 4.5))
                     value = max(value, spike)
-            elif series_id in ['FEDFUNDS', 'DGS10', 'DGS2']:  # Interest rates: more volatile
+            elif series_id in ['FEDFUNDS', 'DGS10', 'DGS2']:
                 value = base_value + 0.6 * np.sin(i / 8.0) + random.uniform(-0.25, 0.25)
                 value = max(0.0, value)
-            elif series_id == 'JTSJOL':  # Job openings: cyclical with some volatility
+            elif series_id == 'JTSJOL':
                 value = base_value + 500 * np.sin(i / 12.0) + random.uniform(-200, 300)
                 value = max(5000, value)
-            elif series_id == 'ICSA':  # Jobless claims: counter-cyclical
+            elif series_id == 'ICSA':
                 value = base_value - 50 * np.sin(i / 12.0) + random.uniform(-30, 50)
                 value = max(150, value)
-            else:  # Default case
+            else:
                 value = base_value + i + random.uniform(-1, 1)
             data.append({
                 'date': date,
                 'value': round(float(value), 2)
             })
-            
+
         return data
 
-    def get_latest_indicator_value(self, indicator_key, days=365*10):
+    def get_latest_indicator_value(self, indicator_key, days=365 * 10):
         """Get latest transformed value for an indicator."""
         series = self.get_indicator_series(indicator_key, days)
         if not series:
@@ -512,7 +493,7 @@ class MacroDataService:
         latest = series[-1]
         return {'latest_value': latest['value'], 'latest_date': latest['date']}
 
-    def get_inflation_metrics(self, days=365*15):
+    def get_inflation_metrics(self, days=365 * 15):
         """Compute inflation YoY% and MoM% from CPI level series, plus latest CPI level."""
         try:
             series_id = self.series_ids.get('inflation')
@@ -546,7 +527,7 @@ class MacroDataService:
     def get_macro_data(self):
         """Fetch all macro indicators"""
         macro_data = {}
-        
+
         for indicator, series_id in self.series_ids.items():
             data = self.get_fred_data(series_id)
             if data:
@@ -555,7 +536,7 @@ class MacroDataService:
                     'name': self._get_indicator_name(indicator),
                     'unit': self._get_indicator_unit(indicator)
                 }
-        
+
         return macro_data
 
     def _get_indicator_name(self, indicator):
@@ -583,7 +564,6 @@ class MacroDataService:
     def analyze_macro_environment(self, macro_data):
         """Generate AI analysis of the macro environment"""
         try:
-            # Convert data to a more AI-friendly format
             analysis_input = {}
             for indicator, data in macro_data.items():
                 if data and 'data' in data and len(data['data']) > 0:
@@ -593,16 +573,15 @@ class MacroDataService:
                         'unit': data.get('unit', ''),
                         'name': data.get('name', indicator)
                     }
-            
-            # Simple rule-based analysis (can be enhanced with ML model)
+
             analysis = {
                 'overview': self._generate_overview(analysis_input),
                 'risks': self._identify_risks(analysis_input),
                 'opportunities': self._identify_opportunities(analysis_input)
             }
-            
+
             return analysis
-            
+
         except Exception as e:
             logger.error(f"Error in macro analysis: {str(e)}")
             return None
@@ -611,18 +590,16 @@ class MacroDataService:
         """Generate overview of current macro environment"""
         if not data:
             return "Unable to generate overview due to missing data."
-            
+
         gdp = data.get('gdp', {})
         inflation = data.get('inflation', {})
         unemployment = data.get('unemployment', {})
-        
+
         overview = "The current macroeconomic environment shows "
-        
-        # GDP analysis
+
         if gdp:
             overview += f"GDP at {gdp['value']} {gdp.get('unit', '')}, "
-        
-        # Inflation analysis
+
         if inflation:
             inflation_val = inflation.get('value', 0)
             if inflation_val > 3.5:
@@ -632,8 +609,7 @@ class MacroDataService:
             else:
                 inflation_status = "moderate"
             overview += f"with {inflation_status} inflation at {inflation_val}%, "
-        
-        # Unemployment analysis
+
         if unemployment:
             unemployment_val = unemployment.get('value', 0)
             if unemployment_val < 4:
@@ -643,49 +619,49 @@ class MacroDataService:
             else:
                 employment_status = "balanced"
             overview += f"and a {employment_status} labor market with unemployment at {unemployment_val}%."
-        
+
         return overview
 
     def _identify_risks(self, data):
         """Identify potential risks in the macro environment"""
         risks = []
-        
+
         if 'inflation' in data:
             inflation = data['inflation']['value']
             if inflation > 4:
                 risks.append(f"High inflation ({inflation}%) may lead to aggressive monetary tightening")
             elif inflation < 1.5:
                 risks.append("Very low inflation may indicate weak demand")
-        
+
         if 'unemployment' in data:
             unemployment = data['unemployment']['value']
             if unemployment > 6:
                 risks.append(f"Elevated unemployment rate ({unemployment}%) may signal economic weakness")
-        
+
         if 'fed_funds' in data and 'treasury_10y' in data:
             fed_rate = data['fed_funds']['value']
             treasury_10y = data['treasury_10y']['value']
             if treasury_10y < fed_rate:
                 risks.append("Inverted yield curve may signal potential economic slowdown")
-        
+
         return risks if risks else ["No significant immediate risks identified"]
 
     def _identify_opportunities(self, data):
         """Identify potential opportunities in the macro environment"""
         opportunities = []
-        
+
         if 'inflation' in data and 'fed_funds' in data:
             inflation = data['inflation']['value']
             fed_rate = data['fed_funds']['value']
-            
+
             if inflation < 2 and fed_rate > 2:
                 opportunities.append("Low inflation and high rates may present buying opportunities in bonds")
             elif inflation > 3 and fed_rate < 1:
                 opportunities.append("High inflation and low rates may favor inflation-protected assets")
-        
+
         if 'gdp' in data and len(data['gdp'].get('data', [])) > 1:
             gdp_growth = data['gdp']['data'][-1]['value'] - data['gdp']['data'][-2]['value']
             if gdp_growth > 0.5:
                 opportunities.append(f"Strong GDP growth of {gdp_growth:.2f}% may support equity markets")
-        
+
         return opportunities if opportunities else ["Consider a diversified portfolio approach"]

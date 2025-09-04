@@ -2207,43 +2207,49 @@ def fix_customer_id():
     return redirect(url_for('subscription'))
 
 
-@app.route("/macro-dashboard")
+@app.route('/macro-dashboard')
 def macro_dashboard():
-    """Display the macroeconomic dashboard with interactive charts"""
     try:
         macro_service = MacroDataService()
-        
-        # Get economic indicators data and charts
+
+        # Get latest values for indicators
         indicators = {}
-        charts = {}
-        using_demo = macro_service.using_demo_data
-        
-        # Define the indicators to display (use nominal GDP at top; also include inflation variants for charts)
-        indicator_keys = ['nominal_gdp', 'inflation', 'unemployment', 'fed_funds', 'treasury_10y', 'treasury_2y', 'yield_curve_2_10', 'jolts', 'jobless_claims']
-        
-        # Get data and generate charts for each indicator
-        for indicator in indicator_keys:
-            # Get latest transformed data point (e.g., CPI -> YoY inflation)
-            latest_info = macro_service.get_latest_indicator_value(indicator, days=365*10)
-            if latest_info:
-                indicators[indicator] = latest_info
-            
-            # Generate chart for the indicator
-            chart = macro_service.get_indicator_chart(indicator, days=365*10)  # 10 years of data
-            charts[indicator] = chart
-        
-        # Add detailed inflation metrics (YoY and MoM)
-        inflation_metrics = macro_service.get_inflation_metrics(days=365*15)
+        indicator_keys = ['nominal_gdp', 'unemployment', 'inflation_yoy', 'fed_funds',
+                          'treasury_10y', 'treasury_2y', 'yield_curve_2_10', 'jolts', 'jobless_claims']
+
+        for key in indicator_keys:
+            latest = macro_service.get_latest_indicator_value(key)
+            if latest:
+                indicators[key] = latest
+
+        # Get inflation metrics
+        inflation_metrics = macro_service.get_inflation_metrics()
         if inflation_metrics:
             indicators['inflation_metrics'] = inflation_metrics
-            # Also build charts for both YoY and MoM inflation
-            charts['inflation_yoy'] = macro_service.get_indicator_chart('inflation_yoy', days=365*10)
-            charts['inflation_mom'] = macro_service.get_indicator_chart('inflation_mom', days=365*10)
 
-        return render_template('macro_dashboard.html', 
-                             indicators=indicators,
-                             charts=charts,
-                             using_demo=using_demo)
+        # Generate charts
+        charts = {}
+        chart_keys = ['nominal_gdp', 'inflation_yoy', 'inflation_mom', 'unemployment',
+                      'fed_funds', 'treasury_10y', 'treasury_2y', 'yield_curve_2_10',
+                      'jolts', 'jobless_claims']
+
+        for key in chart_keys:
+            try:
+                chart_html = macro_service.get_indicator_chart(key)
+                if chart_html and not chart_html.startswith('<p>Error'):
+                    charts[key] = chart_html
+            except Exception as e:
+                logger.error(f"Error generating chart for {key}: {str(e)}")
+                continue
+
+        return render_template('macro_dashboard.html',
+                               indicators=indicators,
+                               charts=charts,
+                               using_demo=macro_service.using_demo_data)
+
+    except Exception as e:
+        logger.error(f"Error in macro dashboard: {str(e)}")
+        return render_template('error.html', message="Unable to load macroeconomic data")
         
     except Exception as e:
         app.logger.error(f"Error in macro_dashboard: {str(e)}", exc_info=True)

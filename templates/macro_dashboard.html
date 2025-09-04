@@ -95,7 +95,7 @@
 
     <!-- Individual Charts Section -->
     <div class="row" id="charts-container">
-        <!-- Nominal GDP Chart (Top priority) -->
+        <!-- Nominal GDP Chart -->
         <div class="col-lg-4 col-md-6 mb-4 chart-card">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -113,8 +113,6 @@
                 </div>
             </div>
         </div>
-
-        
 
         <!-- Inflation YoY Chart -->
         <div class="col-lg-4 col-md-6 mb-4 chart-card">
@@ -153,6 +151,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Unemployment Chart -->
         <div class="col-lg-4 col-md-6 mb-4 chart-card">
             <div class="card h-100">
@@ -297,10 +296,10 @@
 $(document).ready(function() {
     // Make tables responsive
     $('table').addClass('table-responsive');
-    
+
     // Add tooltips to indicators
     $('[data-toggle="tooltip"]').tooltip();
-    
+
     // Make charts responsive
     window.addEventListener('resize', function() {
         var charts = document.querySelectorAll('.js-plotly-plot');
@@ -314,20 +313,27 @@ function toggleLayout(layout) {
     const chartCards = document.querySelectorAll('.chart-card');
     const btn3col = document.getElementById('layout-3col');
     const btn1col = document.getElementById('layout-1col');
-    
+
     // Update button states
-    btn3col.classList.toggle('active', layout === '3col');
-    btn1col.classList.toggle('active', layout === '1col');
-    
+    if (layout === '3col') {
+        btn3col.classList.add('active');
+        btn1col.classList.remove('active');
+    } else {
+        btn1col.classList.add('active');
+        btn3col.classList.remove('active');
+    }
+
     // Update card classes
     chartCards.forEach(card => {
         if (layout === '3col') {
-            card.className = 'col-lg-4 col-md-6 mb-4 chart-card';
+            card.classList.remove('col-12');
+            card.classList.add('col-lg-4', 'col-md-6');
         } else {
-            card.className = 'col-12 mb-4 chart-card';
+            card.classList.remove('col-lg-4', 'col-md-6');
+            card.classList.add('col-12');
         }
     });
-    
+
     // Resize charts after layout change
     setTimeout(() => {
         var charts = document.querySelectorAll('.js-plotly-plot');
