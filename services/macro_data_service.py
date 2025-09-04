@@ -36,6 +36,10 @@ class MacroDataService:
         """Fetch economic data from FRED API"""
         try:
             end_date = datetime.now()
+            # For demo key, get more data to ensure we have recent points
+            if self.fred_api_key == 'demo':
+                days = max(days, 365*10)  # Get at least 10 years of data for demo
+            
             start_date = end_date - timedelta(days=days)
             
             params = {
@@ -43,7 +47,9 @@ class MacroDataService:
                 'api_key': self.fred_api_key,
                 'file_type': 'json',
                 'observation_start': start_date.strftime('%Y-%m-%d'),
-                'observation_end': end_date.strftime('%Y-%m-%d')
+                'observation_end': end_date.strftime('%Y-%m-%d'),
+                'sort_order': 'desc',  # Get most recent data first
+                'limit': 2000  # Increase limit for demo key to get more data points
             }
             
             response = requests.get('https://api.stlouisfed.org/fred/series/observations', 
@@ -77,9 +83,13 @@ class MacroDataService:
             
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400 and 'observation_start' in str(e):
-                # Try with a different date range for demo key
+                # For demo key, try to return the most recent data point we can get
                 if self.fred_api_key == 'demo':
-                    return self._get_demo_data(series_id)
+                    demo_data = self._get_demo_data(series_id)
+                    if demo_data:
+                        # Sort demo data by date to ensure we have the latest
+                        demo_data_sorted = sorted(demo_data, key=lambda x: x['date'], reverse=True)
+                        return demo_data_sorted
             logger.error(f"HTTP Error fetching FRED data for {series_id}: {str(e)}")
             return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
             
@@ -309,13 +319,16 @@ class MacroDataService:
     
     def _get_demo_data(self, series_id):
         """Generate realistic sample data for demo purposes when API calls fail"""
-        end_date = datetime.now()
+        end_date = datetime(2024, 11, 1)  # Fixed to November 2024 for consistency
         
-        # Base values for different indicators (as of 2023)
+        # Base values for different indicators (as of November 2024)
         base_values = {
-            'CPIAUCSL': 300.0,  # CPI index (2023 level)
-            'GDPC1': 20000.0,   # Real GDP in billions of 2012 dollars (2023 level)
-            'GDPA': 25000.0,    # Nominal GDP in billions of current dollars (2023 level)
+            'CPIAUCSL': 314.0,    # CPI index (November 2024 estimate)
+            'GDPC1': 22000.0,     # Real GDP in billions of 2012 dollars (Q3 2024)
+            'GDPA': 28500.0,      # Nominal GDP in billions of current dollars (Q3 2024)
+            'UNRATE': 4.2,        # Unemployment Rate (November 2024)
+            'FEDFUNDS': 5.33,     # Effective Federal Funds Rate (November 2024)
+            'DGS10': 4.5,         # 10-Year Treasury Yield (November 2024)
             'UNRATE': 3.5,      # Unemployment rate in %
             'FEDFUNDS': 5.25,   # Federal funds rate in %
             'DGS10': 4.0        # 10-year treasury yield in %
