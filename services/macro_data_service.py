@@ -35,6 +35,9 @@ class MacroDataService:
             'unemployment': 'UNRATE',  # Unemployment Rate
             'fed_funds': 'FEDFUNDS',   # Federal Funds Rate
             'treasury_10y': 'DGS10',   # 10-Year Treasury Yield
+            'treasury_2y': 'DGS2',     # 2-Year Treasury Yield
+            'jolts': 'JTSJOL',         # Job Openings (JOLTS)
+            'jobless_claims': 'ICSA',   # Initial Jobless Claims
         }
 
     def get_fred_data(self, series_id, days=365*5):
@@ -110,6 +113,9 @@ class MacroDataService:
         if indicator_key in ['inflation_yoy', 'inflation_mom']:
             base_key = 'inflation'
             inflation_variant = indicator_key.split('_')[1]
+        elif indicator_key == 'yield_curve_2_10':
+            # Calculate 2/10 yield curve (10Y - 2Y)
+            return self._get_yield_curve_2_10(days)
 
         series_id = self.series_ids.get(base_key)
         if not series_id:
@@ -137,10 +143,44 @@ class MacroDataService:
             for _, row in df.iterrows()
         ]
 
+    def _get_yield_curve_2_10(self, days=365*10):
+        """Calculate 2/10 yield curve (10Y - 2Y spread)"""
+        try:
+            # Get both 2Y and 10Y data
+            data_2y = self.get_fred_data('DGS2', days)
+            data_10y = self.get_fred_data('DGS10', days)
+            
+            if not data_2y or not data_10y:
+                return []
+            
+            # Convert to DataFrames and merge
+            df_2y = pd.DataFrame(data_2y)
+            df_10y = pd.DataFrame(data_10y)
+            df_2y['date'] = pd.to_datetime(df_2y['date'])
+            df_10y['date'] = pd.to_datetime(df_10y['date'])
+            
+            # Merge on date
+            merged = pd.merge(df_2y, df_10y, on='date', suffixes=('_2y', '_10y'))
+            merged = merged.sort_values('date')
+            
+            # Calculate spread (10Y - 2Y)
+            merged['value'] = merged['value_10y'] - merged['value_2y']
+            merged = merged.dropna(subset=['value'])
+            
+            return [
+                {'date': row['date'].strftime('%Y-%m-%d'), 'value': float(row['value'])}
+                for _, row in merged.iterrows()
+            ]
+        except Exception as e:
+            logger.error(f"Error calculating 2/10 yield curve: {str(e)}")
+            return []
+
     def get_indicator_chart(self, indicator_key, days=365*10):
         """Generate an interactive chart for a specific indicator"""
         try:
             series_id = self.series_ids.get('inflation' if indicator_key in ['inflation_yoy','inflation_mom'] else indicator_key)
+            if indicator_key == 'yield_curve_2_10':
+                series_id = 'DGS2'  # Use 2Y as base for chart config
             if not series_id:
                 return "<p>Invalid indicator specified.</p>"
                 
@@ -291,6 +331,34 @@ class MacroDataService:
                 'title': '10-Year Treasury Constant Maturity Rate',
                 'yaxis_title': 'Percent',
                 'color': '#8c564b'
+            },
+            'treasury_2y': {
+                'type': 'line',
+                'name': '2-Year Treasury Yield',
+                'title': '2-Year Treasury Constant Maturity Rate',
+                'yaxis_title': 'Percent',
+                'color': '#bcbd22'
+            },
+            'yield_curve_2_10': {
+                'type': 'line',
+                'name': '2/10 Yield Curve',
+                'title': '2/10 Year Treasury Yield Curve (10Y - 2Y)',
+                'yaxis_title': 'Basis Points',
+                'color': '#e377c2'
+            },
+            'jolts': {
+                'type': 'line',
+                'name': 'Job Openings',
+                'title': 'Job Openings (JOLTS)',
+                'yaxis_title': 'Thousands',
+                'color': '#17becf'
+            },
+            'jobless_claims': {
+                'type': 'line',
+                'name': 'Jobless Claims',
+                'title': 'Initial Jobless Claims',
+                'yaxis_title': 'Thousands',
+                'color': '#ff7f0e'
             }
         }
         
@@ -343,7 +411,8 @@ class MacroDataService:
             # Define which series to include
             keys = [
                 'nominal_gdp', 'gdp', 'inflation_yoy', 'inflation_mom',
-                'unemployment', 'fed_funds', 'treasury_10y'
+                'unemployment', 'fed_funds', 'treasury_10y', 'treasury_2y',
+                'yield_curve_2_10', 'jolts', 'jobless_claims'
             ]
             frames = []
             for key in keys:
@@ -381,7 +450,10 @@ class MacroDataService:
             'GDPA': 28500.0,      # Nominal GDP (billions current $)
             'UNRATE': 4.2,        # Unemployment Rate (%)
             'FEDFUNDS': 5.25,     # Federal Funds Rate (%)
-            'DGS10': 4.0          # 10-Year Treasury Yield (%)
+            'DGS10': 4.0,         # 10-Year Treasury Yield (%)
+            'DGS2': 4.2,          # 2-Year Treasury Yield (%)
+            'JTSJOL': 8500.0,     # Job Openings (thousands)
+            'ICSA': 220.0         # Initial Jobless Claims (thousands)
         }
         
         # Get the base value for this series, default to 100 if not found
@@ -414,9 +486,15 @@ class MacroDataService:
                     # Simulate spike in early pandemic months
                     spike = 10 + 5 * np.exp(-abs(current_dt.month - 4.5))
                     value = max(value, spike)
-            elif series_id in ['FEDFUNDS', 'DGS10']:  # Interest rates: more volatile
+            elif series_id in ['FEDFUNDS', 'DGS10', 'DGS2']:  # Interest rates: more volatile
                 value = base_value + 0.6 * np.sin(i / 8.0) + random.uniform(-0.25, 0.25)
                 value = max(0.0, value)
+            elif series_id == 'JTSJOL':  # Job openings: cyclical with some volatility
+                value = base_value + 500 * np.sin(i / 12.0) + random.uniform(-200, 300)
+                value = max(5000, value)
+            elif series_id == 'ICSA':  # Jobless claims: counter-cyclical
+                value = base_value - 50 * np.sin(i / 12.0) + random.uniform(-30, 50)
+                value = max(150, value)
             else:  # Default case
                 value = base_value + i + random.uniform(-1, 1)
             data.append({

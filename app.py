@@ -2219,7 +2219,7 @@ def macro_dashboard():
         using_demo = macro_service.using_demo_data
         
         # Define the indicators to display (use nominal GDP at top; also include inflation variants for charts)
-        indicator_keys = ['nominal_gdp', 'inflation', 'unemployment', 'fed_funds', 'treasury_10y']
+        indicator_keys = ['nominal_gdp', 'inflation', 'unemployment', 'fed_funds', 'treasury_10y', 'treasury_2y', 'yield_curve_2_10', 'jolts', 'jobless_claims']
         
         # Get data and generate charts for each indicator
         for indicator in indicator_keys:

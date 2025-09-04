@@ -6,9 +6,19 @@
 <div class="container mt-4">
     <div class="d-flex align-items-center justify-content-between mb-4">
         <h1 class="mb-0">Macroeconomic Dashboard</h1>
-        <a href="{{ url_for('export_all') }}" class="btn btn-primary">
-            <i class="fas fa-file-download me-2"></i> Download All
-        </a>
+        <div class="d-flex align-items-center gap-3">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary active" id="layout-3col" onclick="toggleLayout('3col')">
+                    <i class="fas fa-th me-1"></i> 3 Columns
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="layout-1col" onclick="toggleLayout('1col')">
+                    <i class="fas fa-list me-1"></i> 1 Column
+                </button>
+            </div>
+            <a href="{{ url_for('export_all') }}" class="btn btn-primary">
+                <i class="fas fa-file-download me-2"></i> Download All
+            </a>
+        </div>
     </div>
     {% if using_demo %}
     <div class="alert alert-warning d-flex align-items-center" role="alert">
@@ -84,9 +94,9 @@
     {% endif %}
 
     <!-- Individual Charts Section -->
-    <div class="row">
+    <div class="row" id="charts-container">
         <!-- Nominal GDP Chart (Top priority) -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Nominal GDP</h5>
@@ -107,7 +117,7 @@
         
 
         <!-- Inflation YoY Chart -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Inflation (YoY)</h5>
@@ -126,7 +136,7 @@
         </div>
 
         <!-- Inflation MoM Chart -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Inflation (MoM)</h5>
@@ -144,7 +154,7 @@
             </div>
         </div>
         <!-- Unemployment Chart -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Unemployment Rate</h5>
@@ -163,7 +173,7 @@
         </div>
 
         <!-- Federal Funds Rate Chart -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Federal Funds Rate</h5>
@@ -182,7 +192,7 @@
         </div>
 
         <!-- 10-Year Treasury Yield Chart -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">10-Year Treasury Yield</h5>
@@ -195,6 +205,82 @@
                         {{ charts.treasury_10y|safe }}
                     {% else %}
                         <div class="alert alert-warning">10-Year Treasury Yield chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 2-Year Treasury Yield Chart -->
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">2-Year Treasury Yield</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='treasury_2y') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'treasury_2y' in charts %}
+                        {{ charts.treasury_2y|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">2-Year Treasury Yield chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 2/10 Yield Curve Chart -->
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">2/10 Yield Curve</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='yield_curve_2_10') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'yield_curve_2_10' in charts %}
+                        {{ charts.yield_curve_2_10|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">2/10 Yield Curve chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Job Openings (JOLTS) Chart -->
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Job Openings (JOLTS)</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='jolts') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'jolts' in charts %}
+                        {{ charts.jolts|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">Job Openings chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Jobless Claims Chart -->
+        <div class="col-lg-4 col-md-6 mb-4 chart-card">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Jobless Claims</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='jobless_claims') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'jobless_claims' in charts %}
+                        {{ charts.jobless_claims|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">Jobless Claims chart is currently unavailable.</div>
                     {% endif %}
                 </div>
             </div>
@@ -223,5 +309,32 @@ $(document).ready(function() {
         }
     });
 });
+
+function toggleLayout(layout) {
+    const chartCards = document.querySelectorAll('.chart-card');
+    const btn3col = document.getElementById('layout-3col');
+    const btn1col = document.getElementById('layout-1col');
+    
+    // Update button states
+    btn3col.classList.toggle('active', layout === '3col');
+    btn1col.classList.toggle('active', layout === '1col');
+    
+    // Update card classes
+    chartCards.forEach(card => {
+        if (layout === '3col') {
+            card.className = 'col-lg-4 col-md-6 mb-4 chart-card';
+        } else {
+            card.className = 'col-12 mb-4 chart-card';
+        }
+    });
+    
+    // Resize charts after layout change
+    setTimeout(() => {
+        var charts = document.querySelectorAll('.js-plotly-plot');
+        for (var i = 0; i < charts.length; i++) {
+            Plotly.Plots.resize(charts[i]);
+        }
+    }, 100);
+}
 </script>
 {% endblock %}
