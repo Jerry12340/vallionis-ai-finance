@@ -144,32 +144,58 @@ class MacroDataService:
                 secondary_y=True,
             )
             
-            # Add figure title and axis labels
+            # Add figure title and axis labels with updated layout configuration
             fig.update_layout(
-                title_text="GDP Comparison: Real vs Nominal with Implied Inflation",
+                title=dict(
+                    text="GDP Comparison: Real vs Nominal with Implied Inflation",
+                    font=dict(size=18)
+                ),
                 hovermode="x unified",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1,
+                    bgcolor='rgba(255,255,255,0.8)'
+                ),
                 yaxis=dict(
                     title="GDP (Billions of $)",
-                    titlefont=dict(color='#1f77b4'),
-                    tickfont=dict(color='#1f77b4')
+                    title_font=dict(color='#1f77b4'),
+                    tickfont=dict(color='#1f77b4'),
+                    gridcolor='rgba(200, 200, 200, 0.3)',
+                    zeroline=True,
+                    zerolinecolor='#666',
+                    zerolinewidth=1
                 ),
                 yaxis2=dict(
                     title="Inflation %",
-                    titlefont=dict(color='#2ca02c'),
+                    title_font=dict(color='#2ca02c'),
                     tickfont=dict(color='#2ca02c'),
                     anchor="free",
                     overlaying="y",
                     side="right",
-                    position=1.0
+                    position=0.98,
+                    gridcolor='rgba(200, 200, 200, 0.3)',
+                    zeroline=True,
+                    zerolinecolor='#666',
+                    zerolinewidth=1
                 ),
                 xaxis=dict(
                     title="Date",
                     rangeslider=dict(visible=True),
-                    type="date"
+                    type="date",
+                    gridcolor='rgba(200, 200, 200, 0.3)'
                 ),
+                plot_bgcolor='white',
+                paper_bgcolor='white',
                 height=600,
-                template="plotly_white"
+                margin=dict(l=80, r=100, t=80, b=80),
+                hoverlabel=dict(
+                    bgcolor="white",
+                    font_size=12,
+                    font_family="Arial"
+                )
             )
             
             # Add range selector buttons
