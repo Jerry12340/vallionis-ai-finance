@@ -2220,14 +2220,10 @@ def macro_dashboard():
         
         # Get data and generate charts for each indicator
         for indicator in indicator_keys:
-            # Get latest data point
-            data = macro_service.get_fred_data(series_id=macro_service.series_ids.get(indicator, ''))
-            if data:
-                latest = data[-1]  # Get the latest data point
-                indicators[indicator] = {
-                    'latest_value': latest['value'],
-                    'latest_date': latest['date']
-                }
+            # Get latest transformed data point (e.g., CPI -> YoY inflation)
+            latest_info = macro_service.get_latest_indicator_value(indicator, days=365*10)
+            if latest_info:
+                indicators[indicator] = latest_info
             
             # Generate chart for the indicator
             chart = macro_service.get_indicator_chart(indicator, days=365*10)  # 10 years of data

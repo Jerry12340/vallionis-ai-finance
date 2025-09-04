@@ -97,6 +97,29 @@ class MacroDataService:
             logger.error(f"Error fetching FRED data for {series_id}: {str(e)}")
             return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
             
+    def get_indicator_series(self, indicator_key, days=365*10):
+        """Return transformed time series for an indicator (e.g., CPI -> YoY inflation%)."""
+        series_id = self.series_ids.get(indicator_key)
+        if not series_id:
+            return []
+        data = self.get_fred_data(series_id, days)
+        if not data:
+            return []
+        df = pd.DataFrame(data)
+        df['date'] = pd.to_datetime(df['date'])
+        # Transformations per indicator
+        if indicator_key == 'inflation':
+            # Convert CPI level to YoY percentage change
+            df = df.sort_values('date')
+            df['value'] = df['value'].pct_change(12) * 100.0
+            df = df.dropna(subset=['value'])
+        # Ensure ascending order and standard format
+        df = df.sort_values('date')
+        return [
+            {'date': row['date'].strftime('%Y-%m-%d'), 'value': float(row['value'])}
+            for _, row in df.iterrows()
+        ]
+
     def get_indicator_chart(self, indicator_key, days=365*10):
         """Generate an interactive chart for a specific indicator"""
         try:
@@ -104,8 +127,8 @@ class MacroDataService:
             if not series_id:
                 return "<p>Invalid indicator specified.</p>"
                 
-            # Get indicator data
-            data = self.get_fred_data(series_id, days)
+            # Get indicator data (transformed if needed)
+            data = self.get_indicator_series(indicator_key, days)
             if not data:
                 return f"<p>No data available for {indicator_key}.</p>"
                 
@@ -246,9 +269,9 @@ class MacroDataService:
             },
             'inflation': {
                 'type': 'line',
-                'name': 'Inflation (CPI)',
-                'title': 'Consumer Price Index for All Urban Consumers',
-                'yaxis_title': 'Index (1982-84=100)',
+                'name': 'Inflation (YoY %)',
+                'title': 'Inflation Rate (YoY % from CPI)',
+                'yaxis_title': 'Percent',
                 'color': '#2ca02c'
             },
             'unemployment': {
@@ -289,7 +312,7 @@ class MacroDataService:
             if not series_id:
                 return None
                 
-            data = self.get_fred_data(series_id, days)
+            data = self.get_indicator_series(indicator_key, days)
             if not data:
                 return None
                 
@@ -323,15 +346,12 @@ class MacroDataService:
         
         # Base values for different indicators (as of November 2024)
         base_values = {
-            'CPIAUCSL': 314.0,    # CPI index (November 2024 estimate)
-            'GDPC1': 22000.0,     # Real GDP in billions of 2012 dollars (Q3 2024)
-            'GDPA': 28500.0,      # Nominal GDP in billions of current dollars (Q3 2024)
-            'UNRATE': 4.2,        # Unemployment Rate (November 2024)
-            'FEDFUNDS': 5.33,     # Effective Federal Funds Rate (November 2024)
-            'DGS10': 4.5,         # 10-Year Treasury Yield (November 2024)
-            'UNRATE': 3.5,      # Unemployment rate in %
-            'FEDFUNDS': 5.25,   # Federal funds rate in %
-            'DGS10': 4.0        # 10-year treasury yield in %
+            'CPIAUCSL': 314.0,    # CPI index (1982-84=100)
+            'GDPC1': 22000.0,     # Real GDP (billions of chained 2012 $)
+            'GDPA': 28500.0,      # Nominal GDP (billions current $)
+            'UNRATE': 4.2,        # Unemployment Rate (%)
+            'FEDFUNDS': 5.25,     # Federal Funds Rate (%)
+            'DGS10': 4.0          # 10-Year Treasury Yield (%)
         }
         
         # Get the base value for this series, default to 100 if not found
@@ -340,27 +360,39 @@ class MacroDataService:
         # Generate realistic looking data with some random variation
         import random
         data = []
-        for i in range(12):  # Last 12 months of data
-            date = (end_date - timedelta(days=(11-i)*30)).strftime('%Y-%m-%d')
-            
+        # Generate ~10 years monthly (120 points)
+        months = 120
+        for i in range(months):
+            months_back = (months - 1 - i)
+            date = (end_date - timedelta(days=months_back * 30)).strftime('%Y-%m-%d')
             # Add some realistic variation based on indicator type
             if series_id == 'CPIAUCSL':  # CPI: slow upward trend with small fluctuations
-                value = base_value * (1 + (i * 0.002)) + random.uniform(-0.5, 0.5)
-            elif series_id == 'GDPC1':  # GDP: slow growth with some quarterly variation
-                value = base_value * (1 + (i * 0.001)) + random.uniform(-50, 100)
+                value = base_value * (1 + (i * 0.0025)) + random.uniform(-0.8, 0.8)
+            elif series_id in ['GDPC1', 'GDPA']:  # GDP: slow growth with quarterly variation
+                quarterly_factor = (1 + ((i % 3) == 0) * 0.002)
+                value = base_value * (1 + (i * 0.001)) * quarterly_factor + random.uniform(-80, 120)
             elif series_id == 'UNRATE':  # Unemployment: small fluctuations around base
-                value = base_value + random.uniform(-0.3, 0.3)
+                value = base_value + 0.4 * np.sin(i / 6.0) + random.uniform(-0.2, 0.2)
+                value = max(2.5, min(9.0, value))
             elif series_id in ['FEDFUNDS', 'DGS10']:  # Interest rates: more volatile
-                value = base_value + (i-6)*0.1 + random.uniform(-0.2, 0.2)
+                value = base_value + 0.6 * np.sin(i / 8.0) + random.uniform(-0.25, 0.25)
+                value = max(0.0, value)
             else:  # Default case
                 value = base_value + i + random.uniform(-1, 1)
-                
             data.append({
                 'date': date,
-                'value': round(value, 2)  # Round to 2 decimal places
+                'value': round(float(value), 2)
             })
             
         return data
+
+    def get_latest_indicator_value(self, indicator_key, days=365*10):
+        """Get latest transformed value for an indicator."""
+        series = self.get_indicator_series(indicator_key, days)
+        if not series:
+            return None
+        latest = series[-1]
+        return {'latest_value': latest['value'], 'latest_date': latest['date']}
 
     def get_macro_data(self):
         """Fetch all macro indicators"""
