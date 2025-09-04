@@ -82,13 +82,45 @@ class MacroDataService:
             return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
     
     def _get_demo_data(self, series_id):
-        """Generate sample data for demo purposes when API calls fail"""
-        end_date = datetime(2023, 1, 1)
-        return [
-            {'date': (end_date - timedelta(days=i*30)).strftime('%Y-%m-%d'), 
-             'value': 100 + i*5}
-            for i in range(12)  # Last year of monthly data
-        ]
+        """Generate realistic sample data for demo purposes when API calls fail"""
+        end_date = datetime.now()
+        
+        # Base values for different indicators (as of 2023)
+        base_values = {
+            'CPIAUCSL': 300.0,  # CPI index (2023 level)
+            'GDPC1': 20000.0,   # Real GDP in billions (2023 level)
+            'UNRATE': 3.5,      # Unemployment rate in %
+            'FEDFUNDS': 5.25,   # Federal funds rate in %
+            'DGS10': 4.0        # 10-year treasury yield in %
+        }
+        
+        # Get the base value for this series, default to 100 if not found
+        base_value = base_values.get(series_id, 100.0)
+        
+        # Generate realistic looking data with some random variation
+        import random
+        data = []
+        for i in range(12):  # Last 12 months of data
+            date = (end_date - timedelta(days=(11-i)*30)).strftime('%Y-%m-%d')
+            
+            # Add some realistic variation based on indicator type
+            if series_id == 'CPIAUCSL':  # CPI: slow upward trend with small fluctuations
+                value = base_value * (1 + (i * 0.002)) + random.uniform(-0.5, 0.5)
+            elif series_id == 'GDPC1':  # GDP: slow growth with some quarterly variation
+                value = base_value * (1 + (i * 0.001)) + random.uniform(-50, 100)
+            elif series_id == 'UNRATE':  # Unemployment: small fluctuations around base
+                value = base_value + random.uniform(-0.3, 0.3)
+            elif series_id in ['FEDFUNDS', 'DGS10']:  # Interest rates: more volatile
+                value = base_value + (i-6)*0.1 + random.uniform(-0.2, 0.2)
+            else:  # Default case
+                value = base_value + i + random.uniform(-1, 1)
+                
+            data.append({
+                'date': date,
+                'value': round(value, 2)  # Round to 2 decimal places
+            })
+            
+        return data
 
     def get_macro_data(self):
         """Fetch all macro indicators"""
