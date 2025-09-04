@@ -20,7 +20,8 @@ class MacroDataService:
         # FRED Series IDs for common economic indicators
         self.series_ids = {
             'inflation': 'CPIAUCSL',  # CPI for All Urban Consumers
-            'gdp': 'GDPC1',           # Real GDP
+            'gdp': 'GDPC1',           # Real GDP (2012 chained dollars)
+            'nominal_gdp': 'GDPA',    # Nominal GDP (current dollars)
             'unemployment': 'UNRATE',  # Unemployment Rate
             'fed_funds': 'FEDFUNDS',   # Federal Funds Rate
             'treasury_10y': 'DGS10',   # 10-Year Treasury Yield
@@ -88,7 +89,8 @@ class MacroDataService:
         # Base values for different indicators (as of 2023)
         base_values = {
             'CPIAUCSL': 300.0,  # CPI index (2023 level)
-            'GDPC1': 20000.0,   # Real GDP in billions (2023 level)
+            'GDPC1': 20000.0,   # Real GDP in billions of 2012 dollars (2023 level)
+            'GDPA': 25000.0,    # Nominal GDP in billions of current dollars (2023 level)
             'UNRATE': 3.5,      # Unemployment rate in %
             'FEDFUNDS': 5.25,   # Federal funds rate in %
             'DGS10': 4.0        # 10-year treasury yield in %
