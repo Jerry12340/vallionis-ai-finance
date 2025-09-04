@@ -43,9 +43,13 @@ class MacroDataService:
 
         # Cache configuration
         self.cache_enabled = True
-        self.cache_timeout = 3600  # 1 hour in seconds
+        self.cache_timeout = 86400   # 1 day in seconds
         self._cache = {}
         self._cache_timestamps = {}
+
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
 
     def _get_cache_key(self, func_name, *args, **kwargs):
         """Generate a unique cache key for function call with arguments"""
