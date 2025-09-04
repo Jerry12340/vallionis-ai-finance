@@ -15,7 +15,12 @@ logger = logging.getLogger(__name__)
 
 class MacroDataService:
     def __init__(self):
-        self.fred_api_key = os.getenv('FRED_API_KEY', 'demo')  # Using demo key as fallback
+        self.fred_api_key = os.getenv('FRED_API_KEY') or 'demo'  # Using demo key as fallback
+        if self.fred_api_key == 'demo':
+            logger.warning("FRED_API_KEY not found; using demo data fallback.")
+        else:
+            logger.info("FRED_API_KEY detected; live FRED API will be used.")
+        self.using_demo_data = (self.fred_api_key == 'demo')
         self.yahoo_finance_base = 'https://query1.finance.yahoo.com/v8/finance/chart/'
         self.fred_base_url = 'https://api.stlouisfed.org/fred/series/observations'
         self.headers = {
@@ -358,14 +363,24 @@ class MacroDataService:
             months_back = (months - 1 - i)
             date = (end_date - timedelta(days=months_back * 30)).strftime('%Y-%m-%d')
             # Add some realistic variation based on indicator type
-            if series_id == 'CPIAUCSL':  # CPI: slow upward trend with small fluctuations
-                value = base_value * (1 + (i * 0.0025)) + random.uniform(-0.8, 0.8)
+            if series_id == 'CPIAUCSL':  # CPI: trend with elevated 2021 inflation
+                current_dt = end_date - timedelta(days=months_back * 30)
+                # Baseline gentle uptrend
+                value = base_value * (1 + (i * 0.0020))
+                # Elevated inflation in 2021
+                if current_dt.year == 2021:
+                    value *= 1.004 + random.uniform(-0.001, 0.001)
+                value += random.uniform(-0.8, 0.8)
             elif series_id in ['GDPC1', 'GDPA']:  # GDP: slow growth with quarterly variation
                 quarterly_factor = (1 + ((i % 3) == 0) * 0.002)
                 value = base_value * (1 + (i * 0.001)) * quarterly_factor + random.uniform(-80, 120)
             elif series_id == 'UNRATE':  # Unemployment: small fluctuations around base
+                current_dt = end_date - timedelta(days=months_back * 30)
                 value = base_value + 0.4 * np.sin(i / 6.0) + random.uniform(-0.2, 0.2)
-                value = max(2.5, min(9.0, value))
+                if current_dt.year == 2020 and 3 <= current_dt.month <= 6:
+                    # Simulate spike in early pandemic months
+                    spike = 10 + 5 * np.exp(-abs(current_dt.month - 4.5))
+                    value = max(value, spike)
             elif series_id in ['FEDFUNDS', 'DGS10']:  # Interest rates: more volatile
                 value = base_value + 0.6 * np.sin(i / 8.0) + random.uniform(-0.25, 0.25)
                 value = max(0.0, value)

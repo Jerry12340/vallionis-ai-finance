@@ -1,5 +1,5 @@
 import warnings
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from flask import Flask, render_template, request, session, Response, abort, redirect, url_for, jsonify, \
     send_from_directory, make_response
 import time
@@ -61,7 +61,8 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # Load environment variables
-load_dotenv('.env')
+_dotenv_path = find_dotenv(usecwd=True)
+load_dotenv(_dotenv_path if _dotenv_path else '.env')
 
 # Feature flags for controlling updates
 FEATURE_FLAGS = {
@@ -2214,6 +2215,7 @@ def macro_dashboard():
         # Get economic indicators data and charts
         indicators = {}
         charts = {}
+        using_demo = macro_service.using_demo_data
         
         # Define the indicators to display (use nominal GDP at top; also include inflation variants for charts)
         indicator_keys = ['nominal_gdp', 'inflation', 'unemployment', 'fed_funds', 'treasury_10y']
@@ -2239,7 +2241,8 @@ def macro_dashboard():
 
         return render_template('macro_dashboard.html', 
                              indicators=indicators,
-                             charts=charts)
+                             charts=charts,
+                             using_demo=using_demo)
         
     except Exception as e:
         app.logger.error(f"Error in macro_dashboard: {str(e)}", exc_info=True)

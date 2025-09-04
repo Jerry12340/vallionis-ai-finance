@@ -5,6 +5,12 @@
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-4">Macroeconomic Dashboard</h1>
+    {% if using_demo %}
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Displaying demo data due to API unavailability. Values are simulated for illustration.
+    </div>
+    {% endif %}
     
     <!-- Economic Indicators Overview -->
     {% if indicators %}
