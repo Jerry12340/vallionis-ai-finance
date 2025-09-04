@@ -31,12 +31,22 @@
                         <div class="col-md-4 mb-3">
                             <div class="card h-100 border-0 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="card-title text-primary">Inflation (CPI)</h5>
-                                    <h3 class="mb-0">{{ "%.2f"|format(indicators.inflation.latest_value) }}</h3>
-                                    <small class="text-muted">Index (1982-84=100)</small>
-                                    <div class="mt-2">
-                                        <small>Last updated: {{ indicators.inflation.latest_date }}</small>
-                                    </div>
+                                    <h5 class="card-title text-primary">Inflation</h5>
+                                    {% set infl = indicators.get('inflation_metrics') %}
+                                    {% if infl %}
+                                        <h3 class="mb-0">{{ infl.yoy_percent|round(2) }}%</h3>
+                                        <small class="text-muted">YoY change</small>
+                                        <div class="mt-2">
+                                            <span class="badge bg-light text-dark me-2">MoM: {{ infl.mom_percent|round(2) }}%</span>
+                                            <small class="text-muted">CPI level: {{ infl.cpi_level|round(1) }}</small>
+                                        </div>
+                                        <div class="mt-1">
+                                            <small>Last updated: {{ infl.latest_date }}</small>
+                                        </div>
+                                    {% else %}
+                                        <h3 class="mb-0">—</h3>
+                                        <small class="text-muted">YoY change</small>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

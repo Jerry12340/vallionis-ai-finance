@@ -208,43 +208,9 @@ class MacroDataService:
                 )
             )
             
-            # Add download button
-            fig.update_layout(
-                updatemenus=[
-                    dict(
-                        type="buttons",
-                        direction="left",
-                        buttons=[
-                            dict(
-                                args=[{"visible": [True, False]}],
-                                label="Download CSV",
-                                method="update"
-                            )
-                        ],
-                        pad={"r": 10, "t": 10},
-                        showactive=False,
-                        x=1.05,
-                        xanchor="left",
-                        y=1.1,
-                        yanchor="top"
-                    ),
-                ]
-            )
-            
-            # Add CSV data as a hidden div for download
-            csv_data = df.to_csv(index=False)
+            # Render chart only; CSV download is handled in the card header
             chart_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-            download_button = f"""
-            <div class="text-end mb-2">
-                <a href="data:text/csv;charset=utf-8,{csv_data}" 
-                   download="{indicator_key}_data.csv" 
-                   class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-download me-1"></i> Download CSV
-                </a>
-            </div>
-            """
-            
-            return f"{download_button}{chart_html}"
+            return chart_html
             
         except Exception as e:
             logger.error(f"Error generating {indicator_key} chart: {str(e)}")
@@ -393,6 +359,37 @@ class MacroDataService:
             return None
         latest = series[-1]
         return {'latest_value': latest['value'], 'latest_date': latest['date']}
+
+    def get_inflation_metrics(self, days=365*15):
+        """Compute inflation YoY% and MoM% from CPI level series, plus latest CPI level."""
+        try:
+            series_id = self.series_ids.get('inflation')
+            if not series_id:
+                return None
+            data = self.get_fred_data(series_id, days)
+            if not data or len(data) < 14:
+                return None
+            df = pd.DataFrame(data)
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.sort_values('date')
+            df['value'] = pd.to_numeric(df['value'], errors='coerce')
+            df = df.dropna(subset=['value'])
+            if len(df) < 14:
+                return None
+            last = df.iloc[-1]
+            prev = df.iloc[-2]
+            last_12 = df.iloc[-13]
+            yoy = ((last['value'] / last_12['value']) - 1.0) * 100.0
+            mom = ((last['value'] / prev['value']) - 1.0) * 100.0
+            return {
+                'latest_date': last['date'].strftime('%Y-%m-%d'),
+                'cpi_level': float(last['value']),
+                'yoy_percent': float(round(yoy, 2)),
+                'mom_percent': float(round(mom, 2))
+            }
+        except Exception as e:
+            logger.error(f"Error computing inflation metrics: {str(e)}")
+            return None
 
     def get_macro_data(self):
         """Fetch all macro indicators"""

@@ -2229,6 +2229,11 @@ def macro_dashboard():
             chart = macro_service.get_indicator_chart(indicator, days=365*10)  # 10 years of data
             charts[indicator] = chart
         
+        # Add detailed inflation metrics (YoY and MoM)
+        inflation_metrics = macro_service.get_inflation_metrics(days=365*15)
+        if inflation_metrics:
+            indicators['inflation_metrics'] = inflation_metrics
+
         return render_template('macro_dashboard.html', 
                              indicators=indicators,
                              charts=charts)
