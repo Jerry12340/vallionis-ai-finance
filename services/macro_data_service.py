@@ -3,8 +3,11 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 import json
-from flask import jsonify
+from flask import jsonify, render_template_string
 import logging
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +84,112 @@ class MacroDataService:
         except Exception as e:
             logger.error(f"Error fetching FRED data for {series_id}: {str(e)}")
             return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
+            
+    def get_gdp_comparison_chart(self, days=365*10):
+        """Generate an interactive chart comparing real and nominal GDP"""
+        try:
+            # Get both real and nominal GDP data
+            real_gdp = self.get_fred_data(self.series_ids['gdp'], days)
+            nominal_gdp = self.get_fred_data(self.series_ids['nominal_gdp'], days)
+            
+            # Convert to pandas DataFrames for easier manipulation
+            df_real = pd.DataFrame(real_gdp)
+            df_nominal = pd.DataFrame(nominal_gdp)
+            
+            # Convert date strings to datetime objects
+            df_real['date'] = pd.to_datetime(df_real['date'])
+            df_nominal['date'] = pd.to_datetime(df_nominal['date'])
+            
+            # Create figure with secondary y-axis
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            
+            # Add traces for real and nominal GDP
+            fig.add_trace(
+                go.Scatter(
+                    x=df_real['date'], 
+                    y=df_real['value'],
+                    name="Real GDP (2012 $)",
+                    line=dict(color='#1f77b4')
+                ),
+                secondary_y=False,
+            )
+            
+            fig.add_trace(
+                go.Scatter(
+                    x=df_nominal['date'], 
+                    y=df_nominal['value'],
+                    name="Nominal GDP (Current $)",
+                    line=dict(color='#ff7f0e')
+                ),
+                secondary_y=False,
+            )
+            
+            # Add inflation rate (as the difference between nominal and real GDP growth)
+            # This is a simplified calculation for visualization purposes
+            df_real['real_growth'] = df_real['value'].pct_change() * 100
+            df_nominal['nominal_growth'] = df_nominal['value'].pct_change() * 100
+            df_merged = pd.merge_asof(df_real, df_nominal, on='date')
+            df_merged['inflation'] = df_merged['nominal_growth'] - df_merged['real_growth']
+            
+            # Add inflation as a bar chart on secondary y-axis
+            fig.add_trace(
+                go.Bar(
+                    x=df_merged['date'],
+                    y=df_merged['inflation'],
+                    name="Implied Inflation %",
+                    marker_color='rgba(44, 160, 44, 0.6)',
+                    opacity=0.3,
+                    yaxis='y2'
+                ),
+                secondary_y=True,
+            )
+            
+            # Add figure title and axis labels
+            fig.update_layout(
+                title_text="GDP Comparison: Real vs Nominal with Implied Inflation",
+                hovermode="x unified",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                yaxis=dict(
+                    title="GDP (Billions of $)",
+                    titlefont=dict(color='#1f77b4'),
+                    tickfont=dict(color='#1f77b4')
+                ),
+                yaxis2=dict(
+                    title="Inflation %",
+                    titlefont=dict(color='#2ca02c'),
+                    tickfont=dict(color='#2ca02c'),
+                    anchor="free",
+                    overlaying="y",
+                    side="right",
+                    position=1.0
+                ),
+                xaxis=dict(
+                    title="Date",
+                    rangeslider=dict(visible=True),
+                    type="date"
+                ),
+                height=600,
+                template="plotly_white"
+            )
+            
+            # Add range selector buttons
+            fig.update_xaxes(
+                rangeselector=dict(
+                    buttons=list([
+                        dict(count=1, label="1y", step="year", stepmode="backward"),
+                        dict(count=5, label="5y", step="year", stepmode="backward"),
+                        dict(count=10, label="10y", step="year", stepmode="backward"),
+                        dict(step="all")
+                    ])
+                )
+            )
+            
+            # Return the figure as HTML
+            return fig.to_html(full_html=False, include_plotlyjs='cdn')
+            
+        except Exception as e:
+            logger.error(f"Error generating GDP comparison chart: {str(e)}")
+            return "<p>Error generating chart. Please try again later.</p>"
     
     def _get_demo_data(self, series_id):
         """Generate realistic sample data for demo purposes when API calls fail"""

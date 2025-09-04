@@ -2207,19 +2207,32 @@ def fix_customer_id():
 
 @app.route("/macro-dashboard")
 def macro_dashboard():
+    """Display the macroeconomic dashboard with interactive charts"""
     try:
-        # Fetch macro data
-        macro_data = macro_service.get_macro_data()
-        analysis = macro_service.analyze_macro_environment(macro_data)
+        macro_service = MacroDataService()
         
-        return render_template(
-            "macro_dashboard.html",
-            macro_data=macro_data,
-            analysis=analysis
-        )
+        # Get economic indicators data
+        indicators = {}
+        for indicator in ['inflation', 'gdp', 'unemployment', 'fed_funds', 'treasury_10y']:
+            data = macro_service.get_fred_data(series_id=macro_service.series_ids[indicator])
+            if data:
+                latest = data[-1]  # Get the latest data point
+                indicators[indicator] = {
+                    'latest_value': latest['value'],
+                    'latest_date': latest['date']
+                }
+        
+        # Get the GDP comparison chart
+        gdp_chart = macro_service.get_gdp_comparison_chart(days=365*10)  # 10 years of data
+        
+        return render_template('macro_dashboard.html', 
+                             indicators=indicators,
+                             gdp_chart=gdp_chart)
+        
     except Exception as e:
-        logger.error(f"Error rendering macro dashboard: {e}")
-        return "An error occurred while loading the macro dashboard.", 500
+        current_app.logger.error(f"Error in macro_dashboard: {str(e)}", exc_info=True)
+        return render_template('500.html'), 500
+
 
 @app.route('/delete-account', methods=['POST'])
 @login_required
