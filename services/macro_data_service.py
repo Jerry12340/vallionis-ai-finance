@@ -336,6 +336,39 @@ class MacroDataService:
         except Exception as e:
             logger.error(f"Error exporting {indicator_key} to CSV: {str(e)}")
             return None
+
+    def export_all_to_csv(self, days=365*10):
+        """Export all supported indicator series (including inflation variants) to one CSV file."""
+        try:
+            # Define which series to include
+            keys = [
+                'nominal_gdp', 'gdp', 'inflation_yoy', 'inflation_mom',
+                'unemployment', 'fed_funds', 'treasury_10y'
+            ]
+            frames = []
+            for key in keys:
+                series = self.get_indicator_series(key, days)
+                if series:
+                    df = pd.DataFrame(series)
+                    df = df.rename(columns={'value': key})
+                    frames.append(df)
+            if not frames:
+                return None
+            # Merge on date, outer join to include different frequencies
+            from functools import reduce
+            merged = reduce(lambda left, right: pd.merge(left, right, on='date', how='outer'), frames)
+            merged = merged.sort_values('date')
+
+            # Create CSV response
+            si = io.StringIO()
+            merged.to_csv(si, index=False)
+            output = make_response(si.getvalue())
+            output.headers["Content-Disposition"] = "attachment; filename=all_indicators.csv"
+            output.headers["Content-type"] = "text/csv"
+            return output
+        except Exception as e:
+            logger.error(f"Error exporting all indicators to CSV: {str(e)}")
+            return None
     
     def _get_demo_data(self, series_id):
         """Generate realistic sample data for demo purposes when API calls fail"""

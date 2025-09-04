@@ -2265,6 +2265,21 @@ def export_indicator(indicator_key):
         return redirect(url_for('macro_dashboard'))
 
 
+@app.route('/export-all')
+def export_all():
+    try:
+        macro_service = MacroDataService()
+        response = macro_service.export_all_to_csv(days=365*10)
+        if response:
+            return response
+        flash('Failed to export data. Please try again.', 'error')
+        return redirect(url_for('macro_dashboard'))
+    except Exception as e:
+        app.logger.error(f"Error exporting all indicators: {str(e)}", exc_info=True)
+        flash('An error occurred while exporting all data.', 'error')
+        return redirect(url_for('macro_dashboard'))
+
+
 @app.route('/delete-account', methods=['POST'])
 @login_required
 def delete_account():
