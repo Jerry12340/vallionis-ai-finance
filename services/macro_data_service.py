@@ -11,6 +11,7 @@ import numpy as np
 import io
 import csv
 import time
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +41,59 @@ class MacroDataService:
             'jobless_claims': 'ICSA',
         }
 
+        # Cache configuration
+        self.cache_enabled = True
+        self.cache_timeout = 3600  # 1 hour in seconds
+        self._cache = {}
+        self._cache_timestamps = {}
+
+    def _get_cache_key(self, func_name, *args, **kwargs):
+        """Generate a unique cache key for function call with arguments"""
+        key_str = f"{func_name}_{str(args)}_{str(sorted(kwargs.items()))}"
+        return hashlib.md5(key_str.encode()).hexdigest()
+
+    def _check_cache(self, key):
+        """Check if cache entry exists and is still valid"""
+        if not self.cache_enabled:
+            return None
+
+        if key in self._cache and key in self._cache_timestamps:
+            if time.time() - self._cache_timestamps[key] < self.cache_timeout:
+                return self._cache[key]
+            else:
+                # Cache expired, remove entry
+                del self._cache[key]
+                del self._cache_timestamps[key]
+        return None
+
+    def _set_cache(self, key, value):
+        """Store value in cache with timestamp"""
+        if self.cache_enabled:
+            self._cache[key] = value
+            self._cache_timestamps[key] = time.time()
+
+    def clear_cache(self):
+        """Clear all cached data"""
+        self._cache = {}
+        self._cache_timestamps = {}
+        logger.info("Cache cleared")
+
     def get_fred_data(self, series_id, days=365 * 5):
-        """Fetch economic data from FRED API with improved error handling"""
+        """Fetch economic data from FRED API with improved error handling and caching"""
+        # Check cache first
+        cache_key = self._get_cache_key("get_fred_data", series_id, days)
+        cached_data = self._check_cache(cache_key)
+        if cached_data is not None:
+            logger.debug(f"Cache hit for FRED data: {series_id}")
+            return cached_data
+
+        logger.debug(f"Cache miss for FRED data: {series_id}, fetching from API")
+
         # If using demo key, return demo data immediately
         if self.fred_api_key == 'demo':
-            return self._get_demo_data(series_id)
+            demo_data = self._get_demo_data(series_id)
+            self._set_cache(cache_key, demo_data)
+            return demo_data
 
         try:
             end_date = datetime.now()
@@ -99,8 +148,12 @@ class MacroDataService:
                         ]
 
                         result.sort(key=lambda x: x['date'])
+                        # Cache the result
+                        self._set_cache(cache_key, result)
                         return result
 
+                    # Cache empty result too
+                    self._set_cache(cache_key, [])
                     return []
 
                 except requests.exceptions.RequestException as e:
@@ -109,28 +162,46 @@ class MacroDataService:
                     logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
                     time.sleep(1)
 
+            # Cache empty result
+            self._set_cache(cache_key, [])
             return []
 
         except Exception as e:
             logger.error(f"Error fetching FRED data for {series_id}: {str(e)}")
-            return self._get_demo_data(series_id)
+            demo_data = self._get_demo_data(series_id)
+            # Cache demo data as fallback
+            self._set_cache(cache_key, demo_data)
+            return demo_data
 
     def get_indicator_series(self, indicator_key, days=365 * 10):
-        """Return transformed time series for an indicator"""
+        """Return transformed time series for an indicator with caching"""
+        # Check cache first
+        cache_key = self._get_cache_key("get_indicator_series", indicator_key, days)
+        cached_data = self._check_cache(cache_key)
+        if cached_data is not None:
+            logger.debug(f"Cache hit for indicator series: {indicator_key}")
+            return cached_data
+
+        logger.debug(f"Cache miss for indicator series: {indicator_key}, calculating")
+
         inflation_variant = None
         base_key = indicator_key
         if indicator_key in ['inflation_yoy', 'inflation_mom']:
             base_key = 'inflation'
             inflation_variant = indicator_key.split('_')[1]
         elif indicator_key == 'yield_curve_2_10':
-            return self._get_yield_curve_2_10(days)
+            result = self._get_yield_curve_2_10(days)
+            self._set_cache(cache_key, result)
+            return result
 
         series_id = self.series_ids.get(base_key)
         if not series_id:
+            self._set_cache(cache_key, [])
             return []
 
         data = self.get_fred_data(series_id, days)
         if not data:
+            self._set_cache(cache_key, [])
             return []
 
         df = pd.DataFrame(data)
@@ -144,18 +215,29 @@ class MacroDataService:
                 df['value'] = df['value'].pct_change(12) * 100.0
             df = df.dropna(subset=['value'])
 
-        return [
+        result = [
             {'date': row['date'].strftime('%Y-%m-%d'), 'value': float(row['value'])}
             for _, row in df.iterrows()
         ]
 
+        # Cache the result
+        self._set_cache(cache_key, result)
+        return result
+
     def _get_yield_curve_2_10(self, days=365 * 10):
-        """Calculate 2/10 yield curve (10Y - 2Y spread)"""
+        """Calculate 2/10 yield curve (10Y - 2Y spread) with caching"""
+        # Check cache first
+        cache_key = self._get_cache_key("_get_yield_curve_2_10", days)
+        cached_data = self._check_cache(cache_key)
+        if cached_data is not None:
+            return cached_data
+
         try:
             data_2y = self.get_fred_data('DGS2', days)
             data_10y = self.get_fred_data('DGS10', days)
 
             if not data_2y or not data_10y:
+                self._set_cache(cache_key, [])
                 return []
 
             df_2y = pd.DataFrame(data_2y)
@@ -169,27 +251,45 @@ class MacroDataService:
             merged['value'] = merged['value_10y'] - merged['value_2y']
             merged = merged.dropna(subset=['value'])
 
-            return [
+            result = [
                 {'date': row['date'].strftime('%Y-%m-%d'), 'value': float(row['value'])}
                 for _, row in merged.iterrows()
             ]
+
+            # Cache the result
+            self._set_cache(cache_key, result)
+            return result
         except Exception as e:
             logger.error(f"Error calculating 2/10 yield curve: {str(e)}")
+            self._set_cache(cache_key, [])
             return []
 
     def get_indicator_chart(self, indicator_key, days=365 * 10):
-        """Generate an interactive chart for a specific indicator"""
+        """Generate an interactive chart for a specific indicator with caching"""
+        # Check cache first
+        cache_key = self._get_cache_key("get_indicator_chart", indicator_key, days)
+        cached_data = self._check_cache(cache_key)
+        if cached_data is not None:
+            logger.debug(f"Cache hit for indicator chart: {indicator_key}")
+            return cached_data
+
+        logger.debug(f"Cache miss for indicator chart: {indicator_key}, generating")
+
         try:
             series_id = self.series_ids.get(
                 'inflation' if indicator_key in ['inflation_yoy', 'inflation_mom'] else indicator_key)
             if indicator_key == 'yield_curve_2_10':
                 series_id = 'DGS2'
             if not series_id:
-                return "<p>Invalid indicator specified.</p>"
+                error_msg = "<p>Invalid indicator specified.</p>"
+                self._set_cache(cache_key, error_msg)
+                return error_msg
 
             data = self.get_indicator_series(indicator_key, days)
             if not data:
-                return f"<p>No data available for {indicator_key}.</p>"
+                error_msg = f"<p>No data available for {indicator_key}.</p>"
+                self._set_cache(cache_key, error_msg)
+                return error_msg
 
             df = pd.DataFrame(data)
             df['date'] = pd.to_datetime(df['date'])
@@ -263,11 +363,16 @@ class MacroDataService:
             )
 
             chart_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+            # Cache the result
+            self._set_cache(cache_key, chart_html)
             return chart_html
 
         except Exception as e:
             logger.error(f"Error generating {indicator_key} chart: {str(e)}")
-            return f"<p>Error generating {indicator_key} chart. Please try again later.</p>"
+            error_msg = f"<p>Error generating {indicator_key} chart. Please try again later.</p>"
+            self._set_cache(cache_key, error_msg)
+            return error_msg
 
     def _get_chart_config(self, indicator_key, df):
         """Get configuration for different chart types"""
@@ -486,21 +591,40 @@ class MacroDataService:
         return data
 
     def get_latest_indicator_value(self, indicator_key, days=365 * 10):
-        """Get latest transformed value for an indicator."""
+        """Get latest transformed value for an indicator with caching"""
+        # Check cache first
+        cache_key = self._get_cache_key("get_latest_indicator_value", indicator_key, days)
+        cached_data = self._check_cache(cache_key)
+        if cached_data is not None:
+            return cached_data
+
         series = self.get_indicator_series(indicator_key, days)
         if not series:
+            self._set_cache(cache_key, None)
             return None
         latest = series[-1]
-        return {'latest_value': latest['value'], 'latest_date': latest['date']}
+        result = {'latest_value': latest['value'], 'latest_date': latest['date']}
+
+        # Cache the result
+        self._set_cache(cache_key, result)
+        return result
 
     def get_inflation_metrics(self, days=365 * 15):
-        """Compute inflation YoY% and MoM% from CPI level series, plus latest CPI level."""
+        """Compute inflation YoY% and MoM% from CPI level series, plus latest CPI level with caching"""
+        # Check cache first
+        cache_key = self._get_cache_key("get_inflation_metrics", days)
+        cached_data = self._check_cache(cache_key)
+        if cached_data is not None:
+            return cached_data
+
         try:
             series_id = self.series_ids.get('inflation')
             if not series_id:
+                self._set_cache(cache_key, None)
                 return None
             data = self.get_fred_data(series_id, days)
             if not data or len(data) < 14:
+                self._set_cache(cache_key, None)
                 return None
             df = pd.DataFrame(data)
             df['date'] = pd.to_datetime(df['date'])
@@ -508,20 +632,26 @@ class MacroDataService:
             df['value'] = pd.to_numeric(df['value'], errors='coerce')
             df = df.dropna(subset=['value'])
             if len(df) < 14:
+                self._set_cache(cache_key, None)
                 return None
             last = df.iloc[-1]
             prev = df.iloc[-2]
             last_12 = df.iloc[-13]
             yoy = ((last['value'] / last_12['value']) - 1.0) * 100.0
             mom = ((last['value'] / prev['value']) - 1.0) * 100.0
-            return {
+            result = {
                 'latest_date': last['date'].strftime('%Y-%m-%d'),
                 'cpi_level': float(last['value']),
                 'yoy_percent': float(round(yoy, 2)),
                 'mom_percent': float(round(mom, 2))
             }
+
+            # Cache the result
+            self._set_cache(cache_key, result)
+            return result
         except Exception as e:
             logger.error(f"Error computing inflation metrics: {str(e)}")
+            self._set_cache(cache_key, None)
             return None
 
     def get_macro_data(self):
