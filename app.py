@@ -2215,8 +2215,8 @@ def macro_dashboard():
         indicators = {}
         charts = {}
         
-        # Define the indicators to display
-        indicator_keys = ['gdp', 'nominal_gdp', 'inflation', 'unemployment', 'fed_funds', 'treasury_10y']
+        # Define the indicators to display (use nominal GDP at top; also include inflation variants for charts)
+        indicator_keys = ['nominal_gdp', 'inflation', 'unemployment', 'fed_funds', 'treasury_10y']
         
         # Get data and generate charts for each indicator
         for indicator in indicator_keys:
@@ -2233,6 +2233,9 @@ def macro_dashboard():
         inflation_metrics = macro_service.get_inflation_metrics(days=365*15)
         if inflation_metrics:
             indicators['inflation_metrics'] = inflation_metrics
+            # Also build charts for both YoY and MoM inflation
+            charts['inflation_yoy'] = macro_service.get_indicator_chart('inflation_yoy', days=365*10)
+            charts['inflation_mom'] = macro_service.get_indicator_chart('inflation_mom', days=365*10)
 
         return render_template('macro_dashboard.html', 
                              indicators=indicators,

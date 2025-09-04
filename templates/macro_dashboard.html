@@ -19,11 +19,11 @@
                         <div class="col-md-4 mb-3">
                             <div class="card h-100 border-0 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="card-title text-primary">GDP (Real)</h5>
-                                    <h3 class="mb-0">${{ "%.1f"|format(indicators.gdp.latest_value) }}B</h3>
-                                    <small class="text-muted">2012 Chained Dollars</small>
+                                    <h5 class="card-title text-primary">GDP (Nominal)</h5>
+                                    <h3 class="mb-0">${{ "%.1f"|format(indicators.nominal_gdp.latest_value) }}B</h3>
+                                    <small class="text-muted">Current Dollars</small>
                                     <div class="mt-2">
-                                        <small>Last updated: {{ indicators.gdp.latest_date }}</small>
+                                        <small>Last updated: {{ indicators.nominal_gdp.latest_date }}</small>
                                     </div>
                                 </div>
                             </div>
@@ -31,12 +31,16 @@
                         <div class="col-md-4 mb-3">
                             <div class="card h-100 border-0 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="card-title text-primary">Inflation (MoM)</h5>
+                                    <h5 class="card-title text-primary">Inflation</h5>
                                     {% set infl = indicators.get('inflation_metrics') %}
                                     {% if infl %}
-                                        <h3 class="mb-0">{{ infl.mom_percent|round(2) }}%</h3>
+                                        <div class="d-flex align-items-baseline mb-1">
+                                            <span class="me-2">MoM:</span>
+                                            <h3 class="mb-0">{{ infl.mom_percent|round(2) }}%</h3>
+                                        </div>
                                         <small class="text-muted">Month-over-month change</small>
                                         <div class="mt-2">
+                                            <span class="badge bg-light text-dark me-2">YoY: {{ infl.yoy_percent|round(2) }}%</span>
                                             <small class="text-muted">CPI level: {{ infl.cpi_level|round(1) }}</small>
                                         </div>
                                         <div class="mt-1">
@@ -70,26 +74,7 @@
 
     <!-- Individual Charts Section -->
     <div class="row">
-        <!-- GDP Chart -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Real GDP</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='gdp') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'gdp' in charts %}
-                        {{ charts.gdp|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">GDP chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Nominal GDP Chart -->
+        <!-- Nominal GDP Chart (Top priority) -->
         <div class="col-lg-6 mb-4">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -108,25 +93,62 @@
             </div>
         </div>
 
-        <!-- Inflation Chart -->
+        <!-- Real GDP Chart -->
         <div class="col-lg-6 mb-4">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Inflation (CPI)</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='inflation') }}" class="btn btn-sm btn-outline-primary">
+                    <h5 class="mb-0">Real GDP</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='gdp') }}" class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-download me-1"></i> CSV
                     </a>
                 </div>
                 <div class="card-body">
-                    {% if charts and 'inflation' in charts %}
-                        {{ charts.inflation|safe }}
+                    {% if charts and 'gdp' in charts %}
+                        {{ charts.gdp|safe }}
                     {% else %}
-                        <div class="alert alert-warning">Inflation chart is currently unavailable.</div>
+                        <div class="alert alert-warning">Real GDP chart is currently unavailable.</div>
                     {% endif %}
                 </div>
             </div>
         </div>
 
+        <!-- Inflation YoY Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Inflation (YoY)</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='inflation') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'inflation_yoy' in charts %}
+                        {{ charts.inflation_yoy|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">Inflation YoY chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Inflation MoM Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Inflation (MoM)</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='inflation') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'inflation_mom' in charts %}
+                        {{ charts.inflation_mom|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">Inflation MoM chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
         <!-- Unemployment Chart -->
         <div class="col-lg-6 mb-4">
             <div class="card h-100">

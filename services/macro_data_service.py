@@ -98,8 +98,15 @@ class MacroDataService:
             return self._get_demo_data(series_id) if self.fred_api_key == 'demo' else []
             
     def get_indicator_series(self, indicator_key, days=365*10):
-        """Return transformed time series for an indicator (e.g., CPI -> YoY inflation%)."""
-        series_id = self.series_ids.get(indicator_key)
+        """Return transformed time series for an indicator (e.g., CPI -> YoY inflation%). Supports inflation_yoy and inflation_mom."""
+        # Support synthetic keys for inflation transformations
+        inflation_variant = None
+        base_key = indicator_key
+        if indicator_key in ['inflation_yoy', 'inflation_mom']:
+            base_key = 'inflation'
+            inflation_variant = indicator_key.split('_')[1]
+
+        series_id = self.series_ids.get(base_key)
         if not series_id:
             return []
         data = self.get_fred_data(series_id, days)
@@ -108,11 +115,16 @@ class MacroDataService:
         df = pd.DataFrame(data)
         df['date'] = pd.to_datetime(df['date'])
         # Transformations per indicator
-        if indicator_key == 'inflation':
-            # Convert CPI level to YoY percentage change
+        if base_key == 'inflation':
             df = df.sort_values('date')
-            df['value'] = df['value'].pct_change(12) * 100.0
-            df = df.dropna(subset=['value'])
+            if inflation_variant == 'mom':
+                # Month-over-month % change
+                df['value'] = df['value'].pct_change(1) * 100.0
+                df = df.dropna(subset=['value'])
+            else:
+                # Default to YoY % change
+                df['value'] = df['value'].pct_change(12) * 100.0
+                df = df.dropna(subset=['value'])
         # Ensure ascending order and standard format
         df = df.sort_values('date')
         return [
@@ -123,7 +135,7 @@ class MacroDataService:
     def get_indicator_chart(self, indicator_key, days=365*10):
         """Generate an interactive chart for a specific indicator"""
         try:
-            series_id = self.series_ids.get(indicator_key)
+            series_id = self.series_ids.get('inflation' if indicator_key in ['inflation_yoy','inflation_mom'] else indicator_key)
             if not series_id:
                 return "<p>Invalid indicator specified.</p>"
                 
@@ -240,6 +252,20 @@ class MacroDataService:
                 'yaxis_title': 'Percent',
                 'color': '#2ca02c'
             },
+            'inflation_yoy': {
+                'type': 'line',
+                'name': 'Inflation (YoY %)',
+                'title': 'Inflation Rate (YoY % from CPI)',
+                'yaxis_title': 'Percent',
+                'color': '#2ca02c'
+            },
+            'inflation_mom': {
+                'type': 'line',
+                'name': 'Inflation (MoM %)',
+                'title': 'Inflation Rate (MoM % from CPI)',
+                'yaxis_title': 'Percent',
+                'color': '#17becf'
+            },
             'unemployment': {
                 'type': 'line',
                 'name': 'Unemployment Rate',
@@ -308,7 +334,7 @@ class MacroDataService:
     
     def _get_demo_data(self, series_id):
         """Generate realistic sample data for demo purposes when API calls fail"""
-        end_date = datetime(2024, 11, 1)  # Fixed to November 2024 for consistency
+        end_date = datetime.now()
         
         # Base values for different indicators (as of November 2024)
         base_values = {
