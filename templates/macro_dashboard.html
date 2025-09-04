@@ -1,87 +1,223 @@
 {% extends "base.html" %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Macro Dashboard - Vallionis AI Finance</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+        }
 
-{% block title %}Macro Dashboard - Vallionis AI Finance{% endblock %}
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
 
-{% block content %}
-<div class="container mt-4">
-    <div class="d-flex align-items-center justify-content-between mb-4">
-        <h1 class="mb-0">Macroeconomic Dashboard</h1>
-        <div class="d-flex align-items-center gap-3">
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-outline-secondary active" id="layout-3col" onclick="toggleLayout('3col')">
-                    <i class="fas fa-th me-1"></i> 3 Columns
-                </button>
-                <button type="button" class="btn btn-outline-secondary" id="layout-1col" onclick="toggleLayout('1col')">
-                    <i class="fas fa-list me-1"></i> 1 Column
-                </button>
-            </div>
-            <a href="{{ url_for('export_all') }}" class="btn btn-primary">
-                <i class="fas fa-file-download me-2"></i> Download All
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .card {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            background: linear-gradient(to right, #f8f9fa, #e9ecef);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, var(--secondary-color), #2980b9);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(to right, #2980b9, var(--secondary-color));
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-secondary.active {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            color: white;
+        }
+
+        .indicator-card {
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .indicator-card .card-title {
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--dark-color);
+            font-weight: 600;
+        }
+
+        .alert-warning {
+            background: linear-gradient(to right, #fff3cd, #ffeaa7);
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .badge {
+            font-weight: 500;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--dark-color);
+        }
+
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>Vallionis AI Finance
             </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Reports</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Analysis</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Settings</a>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </div>
-    {% if using_demo %}
-    <div class="alert alert-warning d-flex align-items-center" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        Displaying demo data due to API unavailability. Values are simulated for illustration.
-    </div>
-    {% endif %}
-    
-    <!-- Economic Indicators Overview -->
-    {% if indicators %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Key Economic Indicators</h3>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h1 class="mb-0">Macroeconomic Dashboard</h1>
+            <div class="d-flex align-items-center gap-3">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" id="layout-3col">
+                        <i class="fas fa-th me-1"></i> 3 Columns
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="layout-1col">
+                        <i class="fas fa-list me-1"></i> 1 Column
+                    </button>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-body">
-                                    <h5 class="card-title text-primary">GDP (Nominal)</h5>
-                                    <h3 class="mb-0">${{ "%.1f"|format(indicators.nominal_gdp.latest_value) }}B</h3>
-                                    <small class="text-muted">Current Dollars</small>
-                                    <div class="mt-2">
-                                        <small>Last updated: {{ indicators.nominal_gdp.latest_date }}</small>
+                <a href="#" class="btn btn-primary">
+                    <i class="fas fa-file-download me-2"></i> Download All
+                </a>
+            </div>
+        </div>
+
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Displaying demo data due to API unavailability. Values are simulated for illustration.
+        </div>
+
+        <!-- Economic Indicators Overview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">Key Economic Indicators</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100 border-0 shadow-sm indicator-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">GDP (Nominal)</h5>
+                                        <div class="metric-value">$21,537.0B</div>
+                                        <div class="metric-label">Current Dollars</div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">Last updated: 2023-07-01</small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-body">
-                                    <h5 class="card-title text-primary">Inflation</h5>
-                                    {% set infl = indicators.get('inflation_metrics') %}
-                                    {% if infl %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100 border-0 shadow-sm indicator-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Inflation</h5>
                                         <div class="d-flex align-items-baseline mb-1">
                                             <span class="me-2">MoM:</span>
-                                            <h3 class="mb-0">{{ infl.mom_percent|round(2) }}%</h3>
+                                            <div class="metric-value">0.41%</div>
                                         </div>
-                                        <small class="text-muted">Month-over-month change</small>
+                                        <div class="metric-label">Month-over-month change</div>
                                         <div class="mt-2">
-                                            <span class="badge bg-light text-dark me-2">YoY: {{ infl.yoy_percent|round(2) }}%</span>
-                                            <small class="text-muted">CPI level: {{ infl.cpi_level|round(1) }}</small>
+                                            <span class="badge bg-light text-dark me-2">YoY: 3.67%</span>
+                                            <small class="text-muted">CPI level: 307.8</small>
                                         </div>
                                         <div class="mt-1">
-                                            <small>Last updated: {{ infl.latest_date }}</small>
+                                            <small class="text-muted">Last updated: 2023-09-30</small>
                                         </div>
-                                    {% else %}
-                                        <h3 class="mb-0">—</h3>
-                                        <small class="text-muted">Month-over-month change</small>
-                                    {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-body">
-                                    <h5 class="card-title text-primary">Unemployment Rate</h5>
-                                    <h3 class="mb-0">{{ "%.1f"|format(indicators.unemployment.latest_value) }}%</h3>
-                                    <small class="text-muted">% of labor force</small>
-                                    <div class="mt-2">
-                                        <small>Last updated: {{ indicators.unemployment.latest_date }}</small>
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100 border-0 shadow-sm indicator-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Unemployment Rate</h5>
+                                        <div class="metric-value">3.8%</div>
+                                        <div class="metric-label">% of labor force</div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">Last updated: 2023-09-30</small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -90,257 +226,188 @@
                 </div>
             </div>
         </div>
-    </div>
-    {% endif %}
 
-    <!-- Individual Charts Section -->
-    <div class="row" id="charts-container">
-        <!-- Nominal GDP Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Nominal GDP</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='nominal_gdp') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'nominal_gdp' in charts %}
-                        {{ charts.nominal_gdp|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">Nominal GDP chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Inflation YoY Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Inflation (YoY)</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='inflation') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'inflation_yoy' in charts %}
-                        {{ charts.inflation_yoy|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">Inflation YoY chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Inflation MoM Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Inflation (MoM)</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='inflation') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'inflation_mom' in charts %}
-                        {{ charts.inflation_mom|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">Inflation MoM chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Unemployment Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Unemployment Rate</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='unemployment') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'unemployment' in charts %}
-                        {{ charts.unemployment|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">Unemployment chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Federal Funds Rate Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Federal Funds Rate</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='fed_funds') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'fed_funds' in charts %}
-                        {{ charts.fed_funds|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">Federal Funds Rate chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- 10-Year Treasury Yield Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">10-Year Treasury Yield</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='treasury_10y') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'treasury_10y' in charts %}
-                        {{ charts.treasury_10y|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">10-Year Treasury Yield chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- 2-Year Treasury Yield Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">2-Year Treasury Yield</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='treasury_2y') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'treasury_2y' in charts %}
-                        {{ charts.treasury_2y|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">2-Year Treasury Yield chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- 2/10 Yield Curve Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">2/10 Yield Curve</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='yield_curve_2_10') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'yield_curve_2_10' in charts %}
-                        {{ charts.yield_curve_2_10|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">2/10 Yield Curve chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Job Openings (JOLTS) Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Job Openings (JOLTS)</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='jolts') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'jolts' in charts %}
-                        {{ charts.jolts|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">Job Openings chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Jobless Claims Chart -->
-        <div class="col-lg-4 col-md-6 mb-4 chart-card">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Jobless Claims</h5>
-                    <a href="{{ url_for('export_indicator', indicator_key='jobless_claims') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-download me-1"></i> CSV
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if charts and 'jobless_claims' in charts %}
-                        {{ charts.jobless_claims|safe }}
-                    {% else %}
-                        <div class="alert alert-warning">Jobless Claims chart is currently unavailable.</div>
-                    {% endif %}
-                </div>
-            </div>
+        <!-- Individual Charts Section -->
+        <div class="row" id="charts-container">
+            <!-- Chart cards will be generated here -->
         </div>
     </div>
-</div>
-{% endblock %}
 
-{% block extra_js %}
-<!-- Plotly.js for interactive charts -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <footer class="bg-dark text-white mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Vallionis AI Finance</h5>
+                    <p>Advanced macroeconomic analysis and forecasting</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0">&copy; 2023 Vallionis AI Finance. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
 
-<script>
-$(document).ready(function() {
-    // Make tables responsive
-    $('table').addClass('table-responsive');
+    <script>
+        // Chart data and configuration
+        const chartData = [
+            {
+                title: 'Nominal GDP',
+                id: 'nominal-gdp',
+                cols: 'col-lg-4 col-md-6',
+                value: '$21,537.0B',
+                change: '+2.1%',
+                trend: 'up'
+            },
+            {
+                title: 'Inflation (YoY)',
+                id: 'inflation-yoy',
+                cols: 'col-lg-4 col-md-6',
+                value: '3.67%',
+                change: '-0.25%',
+                trend: 'down'
+            },
+            {
+                title: 'Inflation (MoM)',
+                id: 'inflation-mom',
+                cols: 'col-lg-4 col-md-6',
+                value: '0.41%',
+                change: '+0.08%',
+                trend: 'up'
+            },
+            {
+                title: 'Unemployment Rate',
+                id: 'unemployment',
+                cols: 'col-lg-4 col-md-6',
+                value: '3.8%',
+                change: '-0.2%',
+                trend: 'down'
+            },
+            {
+                title: 'Federal Funds Rate',
+                id: 'fed-funds',
+                cols: 'col-lg-4 col-md-6',
+                value: '5.25%',
+                change: '+0.25%',
+                trend: 'up'
+            },
+            {
+                title: '10-Year Treasury Yield',
+                id: 'treasury-10y',
+                cols: 'col-lg-4 col-md-6',
+                value: '4.32%',
+                change: '+0.15%',
+                trend: 'up'
+            },
+            {
+                title: '2-Year Treasury Yield',
+                id: 'treasury-2y',
+                cols: 'col-lg-4 col-md-6',
+                value: '4.89%',
+                change: '+0.12%',
+                trend: 'up'
+            },
+            {
+                title: '2/10 Yield Curve',
+                id: 'yield-curve',
+                cols: 'col-lg-4 col-md-6',
+                value: '-0.57%',
+                change: '-0.03%',
+                trend: 'down'
+            },
+            {
+                title: 'Job Openings (JOLTS)',
+                id: 'jolts',
+                cols: 'col-lg-4 col-md-6',
+                value: '9.6M',
+                change: '-0.4M',
+                trend: 'down'
+            }
+        ];
 
-    // Add tooltips to indicators
-    $('[data-toggle="tooltip"]').tooltip();
+        // Generate chart cards
+        const chartsContainer = document.getElementById('charts-container');
 
-    // Make charts responsive
-    window.addEventListener('resize', function() {
-        var charts = document.querySelectorAll('.js-plotly-plot');
-        for (var i = 0; i < charts.length; i++) {
-            Plotly.Plots.resize(charts[i]);
+        chartData.forEach(chart => {
+            const chartCard = document.createElement('div');
+            chartCard.className = `${chart.cols} mb-4 chart-card`;
+
+            // Determine trend icon and color
+            let trendIcon = '';
+            let trendColor = '';
+            if (chart.trend === 'up') {
+                trendIcon = 'fa-arrow-up';
+                trendColor = 'success';
+            } else {
+                trendIcon = 'fa-arrow-down';
+                trendColor = 'danger';
+            }
+
+            chartCard.innerHTML = `
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">${chart.title}</h5>
+                        <a href="#" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download me-1"></i> CSV
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="metric-value">${chart.value}</div>
+                            <div class="text-${trendColor}">
+                                <i class="fas ${trendIcon} me-1"></i>${chart.change}
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <div class="chart-placeholder">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-chart-bar fa-3x mb-2"></i>
+                                    <p>Chart for ${chart.title}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chartsContainer.appendChild(chartCard);
+        });
+
+        // Layout toggle functionality
+        const layout3colBtn = document.getElementById('layout-3col');
+        const layout1colBtn = document.getElementById('layout-1col');
+        const chartCards = document.querySelectorAll('.chart-card');
+
+        layout3colBtn.addEventListener('click', () => toggleLayout('3col'));
+        layout1colBtn.addEventListener('click', () => toggleLayout('1col'));
+
+        function toggleLayout(layout) {
+            // Update button states
+            if (layout === '3col') {
+                layout3colBtn.classList.add('active');
+                layout1colBtn.classList.remove('active');
+            } else {
+                layout1colBtn.classList.add('active');
+                layout3colBtn.classList.remove('active');
+            }
+
+            // Update card layout
+            chartCards.forEach(card => {
+                card.classList.remove('col-12', 'col-lg-4', 'col-md-6');
+                if (layout === '3col') {
+                    card.classList.add('col-lg-4', 'col-md-6');
+                } else {
+                    card.classList.add('col-12');
+                }
+            });
+
+            // Trigger window resize to update any charts if needed
+            window.dispatchEvent(new Event('resize'));
         }
-    });
-});
 
-function toggleLayout(layout) {
-    const chartCards = document.querySelectorAll('.chart-card');
-    const btn3col = document.getElementById('layout-3col');
-    const btn1col = document.getElementById('layout-1col');
-
-    // Update button states
-    if (layout === '3col') {
-        btn3col.classList.add('active');
-        btn1col.classList.remove('active');
-    } else {
-        btn1col.classList.add('active');
-        btn3col.classList.remove('active');
-    }
-
-    // Update card classes
-    chartCards.forEach(card => {
-        if (layout === '3col') {
-            card.classList.remove('col-12');
-            card.classList.add('col-lg-4', 'col-md-6');
-        } else {
-            card.classList.remove('col-lg-4', 'col-md-6');
-            card.classList.add('col-12');
-        }
-    });
-
-    // Resize charts after layout change
-    setTimeout(() => {
-        var charts = document.querySelectorAll('.js-plotly-plot');
-        for (var i = 0; i < charts.length; i++) {
-            Plotly.Plots.resize(charts[i]);
-        }
-    }, 100);
-}
-</script>
-{% endblock %}
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    </script>
+</body>
+</html>
