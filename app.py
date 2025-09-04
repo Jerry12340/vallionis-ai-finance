@@ -2211,27 +2211,50 @@ def macro_dashboard():
     try:
         macro_service = MacroDataService()
         
-        # Get economic indicators data
+        # Get economic indicators data and charts
         indicators = {}
-        for indicator in ['inflation', 'gdp', 'unemployment', 'fed_funds', 'treasury_10y']:
-            data = macro_service.get_fred_data(series_id=macro_service.series_ids[indicator])
+        charts = {}
+        
+        # Define the indicators to display
+        indicator_keys = ['gdp', 'nominal_gdp', 'inflation', 'unemployment', 'fed_funds', 'treasury_10y']
+        
+        # Get data and generate charts for each indicator
+        for indicator in indicator_keys:
+            # Get latest data point
+            data = macro_service.get_fred_data(series_id=macro_service.series_ids.get(indicator, ''))
             if data:
                 latest = data[-1]  # Get the latest data point
                 indicators[indicator] = {
                     'latest_value': latest['value'],
                     'latest_date': latest['date']
                 }
-        
-        # Get the GDP comparison chart
-        gdp_chart = macro_service.get_gdp_comparison_chart(days=365*10)  # 10 years of data
+            
+            # Generate chart for the indicator
+            chart = macro_service.get_indicator_chart(indicator, days=365*10)  # 10 years of data
+            charts[indicator] = chart
         
         return render_template('macro_dashboard.html', 
                              indicators=indicators,
-                             gdp_chart=gdp_chart)
+                             charts=charts)
         
     except Exception as e:
-        current_app.logger.error(f"Error in macro_dashboard: {str(e)}", exc_info=True)
+        app.logger.error(f"Error in macro_dashboard: {str(e)}", exc_info=True)
         return render_template('500.html'), 500
+
+@app.route('/export-indicator/<indicator_key>')
+def export_indicator(indicator_key):
+    """Export indicator data as CSV"""
+    try:
+        macro_service = MacroDataService()
+        response = macro_service.export_to_csv(indicator_key, days=365*10)  # 10 years of data
+        if response:
+            return response
+        flash('Failed to export data. Please try again.', 'error')
+        return redirect(url_for('macro_dashboard'))
+    except Exception as e:
+        app.logger.error(f"Error exporting {indicator_key} data: {str(e)}", exc_info=True)
+        flash('An error occurred while exporting data.', 'error')
+        return redirect(url_for('macro_dashboard'))
 
 
 @app.route('/delete-account', methods=['POST'])

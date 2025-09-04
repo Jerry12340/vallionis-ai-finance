@@ -6,20 +6,6 @@
 <div class="container mt-4">
     <h1 class="mb-4">Macroeconomic Dashboard</h1>
     
-    <!-- GDP Comparison Chart Section -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2>GDP Comparison: Real vs Nominal</h2>
-        </div>
-        <div class="card-body">
-            {% if gdp_chart %}
-                {{ gdp_chart|safe }}
-            {% else %}
-                <div class="alert alert-warning">GDP comparison chart is currently unavailable.</div>
-            {% endif %}
-        </div>
-    </div>
-    
     <!-- Economic Indicators Overview -->
     {% if indicators %}
     <div class="row mb-4">
@@ -73,52 +59,118 @@
     </div>
     {% endif %}
 
-    <!-- Detailed Indicators Section -->
-    <div class="card">
-        <div class="card-header">
-            <h3>Detailed Economic Indicators</h3>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Federal Funds Rate</h5>
-                            <small class="text-muted">Percent</small>
-                        </div>
-                        <div class="card-body">
-                            {% if indicators.fed_funds %}
-                            <h2 class="display-4 text-center {{ 'text-success' if indicators.fed_funds.latest_value < 3 else 'text-warning' }}">
-                                {{ "%.2f"|format(indicators.fed_funds.latest_value) }}%
-                            </h2>
-                            <div class="text-center text-muted">
-                                <small>Last updated: {{ indicators.fed_funds.latest_date }}</small>
-                            </div>
-                            {% else %}
-                            <p class="text-muted">Data not available</p>
-                            {% endif %}
-                        </div>
-                    </div>
+    <!-- Individual Charts Section -->
+    <div class="row">
+        <!-- GDP Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Real GDP</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='gdp') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
                 </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">10-Year Treasury Yield</h5>
-                            <small class="text-muted">Percent</small>
-                        </div>
-                        <div class="card-body">
-                            {% if indicators.treasury_10y %}
-                            <h2 class="display-4 text-center {{ 'text-success' if indicators.treasury_10y.latest_value < 3 else 'text-warning' }}">
-                                {{ "%.2f"|format(indicators.treasury_10y.latest_value) }}%
-                            </h2>
-                            <div class="text-center text-muted">
-                                <small>Last updated: {{ indicators.treasury_10y.latest_date }}</small>
-                            </div>
-                            {% else %}
-                            <p class="text-muted">Data not available</p>
-                            {% endif %}
-                        </div>
-                    </div>
+                <div class="card-body">
+                    {% if charts and 'gdp' in charts %}
+                        {{ charts.gdp|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">GDP chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Nominal GDP Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Nominal GDP</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='nominal_gdp') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'nominal_gdp' in charts %}
+                        {{ charts.nominal_gdp|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">Nominal GDP chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Inflation Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Inflation (CPI)</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='inflation') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'inflation' in charts %}
+                        {{ charts.inflation|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">Inflation chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Unemployment Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Unemployment Rate</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='unemployment') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'unemployment' in charts %}
+                        {{ charts.unemployment|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">Unemployment chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Federal Funds Rate Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Federal Funds Rate</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='fed_funds') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'fed_funds' in charts %}
+                        {{ charts.fed_funds|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">Federal Funds Rate chart is currently unavailable.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 10-Year Treasury Yield Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">10-Year Treasury Yield</h5>
+                    <a href="{{ url_for('export_indicator', indicator_key='treasury_10y') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> CSV
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if charts and 'treasury_10y' in charts %}
+                        {{ charts.treasury_10y|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">10-Year Treasury Yield chart is currently unavailable.</div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -131,12 +183,20 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
 <script>
-// Make tables responsive
 $(document).ready(function() {
+    // Make tables responsive
     $('table').addClass('table-responsive');
     
     // Add tooltips to indicators
     $('[data-toggle="tooltip"]').tooltip();
+    
+    // Make charts responsive
+    window.addEventListener('resize', function() {
+        var charts = document.querySelectorAll('.js-plotly-plot');
+        for (var i = 0; i < charts.length; i++) {
+            Plotly.Plots.resize(charts[i]);
+        }
+    });
 });
 </script>
 {% endblock %}
