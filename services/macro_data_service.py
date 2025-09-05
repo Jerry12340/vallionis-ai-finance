@@ -13,6 +13,8 @@ import csv
 import time
 import hashlib
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -43,10 +45,17 @@ class MacroDataService:
 
         # Cache configuration
         self.cache_enabled = True
-        self.cache_timeout = 86400   # 1 day in seconds
+        self.cache_timeout = int(os.getenv('CACHE_TIMEOUT_SECONDS', '86400'))  # 1 day default
         self._cache = {}
         self._cache_timestamps = {}
-        
+        self.cache_stats = {
+            'hits': 0,
+            'misses': 0,
+            'expired': 0,
+            'total_requests': 0
+        }
+
+        logger.info(f"Cache initialized: enabled={self.cache_enabled}, timeout={self.cache_timeout}s")
 
     def _get_cache_key(self, func_name, *args, **kwargs):
         """Generate a unique cache key for function call with arguments"""
@@ -58,13 +67,22 @@ class MacroDataService:
         if not self.cache_enabled:
             return None
 
+        self.cache_stats['total_requests'] += 1
+
         if key in self._cache and key in self._cache_timestamps:
             if time.time() - self._cache_timestamps[key] < self.cache_timeout:
+                self.cache_stats['hits'] += 1
+                logger.debug(f"Cache HIT for key: {key[:20]}...")
                 return self._cache[key]
             else:
                 # Cache expired, remove entry
+                self.cache_stats['expired'] += 1
+                logger.debug(f"Cache EXPIRED for key: {key[:20]}...")
                 del self._cache[key]
                 del self._cache_timestamps[key]
+        else:
+            self.cache_stats['misses'] += 1
+            logger.debug(f"Cache MISS for key: {key[:20]}...")
         return None
 
     def _set_cache(self, key, value):
@@ -72,6 +90,7 @@ class MacroDataService:
         if self.cache_enabled:
             self._cache[key] = value
             self._cache_timestamps[key] = time.time()
+            logger.debug(f"Cache SET for key: {key[:20]}...")
 
     def clear_cache(self):
         """Clear all cached data"""
@@ -79,8 +98,57 @@ class MacroDataService:
         self._cache_timestamps = {}
         logger.info("Cache cleared")
 
+    def get_cache_stats(self):
+        """Return cache statistics"""
+        hit_rate = (self.cache_stats['hits'] / self.cache_stats['total_requests'] * 100) if self.cache_stats[
+                                                                                                'total_requests'] > 0 else 0
+        return {
+            **self.cache_stats,
+            'hit_rate': round(hit_rate, 2),
+            'current_size': len(self._cache),
+            'enabled': self.cache_enabled,
+            'timeout': self.cache_timeout
+        }
+
+    def inspect_cache(self):
+        """Return information about current cache contents"""
+        cache_info = []
+        now = time.time()
+
+        for key, value in self._cache.items():
+            timestamp = self._cache_timestamps.get(key, 0)
+            age = now - timestamp
+            expires_in = self.cache_timeout - age
+            cache_info.append({
+                'key': key[:30] + '...' if len(key) > 30 else key,
+                'age_seconds': round(age, 2),
+                'expires_in_seconds': round(expires_in, 2),
+                'data_type': type(value).__name__,
+                'data_length': len(value) if hasattr(value, '__len__') else 1
+            })
+
+        return sorted(cache_info, key=lambda x: x['age_seconds'], reverse=True)
+
+    def set_cache_timeout(self, seconds):
+        """Dynamically change the cache timeout"""
+        if seconds < 0:
+            logger.warning(f"Invalid cache timeout {seconds}, must be positive")
+            return False
+
+        old_timeout = self.cache_timeout
+        self.cache_timeout = seconds
+        logger.info(f"Cache timeout changed from {old_timeout} to {seconds} seconds")
+
+        # Clear cache when timeout changes significantly
+        if abs(old_timeout - seconds) > 300:
+            self.clear_cache()
+
+        return True
+
     def get_fred_data(self, series_id, days=365 * 5):
         """Fetch economic data from FRED API with improved error handling and caching"""
+        start_time = time.time()
+
         # Check cache first
         cache_key = self._get_cache_key("get_fred_data", series_id, days)
         cached_data = self._check_cache(cache_key)
@@ -88,7 +156,7 @@ class MacroDataService:
             logger.debug(f"Cache hit for FRED data: {series_id}")
             return cached_data
 
-        logger.debug(f"Cache miss for FRED data: {series_id}, fetching from API")
+        logger.info(f"Cache miss for FRED data: {series_id}, fetching from API")
 
         # If using demo key, return demo data immediately
         if self.fred_api_key == 'demo':
@@ -151,6 +219,9 @@ class MacroDataService:
                         result.sort(key=lambda x: x['date'])
                         # Cache the result
                         self._set_cache(cache_key, result)
+
+                        end_time = time.time()
+                        logger.info(f"FRED API call for {series_id} took {end_time - start_time:.3f} seconds")
                         return result
 
                     # Cache empty result too
@@ -176,6 +247,8 @@ class MacroDataService:
 
     def get_indicator_series(self, indicator_key, days=365 * 10):
         """Return transformed time series for an indicator with caching"""
+        start_time = time.time()
+
         # Check cache first
         cache_key = self._get_cache_key("get_indicator_series", indicator_key, days)
         cached_data = self._check_cache(cache_key)
@@ -183,7 +256,7 @@ class MacroDataService:
             logger.debug(f"Cache hit for indicator series: {indicator_key}")
             return cached_data
 
-        logger.debug(f"Cache miss for indicator series: {indicator_key}, calculating")
+        logger.info(f"Cache miss for indicator series: {indicator_key}, calculating")
 
         inflation_variant = None
         base_key = indicator_key
@@ -223,10 +296,15 @@ class MacroDataService:
 
         # Cache the result
         self._set_cache(cache_key, result)
+
+        end_time = time.time()
+        logger.info(f"Indicator series calculation for {indicator_key} took {end_time - start_time:.3f} seconds")
         return result
 
     def _get_yield_curve_2_10(self, days=365 * 10):
         """Calculate 2/10 yield curve (10Y - 2Y spread) with caching"""
+        start_time = time.time()
+
         # Check cache first
         cache_key = self._get_cache_key("_get_yield_curve_2_10", days)
         cached_data = self._check_cache(cache_key)
@@ -259,6 +337,9 @@ class MacroDataService:
 
             # Cache the result
             self._set_cache(cache_key, result)
+
+            end_time = time.time()
+            logger.info(f"Yield curve calculation took {end_time - start_time:.3f} seconds")
             return result
         except Exception as e:
             logger.error(f"Error calculating 2/10 yield curve: {str(e)}")
@@ -267,6 +348,8 @@ class MacroDataService:
 
     def get_indicator_chart(self, indicator_key, days=365 * 10):
         """Generate an interactive chart for a specific indicator with caching"""
+        start_time = time.time()
+
         # Check cache first
         cache_key = self._get_cache_key("get_indicator_chart", indicator_key, days)
         cached_data = self._check_cache(cache_key)
@@ -274,7 +357,7 @@ class MacroDataService:
             logger.debug(f"Cache hit for indicator chart: {indicator_key}")
             return cached_data
 
-        logger.debug(f"Cache miss for indicator chart: {indicator_key}, generating")
+        logger.info(f"Cache miss for indicator chart: {indicator_key}, generating")
 
         try:
             series_id = self.series_ids.get(
@@ -367,6 +450,9 @@ class MacroDataService:
 
             # Cache the result
             self._set_cache(cache_key, chart_html)
+
+            end_time = time.time()
+            logger.info(f"Chart generation for {indicator_key} took {end_time - start_time:.3f} seconds")
             return chart_html
 
         except Exception as e:
