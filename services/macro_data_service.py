@@ -29,19 +29,52 @@ class RedisCache:
     def connect(self):
         """Establish connection to Redis"""
         try:
-            self.redis_client = redis.Redis.from_url(
-                self.redis_url,
-                decode_responses=False,
-                socket_timeout=5,
-                socket_connect_timeout=5,
-                retry_on_timeout=True
-            )
+            # Parse the URL to check if it's SSL
+            if self.redis_url.startswith('rediss://'):
+                # For SSL connections, we might need additional parameters
+                self.redis_client = redis.Redis.from_url(
+                    self.redis_url,
+                    decode_responses=False,
+                    socket_timeout=5,
+                    socket_connect_timeout=5,
+                    retry_on_timeout=True,
+                    ssl_cert_reqs=None,  # This might help with SSL issues
+                    ssl=True
+                )
+            else:
+                # Non-SSL connection
+                self.redis_client = redis.Redis.from_url(
+                    self.redis_url,
+                    decode_responses=False,
+                    socket_timeout=5,
+                    socket_connect_timeout=5,
+                    retry_on_timeout=True
+                )
+
             # Test connection
             self.redis_client.ping()
             logger.info(f"Connected to Redis at {self.redis_url}")
         except Exception as e:
             logger.error(f"Failed to connect to Redis: {str(e)}")
-            self.redis_client = None
+            # Try non-SSL version if SSL failed
+            if self.redis_url.startswith('rediss://'):
+                logger.info("Trying non-SSL connection as fallback...")
+                non_ssl_url = self.redis_url.replace('rediss://', 'redis://')
+                try:
+                    self.redis_client = redis.Redis.from_url(
+                        non_ssl_url,
+                        decode_responses=False,
+                        socket_timeout=5,
+                        socket_connect_timeout=5,
+                        retry_on_timeout=True
+                    )
+                    self.redis_client.ping()
+                    logger.info(f"Connected via non-SSL fallback: {non_ssl_url}")
+                except Exception as fallback_error:
+                    logger.error(f"Non-SSL fallback also failed: {fallback_error}")
+                    self.redis_client = None
+            else:
+                self.redis_client = None
 
     def get(self, key):
         """Get value from Redis cache"""
