@@ -56,6 +56,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import socket
+from services.macro_data_service import macro_data_service
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -2209,81 +2210,83 @@ def fix_customer_id():
 
 @app.route('/macro-dashboard')
 def macro_dashboard():
+    """Render the macroeconomic dashboard with all indicators"""
     try:
-        macro_service = MacroDataService()
+        # Get all indicator data
+        indicators = [
+            'nominal_gdp', 'gdp', 'inflation_yoy', 'inflation_mom',
+            'unemployment', 'fed_funds', 'treasury_10y', 'treasury_2y',
+            'yield_curve_2_10', 'jolts', 'jobless_claims'
+        ]
 
-        # Get latest values for indicators
-        indicators = {}
-        indicator_keys = ['nominal_gdp', 'unemployment', 'inflation_yoy', 'fed_funds',
-                          'treasury_10y', 'treasury_2y', 'yield_curve_2_10', 'jolts', 'jobless_claims']
-
-        for key in indicator_keys:
-            latest = macro_service.get_latest_indicator_value(key)
+        # Get latest values for each indicator
+        latest_values = {}
+        for indicator in indicators:
+            latest = macro_data_service.get_latest_indicator_value(indicator)
             if latest:
-                indicators[key] = latest
+                latest_values[indicator] = latest
+
+        # Get charts for each indicator
+        charts = {}
+        for indicator in indicators:
+            chart_html = macro_data_service.get_indicator_chart(indicator)
+            if chart_html and not chart_html.startswith('<p>Error'):
+                charts[indicator] = chart_html
 
         # Get inflation metrics
-        inflation_metrics = macro_service.get_inflation_metrics()
-        if inflation_metrics:
-            indicators['inflation_metrics'] = inflation_metrics
+        inflation_metrics = macro_data_service.get_inflation_metrics()
 
-        # Generate charts
-        charts = {}
-        chart_keys = ['nominal_gdp', 'inflation_yoy', 'inflation_mom', 'unemployment',
-                      'fed_funds', 'treasury_10y', 'treasury_2y', 'yield_curve_2_10',
-                      'jolts', 'jobless_claims']
+        # Get macro data for analysis
+        macro_data = macro_data_service.get_macro_data()
+        analysis = macro_data_service.analyze_macro_environment(macro_data)
 
-        for key in chart_keys:
-            try:
-                chart_html = macro_service.get_indicator_chart(key)
-                if chart_html and not chart_html.startswith('<p>Error'):
-                    charts[key] = chart_html
-            except Exception as e:
-                logger.error(f"Error generating chart for {key}: {str(e)}")
-                continue
+        # Get cache stats
+        cache_stats = macro_data_service.get_cache_stats()
 
-        return render_template('macro_dashboard.html',
-                               indicators=indicators,
-                               charts=charts,
-                               using_demo=macro_service.using_demo_data)
+        return render_template(
+            'macro_dashboard.html',
+            latest_values=latest_values,
+            charts=charts,
+            inflation_metrics=inflation_metrics,
+            analysis=analysis,
+            cache_stats=cache_stats,
+            using_demo_data=macro_data_service.using_demo_data
+        )
 
     except Exception as e:
-        logger.error(f"Error in macro dashboard: {str(e)}")
-        return render_template('error.html', message="Unable to load macroeconomic data")
-        
-    except Exception as e:
-        app.logger.error(f"Error in macro_dashboard: {str(e)}", exc_info=True)
-        return render_template('500.html'), 500
+        logger.error(f"Error rendering macro dashboard: {str(e)}")
+        return render_template('error.html', message="Failed to load macroeconomic data"), 500
 
-@app.route('/export-indicator/<indicator_key>')
-def export_indicator(indicator_key):
-    """Export indicator data as CSV"""
+@app.route('/macro-data/export-all')
+def export_all_macro_data():
+    """Export all indicator data as a single CSV"""
     try:
-        macro_service = MacroDataService()
-        response = macro_service.export_to_csv(indicator_key, days=365*10)  # 10 years of data
-        if response:
-            return response
-        flash('Failed to export data. Please try again.', 'error')
-        return redirect(url_for('macro_dashboard'))
+        csv_response = macro_data_service.export_all_to_csv()
+        if csv_response:
+            return csv_response
+        else:
+            return jsonify({"error": "Could not export data"}), 404
     except Exception as e:
-        app.logger.error(f"Error exporting {indicator_key} data: {str(e)}", exc_info=True)
-        flash('An error occurred while exporting data.', 'error')
-        return redirect(url_for('macro_dashboard'))
+        logger.error(f"Error exporting all data: {str(e)}")
+        return jsonify({"error": "Failed to export data"}), 500
+
+@app.route('/cache/stats')
+def cache_stats():
+    """Get cache statistics"""
+    return jsonify(macro_data_service.get_cache_stats())
 
 
-@app.route('/export-all')
-def export_all():
-    try:
-        macro_service = MacroDataService()
-        response = macro_service.export_all_to_csv(days=365*10)
-        if response:
-            return response
-        flash('Failed to export data. Please try again.', 'error')
-        return redirect(url_for('macro_dashboard'))
-    except Exception as e:
-        app.logger.error(f"Error exporting all indicators: {str(e)}", exc_info=True)
-        flash('An error occurred while exporting all data.', 'error')
-        return redirect(url_for('macro_dashboard'))
+@app.route('/cache/clear', methods=['POST'])
+def clear_cache():
+    """Clear the cache"""
+    macro_data_service.clear_cache()
+    return jsonify({"status": "success", "message": "Cache cleared"})
+
+
+@app.route('/cache/inspect')
+def inspect_cache():
+    """Inspect cache contents"""
+    return jsonify(macro_data_service.inspect_cache())
 
 
 @app.route('/delete-account', methods=['POST'])

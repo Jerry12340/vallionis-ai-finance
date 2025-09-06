@@ -12,10 +12,107 @@ import io
 import csv
 import time
 import hashlib
+import redis
+import pickle
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class RedisCache:
+    def __init__(self, redis_url=None):
+        self.redis_url = redis_url or os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+        self.redis_client = None
+        self.connect()
+
+    def connect(self):
+        """Establish connection to Redis"""
+        try:
+            self.redis_client = redis.Redis.from_url(
+                self.redis_url,
+                decode_responses=False,
+                socket_timeout=5,
+                socket_connect_timeout=5,
+                retry_on_timeout=True
+            )
+            # Test connection
+            self.redis_client.ping()
+            logger.info(f"Connected to Redis at {self.redis_url}")
+        except Exception as e:
+            logger.error(f"Failed to connect to Redis: {str(e)}")
+            self.redis_client = None
+
+    def get(self, key):
+        """Get value from Redis cache"""
+        if not self.redis_client:
+            return None
+
+        try:
+            cached_data = self.redis_client.get(key)
+            if cached_data:
+                return pickle.loads(cached_data)
+        except Exception as e:
+            logger.error(f"Error getting from Redis cache: {str(e)}")
+        return None
+
+    def set(self, key, value, timeout=None):
+        """Set value in Redis cache with optional timeout"""
+        if not self.redis_client:
+            return False
+
+        try:
+            serialized = pickle.dumps(value)
+            if timeout:
+                self.redis_client.setex(key, timeout, serialized)
+            else:
+                self.redis_client.set(key, serialized)
+            return True
+        except Exception as e:
+            logger.error(f"Error setting Redis cache: {str(e)}")
+            return False
+
+    def delete(self, key):
+        """Delete a key from Redis cache"""
+        if not self.redis_client:
+            return False
+
+        try:
+            return self.redis_client.delete(key) > 0
+        except Exception as e:
+            logger.error(f"Error deleting from Redis cache: {str(e)}")
+            return False
+
+    def clear(self):
+        """Clear all cached data (use with caution!)"""
+        if not self.redis_client:
+            return False
+
+        try:
+            self.redis_client.flushdb()
+            return True
+        except Exception as e:
+            logger.error(f"Error clearing Redis cache: {str(e)}")
+            return False
+
+    def get_stats(self):
+        """Get Redis cache statistics"""
+        if not self.redis_client:
+            return {"connected": False}
+
+        try:
+            info = self.redis_client.info()
+            return {
+                "connected": True,
+                "keys": info.get('db0', {}).get('keys', 0),
+                "memory_used": info.get('used_memory', 0),
+                "hits": info.get('keyspace_hits', 0),
+                "misses": info.get('keyspace_misses', 0),
+                "uptime": info.get('uptime_in_seconds', 0)
+            }
+        except Exception as e:
+            logger.error(f"Error getting Redis stats: {str(e)}")
+            return {"connected": False}
 
 
 class MacroDataService:
@@ -43,19 +140,26 @@ class MacroDataService:
             'jobless_claims': 'ICSA',
         }
 
-        # Cache configuration
+        # Redis cache configuration
         self.cache_enabled = True
         self.cache_timeout = int(os.getenv('CACHE_TIMEOUT_SECONDS', '86400'))  # 1 day default
-        self._cache = {}
-        self._cache_timestamps = {}
+        self.redis_cache = RedisCache()
+
+        # In-memory fallback cache if Redis is unavailable
+        self._fallback_cache = {}
+        self._fallback_timestamps = {}
+
+        # Cache statistics
         self.cache_stats = {
             'hits': 0,
             'misses': 0,
             'expired': 0,
-            'total_requests': 0
+            'total_requests': 0,
+            'redis_connected': self.redis_cache.redis_client is not None
         }
 
-        logger.info(f"Cache initialized: enabled={self.cache_enabled}, timeout={self.cache_timeout}s")
+        logger.info(
+            f"Cache initialized: enabled={self.cache_enabled}, timeout={self.cache_timeout}s, Redis connected={self.cache_stats['redis_connected']}")
 
     def _get_cache_key(self, func_name, *args, **kwargs):
         """Generate a unique cache key for function call with arguments"""
@@ -72,43 +176,72 @@ class MacroDataService:
 
         self.cache_stats['total_requests'] += 1
 
-        if key in self._cache and key in self._cache_timestamps:
-            if time.time() - self._cache_timestamps[key] < self.cache_timeout:
+        # Try Redis first
+        if self.redis_cache.redis_client:
+            cached_data = self.redis_cache.get(key)
+            if cached_data is not None:
                 self.cache_stats['hits'] += 1
-                logger.info(f"Cache HIT for key: {key[:20]}...")
-                return self._cache[key]
+                logger.info(f"Redis cache HIT for key: {key[:20]}...")
+                return cached_data
+
+        # Fallback to in-memory cache if Redis is unavailable
+        if key in self._fallback_cache and key in self._fallback_timestamps:
+            if time.time() - self._fallback_timestamps[key] < self.cache_timeout:
+                self.cache_stats['hits'] += 1
+                logger.info(f"Fallback cache HIT for key: {key[:20]}...")
+                return self._fallback_cache[key]
             else:
                 # Cache expired, remove entry
                 self.cache_stats['expired'] += 1
-                logger.info(f"Cache EXPIRED for key: {key[:20]}...")
-                del self._cache[key]
-                del self._cache_timestamps[key]
-        else:
-            self.cache_stats['misses'] += 1
-            logger.info(f"Cache MISS for key: {key[:20]}...")
+                logger.info(f"Fallback cache EXPIRED for key: {key[:20]}...")
+                del self._fallback_cache[key]
+                del self._fallback_timestamps[key]
+
+        self.cache_stats['misses'] += 1
+        logger.info(f"Cache MISS for key: {key[:20]}...")
         return None
 
     def _set_cache(self, key, value):
         """Store value in cache with timestamp"""
-        if self.cache_enabled:
-            self._cache[key] = value
-            self._cache_timestamps[key] = time.time()
-            logger.info(f"Cache SET for key: {key[:20]}...")
+        if not self.cache_enabled:
+            return
+
+        # Try Redis first
+        if self.redis_cache.redis_client:
+            if self.redis_cache.set(key, value, self.cache_timeout):
+                logger.info(f"Redis cache SET for key: {key[:20]}...")
+                return
+
+        # Fallback to in-memory cache if Redis is unavailable
+        self._fallback_cache[key] = value
+        self._fallback_timestamps[key] = time.time()
+        logger.info(f"Fallback cache SET for key: {key[:20]}...")
 
     def clear_cache(self):
         """Clear all cached data"""
-        self._cache = {}
-        self._cache_timestamps = {}
+        # Clear Redis cache
+        if self.redis_cache.redis_client:
+            self.redis_cache.clear()
+
+        # Clear fallback cache
+        self._fallback_cache = {}
+        self._fallback_timestamps = {}
+
         logger.info("Cache cleared")
 
     def get_cache_stats(self):
         """Return cache statistics"""
         total_requests = self.cache_stats['total_requests']
         hit_rate = (self.cache_stats['hits'] / total_requests * 100) if total_requests > 0 else 0
+
+        # Get Redis stats if available
+        redis_stats = self.redis_cache.get_stats() if self.redis_cache.redis_client else {}
+
         return {
             **self.cache_stats,
             'hit_rate': round(hit_rate, 2),
-            'current_size': len(self._cache),
+            'current_size': len(self._fallback_cache),
+            'redis_stats': redis_stats,
             'enabled': self.cache_enabled,
             'timeout': self.cache_timeout
         }
@@ -118,8 +251,27 @@ class MacroDataService:
         cache_info = []
         now = time.time()
 
-        for key, value in self._cache.items():
-            timestamp = self._cache_timestamps.get(key, 0)
+        # Get Redis cache info if available
+        if self.redis_cache.redis_client:
+            try:
+                # Note: This is a simplified approach - in production you might want
+                # to use SCAN instead of KEYS for large databases
+                keys = self.redis_cache.redis_client.keys('*')
+                for key in keys[:100]:  # Limit to first 100 keys
+                    ttl = self.redis_cache.redis_client.ttl(key)
+                    cache_info.append({
+                        'key': key.decode()[:30] + '...' if len(key) > 30 else key.decode(),
+                        'age_seconds': 'N/A',
+                        'expires_in_seconds': ttl,
+                        'data_type': 'Redis',
+                        'data_length': 'N/A'
+                    })
+            except Exception as e:
+                logger.error(f"Error inspecting Redis cache: {str(e)}")
+
+        # Add fallback cache info
+        for key, value in self._fallback_cache.items():
+            timestamp = self._fallback_timestamps.get(key, 0)
             age = now - timestamp
             expires_in = self.cache_timeout - age
             cache_info.append({
@@ -130,7 +282,7 @@ class MacroDataService:
                 'data_length': len(value) if hasattr(value, '__len__') else 1
             })
 
-        return sorted(cache_info, key=lambda x: x['age_seconds'], reverse=True)
+        return sorted(cache_info, key=lambda x: x.get('age_seconds', 0), reverse=True)
 
     def set_cache_timeout(self, seconds):
         """Dynamically change the cache timeout"""
@@ -598,7 +750,7 @@ class MacroDataService:
             merged.to_csv(si, index=False)
             output = make_response(si.getvalue())
             output.headers["Content-Disposition"] = "attachment; filename=all_indicators.csv"
-            output.headers["Content-type"] = "text/csv"
+            output.headers["Content-type": "text/csv"]
             return output
         except Exception as e:
             logger.error(f"Error exporting all indicators to CSV: {str(e)}")
@@ -837,7 +989,7 @@ class MacroDataService:
         if 'unemployment' in data:
             unemployment = data['unemployment']['value']
             if unemployment > 6:
-                risks.append(f"Elevated unemployment rate ({unemployment}%) may signal economic weakness")
+                risks.append(f"Elevated unemployment rate ({unemployment}) may signal economic weakness")
 
         if 'fed_funds' in data and 'treasury_10y' in data:
             fed_rate = data['fed_funds']['value']
@@ -866,3 +1018,7 @@ class MacroDataService:
                 opportunities.append(f"Strong GDP growth of {gdp_growth:.2f}% may support equity markets")
 
         return opportunities if opportunities else ["Consider a diversified portfolio approach"]
+
+
+# Create a singleton instance
+macro_data_service = MacroDataService()
