@@ -201,14 +201,17 @@ class MacroDataService:
         logger.info(f"Cache MISS for key: {key[:20]}...")
         return None
 
-    def _set_cache(self, key, value):
+    def _set_cache(self, key, value, timeout=None):
         """Store value in cache with timestamp"""
         if not self.cache_enabled:
             return
 
+        # Use specific timeout or default
+        cache_timeout = timeout if timeout is not None else self.cache_timeout
+
         # Try Redis first
         if self.redis_cache.redis_client:
-            if self.redis_cache.set(key, value, self.cache_timeout):
+            if self.redis_cache.set(key, value, cache_timeout):
                 logger.info(f"Redis cache SET for key: {key[:20]}...")
                 return
 
@@ -216,6 +219,18 @@ class MacroDataService:
         self._fallback_cache[key] = value
         self._fallback_timestamps[key] = time.time()
         logger.info(f"Fallback cache SET for key: {key[:20]}...")
+
+    def _delete_from_cache(self, key):
+        """Delete a key from cache"""
+        # Try Redis first
+        if self.redis_cache.redis_client:
+            self.redis_cache.delete(key)
+
+        # Fallback to in-memory cache
+        if key in self._fallback_cache:
+            del self._fallback_cache[key]
+        if key in self._fallback_timestamps:
+            del self._fallback_timestamps[key]
 
     def clear_cache(self):
         """Clear all cached data"""
@@ -228,6 +243,31 @@ class MacroDataService:
         self._fallback_timestamps = {}
 
         logger.info("Cache cleared")
+
+    def clear_indicator_cache(self, indicator_key):
+        """Clear cache for a specific indicator"""
+        # Clear series data
+        series_key = self._get_cache_key("get_indicator_series", indicator_key, 3650)
+        self._delete_from_cache(series_key)
+
+        # Clear chart data
+        chart_key = self._get_cache_key("get_indicator_chart", indicator_key, 3650)
+        self._delete_from_cache(chart_key)
+
+        # Clear latest value
+        latest_key = self._get_cache_key("get_latest_indicator_value", indicator_key, 3650)
+        self._delete_from_cache(latest_key)
+
+        # Clear FRED data if it's a base indicator
+        base_key = indicator_key
+        if indicator_key in ['inflation_yoy', 'inflation_mom']:
+            base_key = 'inflation'
+
+        if base_key in self.series_ids:
+            fred_key = self._get_cache_key("get_fred_data", self.series_ids[base_key], 3650)
+            self._delete_from_cache(fred_key)
+
+        logger.info(f"Cleared cache for indicator: {indicator_key}")
 
     def get_cache_stats(self):
         """Return cache statistics"""
@@ -254,9 +294,13 @@ class MacroDataService:
         # Get Redis cache info if available
         if self.redis_cache.redis_client:
             try:
-                # Note: This is a simplified approach - in production you might want
-                # to use SCAN instead of KEYS for large databases
-                keys = self.redis_cache.redis_client.keys('*')
+                # Use SCAN instead of KEYS for production safety
+                cursor = '0'
+                keys = []
+                while cursor != 0:
+                    cursor, partial_keys = self.redis_cache.redis_client.scan(cursor=cursor, count=100)
+                    keys.extend(partial_keys)
+
                 for key in keys[:100]:  # Limit to first 100 keys
                     ttl = self.redis_cache.redis_client.ttl(key)
                     cache_info.append({
@@ -397,7 +441,25 @@ class MacroDataService:
             return demo_data
 
     def get_indicator_series(self, indicator_key, days=365 * 10):
-        """Return transformed time series for an indicator with caching"""
+        """Return transformed time series for an indicator with smart caching"""
+        # Define cache timeouts based on data frequency
+        cache_timeouts = {
+            'gdp': 86400 * 90,  # 90 days (quarterly data)
+            'nominal_gdp': 86400 * 90,  # 90 days
+            'inflation_yoy': 86400 * 30,  # 30 days (monthly)
+            'inflation_mom': 86400 * 30,  # 30 days
+            'unemployment': 86400 * 7,  # 7 days (weekly)
+            'fed_funds': 86400 * 1,  # 1 day (can change frequently)
+            'treasury_10y': 86400 * 1,  # 1 day
+            'treasury_2y': 86400 * 1,  # 1 day
+            'yield_curve_2_10': 86400 * 1,  # 1 day
+            'jolts': 86400 * 30,  # 30 days (monthly)
+            'jobless_claims': 86400 * 7,  # 7 days (weekly)
+        }
+
+        # Use specific timeout or default
+        timeout = cache_timeouts.get(indicator_key, self.cache_timeout)
+
         # Check cache first
         cache_key = self._get_cache_key("get_indicator_series", indicator_key, days)
         cached_data = self._check_cache(cache_key)
@@ -414,17 +476,17 @@ class MacroDataService:
             inflation_variant = indicator_key.split('_')[1]
         elif indicator_key == 'yield_curve_2_10':
             result = self._get_yield_curve_2_10(days)
-            self._set_cache(cache_key, result)
+            self._set_cache(cache_key, result, timeout)
             return result
 
         series_id = self.series_ids.get(base_key)
         if not series_id:
-            self._set_cache(cache_key, [])
+            self._set_cache(cache_key, [], timeout)
             return []
 
         data = self.get_fred_data(series_id, days)
         if not data:
-            self._set_cache(cache_key, [])
+            self._set_cache(cache_key, [], timeout)
             return []
 
         df = pd.DataFrame(data)
@@ -443,8 +505,8 @@ class MacroDataService:
             for _, row in df.iterrows()
         ]
 
-        # Cache the result
-        self._set_cache(cache_key, result)
+        # Cache the result with appropriate timeout
+        self._set_cache(cache_key, result, timeout)
         return result
 
     def _get_yield_curve_2_10(self, days=365 * 10):
@@ -479,8 +541,8 @@ class MacroDataService:
                 for _, row in merged.iterrows()
             ]
 
-            # Cache the result
-            self._set_cache(cache_key, result)
+            # Cache the result with 1-day timeout (frequently changing data)
+            self._set_cache(cache_key, result, 86400)
             return result
         except Exception as e:
             logger.error(f"Error calculating 2/10 yield curve: {str(e)}")
@@ -750,7 +812,7 @@ class MacroDataService:
             merged.to_csv(si, index=False)
             output = make_response(si.getvalue())
             output.headers["Content-Disposition"] = "attachment; filename=all_indicators.csv"
-            output.headers["Content-type": "text/csv"]
+            output.headers["Content-type"] = "text/csv"
             return output
         except Exception as e:
             logger.error(f"Error exporting all indicators to CSV: {str(e)}")
@@ -989,7 +1051,7 @@ class MacroDataService:
         if 'unemployment' in data:
             unemployment = data['unemployment']['value']
             if unemployment > 6:
-                risks.append(f"Elevated unemployment rate ({unemployment}) may signal economic weakness")
+                risks.append(f"Elevated unemployment rate ({unemployment}%) may signal economic weakness")
 
         if 'fed_funds' in data and 'treasury_10y' in data:
             fed_rate = data['fed_funds']['value']
@@ -1018,7 +1080,6 @@ class MacroDataService:
                 opportunities.append(f"Strong GDP growth of {gdp_growth:.2f}% may support equity markets")
 
         return opportunities if opportunities else ["Consider a diversified portfolio approach"]
-
 
 # Create a singleton instance
 macro_data_service = MacroDataService()
