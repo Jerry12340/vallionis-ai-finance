@@ -12,7 +12,6 @@ import io
 import csv
 import time
 import hashlib
-import functools
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -76,17 +75,17 @@ class MacroDataService:
         if key in self._cache and key in self._cache_timestamps:
             if time.time() - self._cache_timestamps[key] < self.cache_timeout:
                 self.cache_stats['hits'] += 1
-                logger.debug(f"Cache HIT for key: {key[:20]}...")
+                logger.info(f"Cache HIT for key: {key[:20]}...")
                 return self._cache[key]
             else:
                 # Cache expired, remove entry
                 self.cache_stats['expired'] += 1
-                logger.debug(f"Cache EXPIRED for key: {key[:20]}...")
+                logger.info(f"Cache EXPIRED for key: {key[:20]}...")
                 del self._cache[key]
                 del self._cache_timestamps[key]
         else:
             self.cache_stats['misses'] += 1
-            logger.debug(f"Cache MISS for key: {key[:20]}...")
+            logger.info(f"Cache MISS for key: {key[:20]}...")
         return None
 
     def _set_cache(self, key, value):
@@ -94,7 +93,7 @@ class MacroDataService:
         if self.cache_enabled:
             self._cache[key] = value
             self._cache_timestamps[key] = time.time()
-            logger.debug(f"Cache SET for key: {key[:20]}...")
+            logger.info(f"Cache SET for key: {key[:20]}...")
 
     def clear_cache(self):
         """Clear all cached data"""
@@ -867,41 +866,3 @@ class MacroDataService:
                 opportunities.append(f"Strong GDP growth of {gdp_growth:.2f}% may support equity markets")
 
         return opportunities if opportunities else ["Consider a diversified portfolio approach"]
-
-    @cache_method(timeout=3600)  # 1 hour cache for inflation metrics
-    def get_inflation_metrics(self, days=365 * 15):
-        """Compute inflation YoY% and MoM% from CPI level series, plus latest CPI level with caching"""
-        try:
-            series_id = self.series_ids.get('inflation')
-            if not series_id:
-                return None
-
-            data = self.get_fred_data(series_id, days)
-            if not data or len(data) < 14:
-                return None
-
-            df = pd.DataFrame(data)
-            df['date'] = pd.to_datetime(df['date'])
-            df = df.sort_values('date')
-            df['value'] = pd.to_numeric(df['value'], errors='coerce')
-            df = df.dropna(subset=['value'])
-
-            if len(df) < 14:
-                return None
-
-            last = df.iloc[-1]
-            prev = df.iloc[-2]
-            last_12 = df.iloc[-13]
-            yoy = ((last['value'] / last_12['value']) - 1.0) * 100.0
-            mom = ((last['value'] / prev['value']) - 1.0) * 100.0
-
-            return {
-                'latest_date': last['date'].strftime('%Y-%m-%d'),
-                'cpi_level': float(last['value']),
-                'yoy_percent': float(round(yoy, 2)),
-                'mom_percent': float(round(mom, 2))
-            }
-
-        except Exception as e:
-            logger.error(f"Error computing inflation metrics: {str(e)}")
-            return None
